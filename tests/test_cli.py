@@ -96,3 +96,17 @@ def test_build_recusa_out_nao_vazio_sem_tocar_nos_arquivos(observacoes, tmp_path
     assert "não está vazio" in capsys.readouterr().err
     assert sorted(p.name for p in out.iterdir()) == ["guardado.txt"]
     assert existente.read_text(encoding="utf-8") == "não apagar"
+
+
+def test_parquet_com_tipo_de_coluna_errado_retorna_1(observacoes, tmp_path, capsys):
+    fontes = tmp_path / "sources.yaml"
+    fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+    obs = tmp_path / "obs.parquet"
+    write_observations(observacoes, obs)
+    tabela = pq.read_table(obs)
+    i = tabela.schema.get_field_index("count")
+    pq.write_table(tabela.set_column(i, "count", pa.array(["muitos"] * tabela.num_rows)), obs)
+    assert main(["validate", str(obs), "--sources", str(fontes)]) == 1
+    err = capsys.readouterr().err
+    assert err.strip()
+    assert "Traceback" not in err

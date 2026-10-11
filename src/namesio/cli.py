@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
         fontes = load_sources(args.sources)
         try:
             obs = read_observations(args.observations)
-        except (OSError, ArrowException, TypeError) as e:
+        except (OSError, ArrowException, TypeError, KeyError) as e:
             return _erro(f"não foi possível ler {args.observations}: {e}")
         validate(obs, fontes)
         if args.cmd == "validate":

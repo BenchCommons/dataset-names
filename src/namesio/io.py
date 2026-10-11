@@ -42,7 +42,8 @@ def write_observations(observations: list[Observation], path: Path) -> None:
 
 
 def read_observations(path: Path) -> list[Observation]:
-    return [Observation(**linha) for linha in pq.read_table(path).to_pylist()]
+    tabela = pq.read_table(path).select(OBSERVATION_SCHEMA.names).cast(OBSERVATION_SCHEMA)
+    return [Observation(**linha) for linha in tabela.to_pylist()]
 
 
 def _celula(valor) -> str:
