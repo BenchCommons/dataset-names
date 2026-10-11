@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 output/
 *.tsv
+*.parquet
 *.tar.gz
 credentials.json
 
