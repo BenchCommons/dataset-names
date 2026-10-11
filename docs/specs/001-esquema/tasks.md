@@ -183,6 +183,10 @@ def test_forma_ascii_latina():
 def test_forma_ascii_vazia_fora_da_escrita_latina():
     assert ascii_form("Мария", "Cyrl") == ""
     assert ascii_form("李", "Hani") == ""
+
+
+def test_georgiano_nao_recebe_capital_errada():
+    assert normalize_name("ნინო") == "ნინო"
 ```
 
 - [ ] **Passo 2: rodar e ver falhar**
@@ -225,7 +229,7 @@ def normalize_name(raw: str) -> str:
     tem_caixa = any(c.isupper() or c.islower() for c in nome)
     if tem_caixa and nome in (nome.upper(), nome.lower()):
         partes = _SEPARADORES.split(nome.lower())
-        nome = "".join(p[:1].upper() + p[1:] for p in partes)
+        nome = "".join(p[:1].title() + p[1:] for p in partes)
     return unicodedata.normalize("NFC", nome)
 
 
@@ -704,6 +708,18 @@ def test_lista_todos_os_erros(observacoes, fontes):
     with pytest.raises(ValidationError) as e:
         validate([ruim], fontes)
     assert len(e.value.erros) == 2
+
+
+@pytest.mark.parametrize("campos, trecho", [
+    ({"name_key": "zzz"}, "name_key"),
+    ({"script": "Cyrl"}, "script"),
+    ({"name": "Ana  Clara"}, "NFC"),
+    ({"name": "José"}, "NFC"),
+])
+def test_campos_derivados_contradizem_r1(fontes, campos, trecho):
+    ok = make_observation("Ana Clara", kind="given", source_id="wikidata", count_type="attested")
+    with pytest.raises(ValidationError, match=trecho):
+        validate([replace(ok, **campos)], fontes)
 ```
 
 - [ ] **Passo 2: rodar e ver falhar**
@@ -716,6 +732,7 @@ Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.schema'`
 ```python
 """Tabela canônica de observações (spec 001, R1) e sua validação."""
 
+import unicodedata
 from dataclasses import dataclass
 
 from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
@@ -781,6 +798,12 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         for campo in ("name", "name_key", "script", "kind", "count_type", "source_id"):
             if not getattr(o, campo):
                 erros.append(f"{r}: '{campo}' vazio")
+        if o.name != " ".join(unicodedata.normalize("NFC", o.name).split()):
+            erros.append(f"{r}: 'name' fora de NFC ou com espaços não colapsados (R1)")
+        if o.name_key != name_key(o.name):
+            erros.append(f"{r}: 'name_key' {o.name_key!r} diverge de name_key(name) (R1)")
+        if o.script != detect_script(o.name):
+            erros.append(f"{r}: 'script' {o.script!r} diverge da escrita detectada em name (R1)")
         if o.script == "Latn" and not o.ascii:
             erros.append(f"{r}: 'ascii' vazio em escrita latina")
         if o.kind and o.kind not in KINDS:
@@ -989,6 +1012,18 @@ def test_fontes_ambiguas_sem_primary():
     fontes_sem_primary["a"] = replace(fontes["a"], primary=False)
     with pytest.raises(AggregationError, match="primary"):
         by_country(obs, fontes_sem_primary)
+
+
+def test_population_nome_so_em_edicao_antiga_nao_e_contado(observacoes, fontes):
+    antigo = make_observation("JOAO", kind="given", source_id="br-ibge-censo", gender="M",
+                              year=2010, count=9000, country="BR", count_type="population")
+    br = by_country(observacoes + [antigo], fontes)["BR"]
+    joao = _linha(br, "given", "joao")
+    assert (joao.count, joao.count_type, joao.rank, joao.first_year, joao.last_year) == (
+        None, "attested", None, None, None,
+    )
+    maria = _linha(br, "given", "maria")
+    assert (maria.count, maria.rank) == (12000, 1)
 ```
 
 - [ ] **Passo 2: rodar e ver falhar**
@@ -1084,7 +1119,19 @@ def _fontes_oficiais(observations: list[Observation], sources: dict[str, Source]
     return oficiais
 
 
-def _contagem(obs: list[Observation], oficiais: dict[tuple, str]):
+def _edicoes(observations: list[Observation], oficiais: dict[tuple, str]) -> dict[str, int]:
+    """país -> edição mais recente (maior year) da fonte population oficial (R3.3)."""
+    edicoes: dict[str, int] = {}
+    for o in observations:
+        if (
+            o.count_type == "population" and o.year is not None and o.country is not None
+            and o.source_id == oficiais.get((o.country, "population"))
+        ):
+            edicoes[o.country] = max(edicoes.get(o.country, o.year), o.year)
+    return edicoes
+
+
+def _contagem(obs: list[Observation], oficiais: dict[tuple, str], edicoes: dict[str, int]):
     """-> (count_type, observações contadas, first_year, last_year) para um nome num país."""
     pais = obs[0].country
     for tipo in PRECEDENCIA:
@@ -1092,11 +1139,13 @@ def _contagem(obs: list[Observation], oficiais: dict[tuple, str]):
         contadas = [o for o in obs if o.count_type == tipo and o.source_id == fonte]
         if not contadas:
             continue
-        anos = [o.year for o in contadas if o.year is not None]
-        if tipo == "population" and anos:
-            ultimo = max(anos)
+        if tipo == "population" and pais in edicoes:
+            ultimo = edicoes[pais]
             contadas = [o for o in contadas if o.year == ultimo]
+            if not contadas:
+                continue
             return tipo, contadas, ultimo, ultimo
+        anos = [o.year for o in contadas if o.year is not None]
         return tipo, contadas, (min(anos) if anos else None), (max(anos) if anos else None)
     return "attested", [], None, None
 
@@ -1120,13 +1169,14 @@ def _ranquear(linhas: list[CountryRow]) -> list[CountryRow]:
 
 def by_country(observations: list[Observation], sources: dict[str, Source]) -> dict[str, list[CountryRow]]:
     oficiais = _fontes_oficiais(observations, sources)
+    edicoes = _edicoes(observations, oficiais)
     grupos: dict[tuple, list[Observation]] = defaultdict(list)
     for o in observations:
         if o.country is not None:
             grupos[(o.country, o.kind, o.name_key)].append(o)
     linhas: dict[str, list[CountryRow]] = defaultdict(list)
     for (pais, kind, chave), obs in grupos.items():
-        tipo, contadas, primeiro, ultimo = _contagem(obs, oficiais)
+        tipo, contadas, primeiro, ultimo = _contagem(obs, oficiais, edicoes)
         f = sum(o.count for o in contadas if o.gender == "F")
         m = sum(o.count for o in contadas if o.gender == "M")
         nome = display_name(obs)
@@ -1313,7 +1363,8 @@ def write_observations(observations: list[Observation], path: Path) -> None:
 
 
 def read_observations(path: Path) -> list[Observation]:
-    return [Observation(**linha) for linha in pq.read_table(path).to_pylist()]
+    tabela = pq.read_table(path).select(OBSERVATION_SCHEMA.names).cast(OBSERVATION_SCHEMA)
+    return [Observation(**linha) for linha in tabela.to_pylist()]
 
 
 def _celula(valor) -> str:
@@ -1531,6 +1582,20 @@ def test_build_recusa_out_nao_vazio_sem_tocar_nos_arquivos(observacoes, tmp_path
     assert "não está vazio" in capsys.readouterr().err
     assert sorted(p.name for p in out.iterdir()) == ["guardado.txt"]
     assert existente.read_text(encoding="utf-8") == "não apagar"
+
+
+def test_parquet_com_tipo_de_coluna_errado_retorna_1(observacoes, tmp_path, capsys):
+    fontes = tmp_path / "sources.yaml"
+    fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+    obs = tmp_path / "obs.parquet"
+    write_observations(observacoes, obs)
+    tabela = pq.read_table(obs)
+    i = tabela.schema.get_field_index("count")
+    pq.write_table(tabela.set_column(i, "count", pa.array(["muitos"] * tabela.num_rows)), obs)
+    assert main(["validate", str(obs), "--sources", str(fontes)]) == 1
+    err = capsys.readouterr().err
+    assert err.strip()
+    assert "Traceback" not in err
 ```
 
 - [ ] **Passo 2: rodar e ver falhar**
@@ -1586,7 +1651,7 @@ def main(argv: list[str] | None = None) -> int:
         fontes = load_sources(args.sources)
         try:
             obs = read_observations(args.observations)
-        except (OSError, ArrowException, TypeError) as e:
+        except (OSError, ArrowException, TypeError, KeyError) as e:
             return _erro(f"não foi possível ler {args.observations}: {e}")
         validate(obs, fontes)
         if args.cmd == "validate":
