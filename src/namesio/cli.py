@@ -5,9 +5,11 @@ import json
 import sys
 from pathlib import Path
 
+from pyarrow import ArrowException
+
 from namesio.aggregate import AggregationError, by_country, name_index
 from namesio.io import read_observations, write_by_country, write_index, write_observations
-from namesio.manifest import build_manifest
+from namesio.manifest import RELEASE, build_manifest
 from namesio.schema import ValidationError, validate
 from namesio.sources import SourceError, load_sources
 
@@ -25,11 +27,24 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _erro(mensagem: str) -> int:
+    print(mensagem, file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.cmd == "build":
+        if not RELEASE.fullmatch(args.release):
+            return _erro(f"release '{args.release}' fora do formato AAAA.MM[.N]")
+        if args.out.exists() and (not args.out.is_dir() or any(args.out.iterdir())):
+            return _erro(f"--out {args.out} já existe e não está vazio; use um diretório novo")
     try:
         fontes = load_sources(args.sources)
-        obs = read_observations(args.observations)
+        try:
+            obs = read_observations(args.observations)
+        except (OSError, ArrowException, TypeError) as e:
+            return _erro(f"não foi possível ler {args.observations}: {e}")
         validate(obs, fontes)
         if args.cmd == "validate":
             print(f"OK: {len(obs)} observações válidas.")
@@ -41,11 +56,10 @@ def main(argv: list[str] | None = None) -> int:
             write_index(name_index(obs, paises, kind), args.out / f"{base}.csv", args.out / f"{base}.parquet")
         write_by_country(paises, args.out / "by_country")
         manifest = build_manifest(args.release, args.out, fontes, {o.source_id for o in obs})
-    except (SourceError, ValidationError, AggregationError, ValueError) as e:
-        print(e, file=sys.stderr)
-        return 1
-    (args.out / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except (SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException) as e:
+        return _erro(str(e))
     print(f"OK: {len(obs)} observações, {len(paises)} países em {args.out}.")
     return 0

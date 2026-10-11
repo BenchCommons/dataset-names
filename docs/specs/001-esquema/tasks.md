@@ -1436,6 +1436,8 @@ git commit -m "Adiciona escrita em Parquet e CSV e manifesto da release" -m "Co-
 import json
 from dataclasses import replace
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import yaml
 
 from namesio.cli import main
@@ -1482,6 +1484,53 @@ def test_build_recusa_release_invalida(observacoes, tmp_path, capsys):
     obs, fontes = _preparar(tmp_path, observacoes)
     assert main(["build", str(obs), "--sources", str(fontes), "--out", str(tmp_path / "d"), "--release", "out"]) == 1
     assert "AAAA.MM" in capsys.readouterr().err
+
+
+def test_build_release_invalida_nao_cria_saida(observacoes, tmp_path, capsys):
+    obs, fontes = _preparar(tmp_path, observacoes)
+    out = tmp_path / "d"
+    assert main(["build", str(obs), "--sources", str(fontes), "--out", str(out), "--release", "2026.13"]) == 1
+    assert "AAAA.MM" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_arquivo_ausente_retorna_1_sem_traceback(tmp_path, capsys):
+    fontes = tmp_path / "sources.yaml"
+    fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+    assert main(["validate", str(tmp_path / "nao_existe.parquet"), "--sources", str(fontes)]) == 1
+    err = capsys.readouterr().err
+    assert "nao_existe.parquet" in err
+    assert "Traceback" not in err
+
+
+def test_parquet_corrompido_retorna_1(tmp_path, capsys):
+    fontes = tmp_path / "sources.yaml"
+    fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+    obs = tmp_path / "obs.parquet"
+    obs.write_text("isto não é parquet", encoding="utf-8")
+    assert main(["validate", str(obs), "--sources", str(fontes)]) == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_parquet_com_colunas_erradas_retorna_1(tmp_path, capsys):
+    fontes = tmp_path / "sources.yaml"
+    fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+    obs = tmp_path / "obs.parquet"
+    pq.write_table(pa.table({"coluna_estranha": ["x"]}), obs)
+    assert main(["validate", str(obs), "--sources", str(fontes)]) == 1
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_build_recusa_out_nao_vazio_sem_tocar_nos_arquivos(observacoes, tmp_path, capsys):
+    obs, fontes = _preparar(tmp_path, observacoes)
+    out = tmp_path / "dist"
+    out.mkdir()
+    existente = out / "guardado.txt"
+    existente.write_text("não apagar", encoding="utf-8")
+    assert main(["build", str(obs), "--sources", str(fontes), "--out", str(out), "--release", "2026.10"]) == 1
+    assert "não está vazio" in capsys.readouterr().err
+    assert sorted(p.name for p in out.iterdir()) == ["guardado.txt"]
+    assert existente.read_text(encoding="utf-8") == "não apagar"
 ```
 
 - [ ] **Passo 2: rodar e ver falhar**
@@ -1499,9 +1548,11 @@ import json
 import sys
 from pathlib import Path
 
+from pyarrow import ArrowException
+
 from namesio.aggregate import AggregationError, by_country, name_index
 from namesio.io import read_observations, write_by_country, write_index, write_observations
-from namesio.manifest import build_manifest
+from namesio.manifest import RELEASE, build_manifest
 from namesio.schema import ValidationError, validate
 from namesio.sources import SourceError, load_sources
 
@@ -1519,11 +1570,24 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _erro(mensagem: str) -> int:
+    print(mensagem, file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.cmd == "build":
+        if not RELEASE.fullmatch(args.release):
+            return _erro(f"release '{args.release}' fora do formato AAAA.MM[.N]")
+        if args.out.exists() and (not args.out.is_dir() or any(args.out.iterdir())):
+            return _erro(f"--out {args.out} já existe e não está vazio; use um diretório novo")
     try:
         fontes = load_sources(args.sources)
-        obs = read_observations(args.observations)
+        try:
+            obs = read_observations(args.observations)
+        except (OSError, ArrowException, TypeError) as e:
+            return _erro(f"não foi possível ler {args.observations}: {e}")
         validate(obs, fontes)
         if args.cmd == "validate":
             print(f"OK: {len(obs)} observações válidas.")
@@ -1535,12 +1599,11 @@ def main(argv: list[str] | None = None) -> int:
             write_index(name_index(obs, paises, kind), args.out / f"{base}.csv", args.out / f"{base}.parquet")
         write_by_country(paises, args.out / "by_country")
         manifest = build_manifest(args.release, args.out, fontes, {o.source_id for o in obs})
-    except (SourceError, ValidationError, AggregationError, ValueError) as e:
-        print(e, file=sys.stderr)
-        return 1
-    (args.out / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+        (args.out / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except (SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException) as e:
+        return _erro(str(e))
     print(f"OK: {len(obs)} observações, {len(paises)} países em {args.out}.")
     return 0
 ```
@@ -1562,11 +1625,8 @@ git commit -m "Adiciona CLI namesio validate e build" -m "Co-Authored-By: Claude
 Rodar: `uv run namesio --help`
 Esperado: uso com os subcomandos `validate` e `build`.
 
-- [ ] **Passo 7: suíte completa e push**
+- [ ] **Passo 7: suíte completa**
 
 Rodar: `uv run pytest -q`
-Esperado: `75 passed`
+Esperado: suíte inteira verde, sem falhas
 
-```bash
-git push
-```
