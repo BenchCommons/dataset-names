@@ -17,13 +17,13 @@ def test_escrita_sem_caixa_fica_intacta():
 
 
 def test_entrada_decomposta_vira_nfc():
-    decomposto = "José"
+    decomposto = "Jose\u0301"
     assert normalize_name(decomposto) == "José"
     assert len(normalize_name(decomposto)) == 4
 
 
 def test_maiusculas_decompostas_tem_a_mesma_chave_que_a_forma_composta():
-    assert name_key(normalize_name("JOSÉ")) == name_key("José") == "josé"
+    assert name_key(normalize_name("JOSE\u0301")) == name_key("José") == "josé"
 
 
 def test_i_turco_maiusculo():
