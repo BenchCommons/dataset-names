@@ -90,3 +90,55 @@ def test_todos_os_erros_sao_listados():
     with pytest.raises(SourceError) as e:
         parse_sources([fonte(license="ODbL-1.0", country="XX")])
     assert "ADR 0001" in str(e.value) and "ISO 3166-1" in str(e.value)
+
+
+def test_licenca_nao_textual_vira_source_error():
+    with pytest.raises(SourceError, match="ADR 0001"):
+        parse_sources([fonte(license=["CC0-1.0"])])
+
+
+def test_id_nao_textual_vira_source_error():
+    with pytest.raises(SourceError, match="'id' vazio"):
+        parse_sources([fonte(id=["us-ssa-births"])])
+
+
+@pytest.mark.parametrize("campos, trecho", [
+    ({"country": ["US"]}, "ISO 3166-1"),
+    ({"count_type": ["births"]}, "count_type"),
+])
+def test_campo_nao_textual_vira_source_error(campos, trecho):
+    with pytest.raises(SourceError, match=trecho):
+        parse_sources([fonte(**campos)])
+
+
+def test_entrada_que_nao_e_mapeamento():
+    with pytest.raises(SourceError, match="#0: entrada deve ser um mapeamento") as e:
+        parse_sources(["foo", None])
+    assert "#1: entrada deve ser um mapeamento" in str(e.value)
+
+
+def test_arquivo_inexistente(tmp_path):
+    with pytest.raises(SourceError, match="não foi possível ler"):
+        load_sources(tmp_path / "nao-existe.yaml")
+
+
+def test_yaml_malformado(tmp_path):
+    p = tmp_path / "sources.yaml"
+    p.write_text("sources: [\n", encoding="utf-8")
+    with pytest.raises(SourceError, match="YAML inválido"):
+        load_sources(p)
+
+
+def test_raiz_que_nao_e_mapeamento(tmp_path):
+    p = tmp_path / "sources.yaml"
+    p.write_text("- foo\n", encoding="utf-8")
+    with pytest.raises(SourceError, match="a raiz deve ser um mapeamento"):
+        load_sources(p)
+
+
+@pytest.mark.parametrize("conteudo", ["sources: 5\n", "sources: texto\n"])
+def test_sources_que_nao_e_lista(tmp_path, conteudo):
+    p = tmp_path / "sources.yaml"
+    p.write_text(conteudo, encoding="utf-8")
+    with pytest.raises(SourceError, match="'sources' deve ser uma lista"):
+        load_sources(p)

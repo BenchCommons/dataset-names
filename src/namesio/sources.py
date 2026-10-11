@@ -47,15 +47,33 @@ def is_country(code: object) -> bool:
 
 
 def load_sources(path: Path) -> dict[str, Source]:
-    dados = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
-    return parse_sources(dados.get("sources") or [])
+    try:
+        dados = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    except OSError as e:
+        raise SourceError(f"não foi possível ler {path}: {e}") from e
+    except yaml.YAMLError as e:
+        raise SourceError(f"{path}: YAML inválido: {e}") from e
+    if dados is None:
+        dados = {}
+    if not isinstance(dados, dict):
+        raise SourceError(f"{path}: a raiz deve ser um mapeamento com a chave 'sources'")
+    entradas = dados.get("sources", [])
+    if entradas is None:
+        entradas = []
+    if not isinstance(entradas, list):
+        raise SourceError(f"{path}: 'sources' deve ser uma lista")
+    return parse_sources(entradas)
 
 
 def parse_sources(entradas: list[dict]) -> dict[str, Source]:
     erros: list[str] = []
     fontes: dict[str, Source] = {}
     for i, e in enumerate(entradas):
-        rotulo = e.get("id") or f"#{i}"
+        if not isinstance(e, dict):
+            erros.append(f"#{i}: entrada deve ser um mapeamento")
+            continue
+        rotulo = str(e.get("id") or f"#{i}")
+        antes = len(erros)
         faltando = [c for c in CAMPOS if c not in e]
         if faltando:
             erros.append(f"{rotulo}: campos ausentes {faltando}")
@@ -66,7 +84,7 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
         for campo in ("id", "name", "url", "attribution"):
             if not isinstance(e[campo], str) or not e[campo].strip():
                 erros.append(f"{rotulo}: '{campo}' vazio")
-        if e["license"] not in LICENCAS_COMPATIVEIS:
+        if not isinstance(e["license"], str) or e["license"] not in LICENCAS_COMPATIVEIS:
             erros.append(f"{rotulo}: licença '{e['license']}' incompatível com o ADR 0001")
         if e["country"] is not None and not is_country(e["country"]):
             erros.append(f"{rotulo}: país '{e['country']}' fora da ISO 3166-1 alfa-2")
@@ -79,6 +97,8 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
             erros.append(f"{rotulo}: 'suppression' deve ser inteiro positivo ou vazio")
         if not isinstance(e["retrieved"], date):
             erros.append(f"{rotulo}: 'retrieved' deve ser uma data AAAA-MM-DD")
+        if len(erros) > antes:
+            continue
         if e["id"] in fontes:
             erros.append(f"{rotulo}: id duplicado")
             continue
