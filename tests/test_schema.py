@@ -55,3 +55,15 @@ def test_lista_todos_os_erros(observacoes, fontes):
     with pytest.raises(ValidationError) as e:
         validate([ruim], fontes)
     assert len(e.value.erros) == 2
+
+
+@pytest.mark.parametrize("campos, trecho", [
+    ({"name_key": "zzz"}, "name_key"),
+    ({"script": "Cyrl"}, "script"),
+    ({"name": "Ana  Clara"}, "NFC"),
+    ({"name": "José"}, "NFC"),
+])
+def test_campos_derivados_contradizem_r1(fontes, campos, trecho):
+    ok = make_observation("Ana Clara", kind="given", source_id="wikidata", count_type="attested")
+    with pytest.raises(ValidationError, match=trecho):
+        validate([replace(ok, **campos)], fontes)

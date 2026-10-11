@@ -1,5 +1,6 @@
 """Tabela canônica de observações (spec 001, R1) e sua validação."""
 
+import unicodedata
 from dataclasses import dataclass
 
 from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
@@ -65,6 +66,12 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         for campo in ("name", "name_key", "script", "kind", "count_type", "source_id"):
             if not getattr(o, campo):
                 erros.append(f"{r}: '{campo}' vazio")
+        if o.name != " ".join(unicodedata.normalize("NFC", o.name).split()):
+            erros.append(f"{r}: 'name' fora de NFC ou com espaços não colapsados (R1)")
+        if o.name_key != name_key(o.name):
+            erros.append(f"{r}: 'name_key' {o.name_key!r} diverge de name_key(name) (R1)")
+        if o.script != detect_script(o.name):
+            erros.append(f"{r}: 'script' {o.script!r} diverge da escrita detectada em name (R1)")
         if o.script == "Latn" and not o.ascii:
             erros.append(f"{r}: 'ascii' vazio em escrita latina")
         if o.kind and o.kind not in KINDS:
