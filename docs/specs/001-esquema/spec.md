@@ -37,7 +37,7 @@ Regras:
 
 ### R2. Registro de fontes (`sources.yaml`)
 
-Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pela licença), `country`, `count_type`, `primary` (booleano, ver R3.3), `suppression` (limite abaixo do qual a fonte omite nomes, ex.: `5` na SSA; vazio se não houver) e `retrieved` (data da coleta). Fonte sem licença compatível com o ADR 0001 não pode ser registrada.
+Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pela licença), `country`, `count_type`, `primary` (booleano, ver R3.3), `suppression` (limite abaixo do qual a fonte omite nomes, ex.: `5` na SSA; vazio se não houver) e `retrieved` (data da coleta). Fonte sem licença compatível com o ADR 0001 não pode ser registrada. Quando houver mais de uma fonte para o mesmo par (`country`, `count_type`), exatamente uma delas tem `primary: true`.
 
 ### R3. Saídas agregadas
 
@@ -51,7 +51,7 @@ Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pel
 | `name_key`, `ascii`, `script` | Como em R1 |
 | `country_count` | Número de países distintos que atestam o nome |
 | `countries` | Lista de `{country, count, count_type, rank}`, uma por país, calculada como em R3.3. JSON no CSV, lista de structs no Parquet |
-| `female_share` | F ÷ (F + M), somando só observações com `count` e `gender` informados. Vazio sem base |
+| `female_share` | F ÷ (F + M), somando, em todos os países, só as observações escolhidas em R3.3 que têm `count` e `gender`. Vazio sem base. É uma estimativa ponderada que combina países com tipos de contagem diferentes, por isso nunca é usada como contagem |
 | `gender_basis` | F + M usados no cálculo de `female_share` |
 | `group_id` | Grupo de variantes, preenchido pela spec 005. Vazio até lá |
 | `sources` | Lista ordenada de `source_id` que atestam o nome |
@@ -61,8 +61,9 @@ Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pel
 - `births`: soma de todos os anos disponíveis; `first_year` e `last_year` delimitam a série.
 - `population`: usa a edição mais recente; `first_year` = `last_year` = ano da edição.
 - Mais de uma fonte com o mesmo `count_type` no país: usa só a fonte `primary: true`. As demais apenas atestam (entram em `sources`), sem somar contagem.
+- O mesmo nome com contagens de tipos diferentes no país: vale `population`; sem ela, `births`. `attested` só quando não há contagem.
 - País só com `attested`: `count` e `rank` vazios.
-- `rank` é denso, por `kind`, em ordem decrescente de `count`.
+- `rank` é denso, por `kind` e `count_type`, em ordem decrescente de `count`.
 
 ### R4. Layout do repositório
 
@@ -82,7 +83,7 @@ legacy/                   listas atuais, congeladas
 docs/specs/, docs/adr/
 ```
 
-`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é definido na spec 002.
+`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é provisório (`namesio`) e acompanha a futura renomeação do repositório.
 
 ### R5. Versionamento
 
@@ -100,7 +101,7 @@ docs/specs/, docs/adr/
 2. `sources.yaml` é validado contra os campos de R2, e o build falha com licença fora da lista do ADR 0001.
 3. Com uma tabela de observações de teste, cobrindo duas fontes `births` no mesmo país (uma `primary`), uma fonte `population`, uma fonte `attested`, nomes em escrita latina, cirílica e chinesa, e um nome com espaço, as saídas de R3 batem com valores esperados escritos à mão.
 4. `female_share` fica vazio quando nenhuma observação do nome tem contagem e gênero.
-5. Nenhuma saída soma contagens de `count_type` diferentes.
+5. Nenhum `count` ou `rank` soma contagens de `count_type` diferentes.
 6. Os arquivos legados estão em `legacy/` com conteúdo idêntico ao do commit anterior.
 
 ## Fora de escopo
