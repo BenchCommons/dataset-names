@@ -7,10 +7,8 @@ __pycache__/
 output/
 *.tsv
 *.tar.gz
-*out*
 credentials.json
 
-*.json
 
 nohup.out
 *.out
@@ -111,3 +109,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+.venv/
