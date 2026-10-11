@@ -30,7 +30,7 @@ def normalize_name(raw: str) -> str:
     tem_caixa = any(c.isupper() or c.islower() for c in nome)
     if tem_caixa and nome in (nome.upper(), nome.lower()):
         partes = _SEPARADORES.split(nome.lower())
-        nome = "".join(p[:1].upper() + p[1:] for p in partes)
+        nome = "".join(p[:1].title() + p[1:] for p in partes)
     return unicodedata.normalize("NFC", nome)
 
 

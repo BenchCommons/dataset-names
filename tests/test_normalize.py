@@ -59,3 +59,7 @@ def test_forma_ascii_latina():
 def test_forma_ascii_vazia_fora_da_escrita_latina():
     assert ascii_form("Мария", "Cyrl") == ""
     assert ascii_form("李", "Hani") == ""
+
+
+def test_georgiano_nao_recebe_capital_errada():
+    assert normalize_name("ნინო") == "ნინო"
