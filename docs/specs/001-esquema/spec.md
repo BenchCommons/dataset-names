@@ -59,7 +59,7 @@ Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pel
 **R3.3 `by_country/<CC>.csv`.** Uma linha por (`name_key`, `kind`) do país, com `name`, `ascii`, `script`, `count`, `count_type`, `rank`, `female_share`, `gender_basis`, `first_year`, `last_year`. Agregação:
 
 - `births`: soma de todos os anos disponíveis; `first_year` e `last_year` delimitam a série.
-- `population`: usa a edição mais recente; `first_year` = `last_year` = ano da edição.
+- `population`: usa a edição mais recente da fonte no país (o maior `year` entre as observações da fonte); nomes ausentes dessa edição não usam edições antigas; `first_year` = `last_year` = ano da edição.
 - Mais de uma fonte com o mesmo `count_type` no país: usa só a fonte `primary: true`. As demais apenas atestam (entram em `sources`), sem somar contagem.
 - O mesmo nome com contagens de tipos diferentes no país: vale `population`; sem ela, `births`. `attested` só quando não há contagem.
 - País só com `attested`: `count` e `rank` vazios.

@@ -156,3 +156,15 @@ def test_fontes_ambiguas_sem_primary():
     fontes_sem_primary["a"] = replace(fontes["a"], primary=False)
     with pytest.raises(AggregationError, match="primary"):
         by_country(obs, fontes_sem_primary)
+
+
+def test_population_nome_so_em_edicao_antiga_nao_e_contado(observacoes, fontes):
+    antigo = make_observation("JOAO", kind="given", source_id="br-ibge-censo", gender="M",
+                              year=2010, count=9000, country="BR", count_type="population")
+    br = by_country(observacoes + [antigo], fontes)["BR"]
+    joao = _linha(br, "given", "joao")
+    assert (joao.count, joao.count_type, joao.rank, joao.first_year, joao.last_year) == (
+        None, "attested", None, None, None,
+    )
+    maria = _linha(br, "given", "maria")
+    assert (maria.count, maria.rank) == (12000, 1)

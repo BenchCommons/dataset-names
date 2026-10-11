@@ -83,7 +83,19 @@ def _fontes_oficiais(observations: list[Observation], sources: dict[str, Source]
     return oficiais
 
 
-def _contagem(obs: list[Observation], oficiais: dict[tuple, str]):
+def _edicoes(observations: list[Observation], oficiais: dict[tuple, str]) -> dict[str, int]:
+    """país -> edição mais recente (maior year) da fonte population oficial (R3.3)."""
+    edicoes: dict[str, int] = {}
+    for o in observations:
+        if (
+            o.count_type == "population" and o.year is not None and o.country is not None
+            and o.source_id == oficiais.get((o.country, "population"))
+        ):
+            edicoes[o.country] = max(edicoes.get(o.country, o.year), o.year)
+    return edicoes
+
+
+def _contagem(obs: list[Observation], oficiais: dict[tuple, str], edicoes: dict[str, int]):
     """-> (count_type, observações contadas, first_year, last_year) para um nome num país."""
     pais = obs[0].country
     for tipo in PRECEDENCIA:
@@ -91,11 +103,13 @@ def _contagem(obs: list[Observation], oficiais: dict[tuple, str]):
         contadas = [o for o in obs if o.count_type == tipo and o.source_id == fonte]
         if not contadas:
             continue
-        anos = [o.year for o in contadas if o.year is not None]
-        if tipo == "population" and anos:
-            ultimo = max(anos)
+        if tipo == "population" and pais in edicoes:
+            ultimo = edicoes[pais]
             contadas = [o for o in contadas if o.year == ultimo]
+            if not contadas:
+                continue
             return tipo, contadas, ultimo, ultimo
+        anos = [o.year for o in contadas if o.year is not None]
         return tipo, contadas, (min(anos) if anos else None), (max(anos) if anos else None)
     return "attested", [], None, None
 
@@ -119,13 +133,14 @@ def _ranquear(linhas: list[CountryRow]) -> list[CountryRow]:
 
 def by_country(observations: list[Observation], sources: dict[str, Source]) -> dict[str, list[CountryRow]]:
     oficiais = _fontes_oficiais(observations, sources)
+    edicoes = _edicoes(observations, oficiais)
     grupos: dict[tuple, list[Observation]] = defaultdict(list)
     for o in observations:
         if o.country is not None:
             grupos[(o.country, o.kind, o.name_key)].append(o)
     linhas: dict[str, list[CountryRow]] = defaultdict(list)
     for (pais, kind, chave), obs in grupos.items():
-        tipo, contadas, primeiro, ultimo = _contagem(obs, oficiais)
+        tipo, contadas, primeiro, ultimo = _contagem(obs, oficiais, edicoes)
         f = sum(o.count for o in contadas if o.gender == "F")
         m = sum(o.count for o in contadas if o.gender == "M")
         nome = display_name(obs)
