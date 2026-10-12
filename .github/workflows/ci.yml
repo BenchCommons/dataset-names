@@ -23,3 +23,10 @@ jobs:
           uv run namesio run --offline --sources tests/fixtures/sources.yaml --adapters adaptadores \
             --cache "$RUNNER_TEMP/cache" --out "$RUNNER_TEMP/dist" --release 2026.10
           test -s "$RUNNER_TEMP/dist/by_country/PT.csv"
+      - name: namesio run --offline sobre as amostras das fontes oficiais
+        run: |
+          mkdir -p "$RUNNER_TEMP/cache-oficiais"
+          cp -R tests/fixtures/. "$RUNNER_TEMP/cache-oficiais/"
+          uv run namesio run --offline --cache "$RUNNER_TEMP/cache-oficiais" \
+            --out "$RUNNER_TEMP/dist-oficiais" --release 2026.10
+          for pais in FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done

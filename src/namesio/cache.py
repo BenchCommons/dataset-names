@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import time
+import urllib.error
 import urllib.request
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -98,4 +99,10 @@ def fetch_resource(
             ultimo = e
             if i + 1 < tentativas:
                 dormir(espera * 2**i)
-    raise FetchError(f"falha ao baixar {resource.url} após {tentativas} tentativa(s): {ultimo}")
+    mensagem = f"falha ao baixar {resource.url} após {tentativas} tentativa(s): {ultimo}"
+    if isinstance(ultimo, urllib.error.HTTPError) and ultimo.code == 403:
+        mensagem += (
+            f"; o servidor recusou o download automático: baixe o arquivo pelo navegador, "
+            f"grave-o em {destino} e rode com --offline"
+        )
+    raise FetchError(mensagem)

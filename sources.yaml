@@ -1,1 +1,53 @@
-sources: []
+# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1.
+sources:
+  - id: us-ssa-births
+    name: Social Security Administration, Popular Baby Names (national data)
+    url: https://www.ssa.gov/oact/babynames/limits.html
+    license: public-domain
+    attribution: "Social Security Administration (EUA), Baby Names from Social Security Card Applications, National Data"
+    country: US
+    count_type: births
+    primary: true
+    suppression: 5
+    retrieved: 2026-10-12
+  - id: fr-insee-births
+    name: INSEE, Fichier des prénoms (France, nível nacional)
+    url: https://www.insee.fr/fr/statistiques/8595130
+    license: etalab-2.0
+    attribution: "Source : Insee, Fichier des prénoms, édition 2025"
+    country: FR
+    count_type: births
+    primary: true
+    suppression: 3
+    retrieved: 2026-10-12
+    uniform_case: true
+  - id: ie-cso-births
+    name: Central Statistics Office, Irish Babies' Names (VSA50 e VSA60)
+    url: https://data.gov.ie/dataset/vsa50-boys-names-in-ireland-with-3-or-more-occurrences
+    license: CC-BY-4.0
+    attribution: "Central Statistics Office (Irlanda), tabelas VSA50 e VSA60, CC BY 4.0"
+    country: IE
+    count_type: births
+    primary: true
+    suppression: 3
+    retrieved: 2026-10-12
+  - id: no-ssb-fornavn
+    name: Statistics Norway, nascidos por primeiro nome (tabela 10467)
+    url: https://www.ssb.no/en/statbank/table/10467
+    license: CC-BY-4.0
+    attribution: "Statistics Norway (SSB), tabela 10467, CC BY 4.0"
+    country: "NO"
+    count_type: births
+    primary: true
+    suppression: 4
+    retrieved: 2026-10-12
+  - id: no-ssb-etternavn
+    name: Statistics Norway, sobrenomes usados por 200 pessoas ou mais (tabela 12891)
+    url: https://www.ssb.no/en/statbank/table/12891
+    license: CC-BY-4.0
+    attribution: "Statistics Norway (SSB), tabela 12891, CC BY 4.0"
+    country: "NO"
+    count_type: population
+    primary: true
+    suppression: 200
+    retrieved: 2026-10-12
