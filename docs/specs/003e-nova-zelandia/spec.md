@@ -1,8 +1,8 @@
 # 003e. Nova Zelândia: nomes de bebês do Department of Internal Affairs
 
-Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Nomes corrompidos na fonte: [ADR 0006](../../adr/0006-nomes-corrompidos-na-fonte.md). Pendências herdadas: issue #10.
+Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Nomes corrompidos na fonte: [ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md). Pendências herdadas: issue #10.
 
-Status: Em implementação.
+Status: Em PR (#28).
 
 ## Por quê
 
@@ -45,27 +45,27 @@ Particularidades que o adaptador trata:
 
 ### R2. Codificação do arquivo
 
-Bytes acima de 0x7F medidos no arquivo real (71 linhas, todas na coluna `Name`):
+Bytes acima de 0x7F medidos no arquivo real (71 linhas, todas na coluna `Name`), com a leitura de cada página de código candidata (CP437, CP850, Windows-1252, Latin-1 e Mac Roman). Toda página lê algum desses bytes como letra; o que decide a tradução é a posição do byte nos nomes do arquivo real: a letra só é aceita quando toda ocorrência do byte forma um nome atestado.
 
-| Byte | Linhas | Exemplos | Leitura |
-|---|---|---|---|
-| `0x82` | 38 | `Am_lie`, `Andr_`, `Esm_` (2009 a 2023), `Ren_e` | `é` em CP437 e CP850; em Windows-1252 é a aspa `‚`, que não ocorre em nome |
-| `0xE9` | 25 | `Zo_`, `Esm_` (2024 e 2025) | `é` em Latin-1 e Windows-1252 |
-| `0xF6` | 1 | `Bj_rn` | `ö` em Latin-1 e Windows-1252; em CP437 é `÷` |
-| `0x8D` | 4 | `N_kau` | Sem leitura: indefinido em Windows-1252, `ì` em CP437; o nome é Nīkau |
-| `0x8F` | 3 | `K_whai` | Sem leitura: indefinido em Windows-1252, `Å` em CP437; o nome é Kāwhai |
+| Byte | Linhas | Exemplos | Leituras candidatas | Decisão |
+|---|---|---|---|---|
+| `0x82` | 38 | `Am_lie`, `Andr_`, `Esm_` (2009 a 2023), `Ren_e` | `é` em CP437 e CP850; `‚` (aspa) em Windows-1252; `Ç` em Mac Roman; controle em Latin-1 | `é`: só essa leitura forma Amélie, André, Danté, Esmé, Renée e Reneé em todas as ocorrências |
+| `0xE9` | 25 | `Zo_`, `Esm_` (2024 e 2025) | `é` em Latin-1 e Windows-1252; `Ú` em CP850; `Θ` em CP437; `È` em Mac Roman | `é`: só essa leitura forma Zoé e Esmé; `ZoÚ`, `ZoΘ` e `ZoÈ` não são nomes atestados |
+| `0xF6` | 1 | `Bj_rn` | `ö` em Latin-1 e Windows-1252; `÷` em CP437 e CP850; `ˆ` em Mac Roman | `ö`: forma Björn; as outras leituras não são letras |
+| `0x8D` | 4 | `N_kau` | `ì` em CP437 e CP850; `ç` em Mac Roman; indefinido em Windows-1252; controle em Latin-1 | Sem tradução: o nome é Nīkau, e nenhuma leitura dá `ī` (`Nìkau` e `Nçkau` não são atestados) |
+| `0x8F` | 3 | `K_whai` | `Å` em CP437 e CP850; `è` em Mac Roman; indefinido em Windows-1252; controle em Latin-1 | Sem tradução: o nome é Kāwhai, e nenhuma leitura dá `ā` (`KÅwhai` e `Kèwhai` não são atestados) |
 
 Nenhuma codificação única lê o arquivo: `Esmé` aparece com `0x82` até 2023 e com `0xE9` em 2024 e 2025, e o arquivo não é UTF-8 válido (byte `0x82` na posição 54.334).
 
 - **R2.1** Se o arquivo inteiro for UTF-8 válido, o adaptador o lê como UTF-8 (uma edição corrigida da fonte passa a valer sem mudança de código).
 - **R2.2** Senão, o adaptador lê os bytes até 0x7F como ASCII e traduz os bytes acima de 0x7F por uma tabela fechada: `0x82` e `0xE9` viram `é`, `0xF6` vira `ö`. Qualquer outro byte acima de 0x7F vira U+FFFD, o que torna o nome corrompido (R3).
-- **R2.3** A tabela só ganha um byte novo com evidência do arquivo real registrada nesta spec (página de código e nomes em que ocorre), conforme o ADR 0006.
+- **R2.3** A tabela só ganha um byte novo com evidência do arquivo real registrada nesta spec (leituras candidatas e nomes atestados em todas as ocorrências), conforme o ADR 0007.
 
 ### R3. Nomes corrompidos na fonte
 
-- **R3.1** Nome que, depois de R2, contém `?` ou U+FFFD é descartado: nenhum registro é emitido para a linha ([ADR 0006](../../adr/0006-nomes-corrompidos-na-fonte.md)).
+- **R3.1** Nome que, depois de R2, contém `?` ou U+FFFD é descartado: nenhum registro é emitido para a linha ([ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md)).
 - **R3.2** Ao terminar o arquivo, se houve descarte, o adaptador registra um aviso no logger `namescommons.adapters.nz_dia_births` com o número de linhas descartadas, a soma das contagens delas e as formas distintas, por exemplo `nz-dia-births: 13 linha(s) com nome corrompido na fonte descartada(s), 164 registro(s): '?io', ...`. O aviso aparece no `stderr` da CLI sem configuração de logging.
-- **R3.3** Medido no arquivo real: 64 linhas recuperadas por R2.2 (`Amélie`, `André`, `Björn`, `Danté`, `Esmé`, `Reneé`, `Renée`, `Zoé`) e 13 linhas descartadas, com 164 registros: `?io` (2), `?ria`, `M?hina`, `M?ia`, `N?kau`, `K�whai` (3) e `N�kau` (4), em que `�` é U+FFFD. Restam 74.006 linhas e 2.856 nomes distintos. O `ingest` produz 73.991 observações e 2.854 nomes: 15 pares de linhas do mesmo ano e sexo diferem só na caixa (`Jo-Anne` e `Jo-anne`, `MacKenzie` e `Mackenzie`, `McKenzie` e `Mckenzie`) e são somados pela chave da spec 002 (R1.4), com 4.516.342 registros no total.
+- **R3.3** Medido no arquivo real: 64 linhas recuperadas por R2.2 (`Amélie`, `André`, `Björn`, `Danté`, `Esmé`, `Reneé`, `Renée`, `Zoé`) e 13 linhas descartadas, com 164 registros: `?io` (2), `?ria`, `M?hina`, `M?ia`, `N?kau`, `K�whai` (3) e `N�kau` (4), em que `�` é U+FFFD. Restam 74.006 linhas e 2.856 nomes distintos. O `ingest` produz 73.991 observações e 2.854 nomes: 15 pares de linhas do mesmo ano e sexo diferem só na caixa (`Jo-Anne` e `Jo-anne`, `MacKenzie` e `Mackenzie`, `McKenzie` e `Mckenzie`) e são somados pela chave da spec 002 (R1.4), com 4.516.342 registros no total; a forma exibida de cada par é a de maior contagem (spec 002, R1.4, como ajustada no PR #21).
 
 ### R4. Download bloqueado com status 200
 

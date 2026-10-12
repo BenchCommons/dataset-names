@@ -6,7 +6,7 @@
 
 **Stack:** a mesma da spec 003, sem dependência nova.
 
-**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0002`](../../adr/0002-valores-suprimidos.md), [`0006`](../../adr/0006-nomes-corrompidos-na-fonte.md). Pendências herdadas: issue #10.
+**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0002`](../../adr/0002-valores-suprimidos.md), [`0007`](../../adr/0007-nomes-corrompidos-na-fonte.md). Pendências herdadas: issue #10.
 
 ## Restrições globais
 
@@ -22,7 +22,7 @@
 | Decisão | Motivo |
 |---|---|
 | Tabela fechada `{0x82: é, 0xE9: é, 0xF6: ö}` em vez de uma página de código | O arquivo mistura CP437/CP850 e Latin-1; qualquer página única corrompe parte dos nomes (`Zoé` em CP437 vira `ZoΘ`, `Amélie` em Windows-1252 vira `Am‚lie`) |
-| `0x8D` e `0x8F` sem tradução, mesmo sabendo que os nomes são Nīkau e Kāwhai | Nenhuma página de código lê esses bytes como `ī` e `ā`; a tradução seria um palpite apoiado só no nome, e o ADR 0006 só aceita leitura inequívoca |
+| `0x8D` e `0x8F` sem tradução, mesmo sabendo que os nomes são Nīkau e Kāwhai | As páginas de código leem esses bytes como outras letras (`ì`, `Å`, `ç`, `è`), nunca `ī` e `ā`; a tradução seria um palpite apoiado só no nome, e o ADR 0007 só aceita a leitura que forma o nome atestado |
 | UTF-8 primeiro, para o arquivo inteiro | Uma edição corrigida pela fonte é lida sem mudança de código; um arquivo legado com bytes acentuados quase nunca forma UTF-8 válido por acaso |
 | Decodificação por linha só depois de decidir a codificação do arquivo | A decisão por linha deixaria um arquivo meio UTF-8 e meio legado passar sem aviso |
 | Aviso pelo `logging` (logger do módulo), e não um canal novo no contrato | O contrato de `parse` só produz registros; o `logging` aparece no `stderr` da CLI sem configuração (`lastResort`) e é testável com `caplog` |
@@ -54,7 +54,7 @@
 |---|---|
 | R1, R1.1 a R1.5 | 2 |
 | R2.1, R2.2 | 2 |
-| R2.3 | Sem código: regra para edições futuras, no ADR 0006 e na docstring |
+| R2.3 | Sem código: regra para edições futuras, no ADR 0007 e na docstring |
 | R3.1, R3.2 | 2 |
 | R3.3 | Fechamento (medição com o arquivo real) |
 | R4.1 | 1 |

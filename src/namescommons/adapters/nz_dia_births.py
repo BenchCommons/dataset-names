@@ -3,7 +3,7 @@
 O CSV traz Year,Sex,Name,Count, com o ano do registro do nascimento. A fonte omite nomes com
 menos de 10 registros no ano; não há marcador de supressão no arquivo.
 
-Codificação (spec 003e, R2, e ADR 0006): se o arquivo inteiro for UTF-8 válido, é lido como UTF-8.
+Codificação (spec 003e, R2, e ADR 0007): se o arquivo inteiro for UTF-8 válido, é lido como UTF-8.
 Senão, os bytes acima de 0x7F passam pela tabela _LEGADO, medida no arquivo real de 2026-10-12;
 qualquer outro byte vira U+FFFD. Nome com '?' ou U+FFFD é descartado, e os descartes são avisados
 no logger deste módulo ao fim do arquivo. Um byte só entra em _LEGADO com evidência registrada na spec.
@@ -34,10 +34,11 @@ RESOURCES = [
 
 _CABECALHO = ["Year", "Sex", "Name", "Count"]
 _SEXO = {"F": "F", "M": "M"}
-# Byte -> letra, só quando a leitura é inequívoca (spec 003e, R2.2):
-# 0x82 é 'é' em CP437/CP850 (em Windows-1252 é a aspa '‚'); 0xE9 e 0xF6 são 'é' e 'ö' em Latin-1.
+# Byte -> letra, só quando todas as ocorrências do byte no arquivo real formam um nome atestado
+# (spec 003e, R2.2, e ADR 0007): 0x82 é 'é' em CP437/CP850 (Amélie, André, Esmé); 0xE9 e 0xF6 são
+# 'é' e 'ö' em Latin-1 (Zoé, Esmé, Björn). Os demais bytes de 0x80 a 0xFF viram U+FFFD.
 _LEGADO = {0x82: "é", 0xE9: "é", 0xF6: "ö"}
-_TABELA = {b: chr(b) for b in range(0x80)} | {b: _LEGADO.get(b, "\ufffd") for b in range(0x80, 0x100)}
+_TABELA = {b: _LEGADO.get(b, "\ufffd") for b in range(0x80, 0x100)}  # para str.translate sobre Latin-1
 _CORROMPIDO = ("?", "\ufffd")
 
 _log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def _decodificar(dados: bytes) -> str:
     try:
         return dados.decode("utf-8")
     except UnicodeDecodeError:
-        return "".join(_TABELA[b] for b in dados)
+        return dados.decode("latin-1").translate(_TABELA)
 
 
 def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
