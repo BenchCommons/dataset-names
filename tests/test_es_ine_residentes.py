@@ -73,10 +73,32 @@ def _xlsx_alterado(tmp_path: Path, trocas: dict[str, str], membro="xl/sharedStri
     return {NOMES: destino, APELLIDOS: AMOSTRA / APELLIDOS}
 
 
-def test_r2_3_ano_da_edicao(mod, tmp_path):
+def test_r2_3_ano_da_edicao_vem_do_conteudo(mod, tmp_path, monkeypatch):
     arquivos = _xlsx_alterado(tmp_path, {"a fecha 01/01/2025": "a fecha 01/01/2026"})
-    anos = {(r.kind, r.year) for r in mod.parse(arquivos)}
-    assert anos == {("given", 2026), ("family", 2025)}
+    nova = ["Datos procedentes de Censos de población anuales a fecha 01/01/2026"]
+    _linhas_xls(mod, monkeypatch, lambda aba, n, v: nova if n == 3 else v)
+    assert {r.year for r in mod.parse(arquivos)} == {2026}
+
+
+def test_r2_3_arquivos_de_edicoes_diferentes_falham(mod, tmp_path):
+    """O INE atualizou um arquivo e não o outro: ficar só com a edição mais recente apagaria o outro kind."""
+    arquivos = _xlsx_alterado(tmp_path, {"a fecha 01/01/2025": "a fecha 01/01/2026"})
+    with pytest.raises(FormatError, match=r"edições diferentes entre as abas: .*Hombres.*2026.*Apellidos >=100.*2025"):
+        next(mod.parse(arquivos))
+
+
+def test_r2_3_abas_de_nomes_de_edicoes_diferentes_falham(mod, monkeypatch):
+    original = mod.rows
+
+    def rows(caminho, aba):
+        for numero, valores in original(caminho, aba):
+            if aba == "Mujeres" and numero == 2:
+                valores = ["Datos procedentes de Censos de población anuales a fecha 01/01/2024"]
+            yield numero, valores
+
+    monkeypatch.setattr(mod, "rows", rows)
+    with pytest.raises(FormatError, match=r"edições diferentes entre as abas: .*'Hombres': 2025.*'Mujeres': 2024"):
+        next(mod.parse(ARQUIVOS))
 
 
 def test_r2_3_sem_a_frase_da_data_falha(mod, tmp_path):

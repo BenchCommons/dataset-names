@@ -68,13 +68,38 @@ def _tabela(caminho: Path, aba: str, cabecalho: list[str], campo: str,
         raise FormatError(f"{onde}: nenhuma linha de dados depois do cabeçalho")
 
 
+def _edicao(caminho: Path, aba: str) -> int | None:
+    """Ano da frase 'a fecha DD/MM/AAAA' antes do primeiro dado da aba (None se ausente)."""
+    for _, valores in rows(caminho, aba):
+        if type(valores[0]) is int:
+            break
+        for valor in valores:
+            m = _DATA.search(valor) if isinstance(valor, str) else None
+            if m:
+                return int(m.group(1))
+    return None
+
+
+def _confere_edicao(abas: list[tuple[Path, str]]) -> None:
+    """Spec 003b, R2.3: as abas dos dois arquivos precisam ser da mesma edição.
+
+    Com edições diferentes, a regra de population (spec 001, R3.3) ficaria só com a mais recente
+    e apagaria as contagens do outro arquivo sem aviso.
+    """
+    anos = {(caminho.name, aba): _edicao(caminho, aba) for caminho, aba in abas}
+    if len({a for a in anos.values() if a is not None}) > 1:
+        lista = ", ".join(f"{arq}, aba {aba!r}: {ano}" for (arq, aba), ano in anos.items())
+        raise FormatError(f"edições diferentes entre as abas: {lista}; o INE atualizou um arquivo e não o outro?")
+
+
 def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
-    nomes = Path(files[NOMES])
-    for aba in sheet_names(nomes):
+    nomes, apellidos = Path(files[NOMES]), Path(files[APELLIDOS])
+    abas_nomes, abas_apellidos = sheet_names(nomes), sheet_names(apellidos)
+    _confere_edicao([(nomes, a) for a in abas_nomes] + [(apellidos, a) for a in abas_apellidos])
+    for aba in abas_nomes:
         sexo = parse_code(aba, _SEXO, "aba de nomes")
         for ano, nome, n in _tabela(nomes, aba, _CABECALHO_NOMES, "Frecuencia"):
             yield RawRecord(name=nome, kind="given", country="ES", gender=sexo, year=ano, count=n)
-    apellidos = Path(files[APELLIDOS])
-    for aba in sheet_names(apellidos):
+    for aba in abas_apellidos:
         for ano, nome, n in _tabela(apellidos, aba, _CABECALHO_APELLIDOS, "Apellido 1º", acima="Apellido 1º"):
             yield RawRecord(name=nome, kind="family", country="ES", year=ano, count=n)
