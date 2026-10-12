@@ -312,17 +312,16 @@ def test_linhas_lidas_saem_da_arvore(tmp_path):
     dados = "".join(f'<row r="{i}"><c r="A{i}"><v>{i}</v></c></row>' for i in range(1, 2001))
     arq = _xlsx(tmp_path / "a.xlsx", [("X", dados)])
     vistos = []
-    original = planilha.ET.iterparse
+    original = planilha._eventos
 
     def espia(*args, **kwargs):
-        it = original(*args, **kwargs)
-        for evento, el in it:
+        for evento, el in original(*args, **kwargs):
             yield evento, el
             if evento == "end" and el.tag.endswith("sheetData"):
                 vistos.append(len(el))
 
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(planilha.ET, "iterparse", espia)
+    monkeypatch.setattr(planilha, "_eventos", espia)
     try:
         assert sum(1 for _ in rows(arq, "X")) == 2000
     finally:
@@ -438,3 +437,94 @@ def test_r1_4_dtd_depois_de_bom_utf8_e_recusado(tmp_path, membro, operacao, prol
     arq = _regravar(base, tmp_path / "a.xlsx", membro, f'﻿<?xml version="1.0"?>{prolog}{raiz}')
     with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
         operacao(arq)
+
+
+# DTD em codificações que fogem da pré-checagem em UTF-8 (parser differential) ----------------------
+
+_MEMBROS = [
+    ("xl/workbook.xml", lambda a: sheet_names(a)),
+    ("xl/_rels/workbook.xml.rels", lambda a: sheet_names(a)),
+    ("xl/sharedStrings.xml", lambda a: list(rows(a, "X"))),
+    ("xl/worksheets/sheet1.xml", lambda a: list(rows(a, "X"))),
+]
+_RAIZ = {"xl/workbook.xml": f"<workbook {NS} {NS_R}/>", "xl/_rels/workbook.xml.rels": "<Relationships/>",
+         "xl/sharedStrings.xml": f"<sst {NS}/>", "xl/worksheets/sheet1.xml": f"<worksheet {NS}/>"}
+_DTD = '<!DOCTYPE x [<!ENTITY a "b">]>'
+
+
+def _regravar_bytes(origem: Path, destino: Path, membro: str, dados: bytes) -> Path:
+    with zipfile.ZipFile(origem) as zin, zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            zout.writestr(info.filename, dados if info.filename == membro else zin.read(info.filename))
+    return destino
+
+
+@pytest.mark.parametrize("membro, operacao", _MEMBROS)
+@pytest.mark.parametrize("declarada, codec", [
+    ("cp037", "cp037"),
+    ("utf-32", "utf-32"),
+    ("UTF-32LE", "utf-32-le"),
+    ("UTF-32BE", "utf-32-be"),
+    ("latin-1", "latin-1"),
+    ("iso-8859-1", "ascii"),
+    ("windows-1252", "cp1252"),
+    ("us-ascii", "ascii"),
+])
+def test_r1_4_dtd_em_codificacao_nao_utf_e_recusado(tmp_path, membro, operacao, declarada, codec):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    texto = f'<?xml version="1.0" encoding="{declarada}"?>{_DTD}{_RAIZ[membro]}'
+    arq = _regravar_bytes(base, tmp_path / "a.xlsx", membro, texto.encode(codec))
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} "):
+        operacao(arq)
+
+
+@pytest.mark.parametrize("membro, operacao", _MEMBROS)
+@pytest.mark.parametrize("dados", [
+    '<?xml version="1.0"?>{dtd}{raiz}'.encode("cp037"),  # sem declaração: EBCDIC não é UTF-8
+    '<?xml version="1.0"?>{dtd}{raiz}'.encode("utf-32-le"),
+    '<?xml version="1.0"?>{dtd}{raiz}'.encode("utf-32-be"),
+    b"\xff\xfe\x00\x00<\x00\x00\x00",
+    b"\x00\x00\xfe\xff\x00\x00\x00<",
+    b'<?xml version="1.0"?>\xe9{dtd}{raiz}',  # UTF-8 inválido
+], ids=["ebcdic", "utf32le", "utf32be", "bom-utf32le", "bom-utf32be", "utf8-invalido"])
+def test_r1_4_prefixo_que_nao_e_utf8_nem_utf16_e_recusado(tmp_path, membro, operacao, dados):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    arq = _regravar_bytes(base, tmp_path / "a.xlsx", membro, dados)
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} "):
+        operacao(arq)
+
+
+@pytest.mark.parametrize("membro, operacao", _MEMBROS)
+@pytest.mark.parametrize("codec, declarada", [
+    ("utf-8", "UTF-8"), ("utf-8", "utf8"), ("utf-8", None), ("utf-16", "UTF-16"), ("utf-16", "utf16"),
+])
+def test_r1_4_dtd_em_utf8_e_utf16_com_declaracao_valida_continua_recusado(tmp_path, membro, operacao, codec, declarada):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    enc = f' encoding="{declarada}"' if declarada else ""
+    texto = f'<?xml version="1.0"{enc}?>{_DTD}{_RAIZ[membro]}'
+    arq = _regravar_bytes(base, tmp_path / "a.xlsx", membro, texto.encode(codec))
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
+        operacao(arq)
+
+
+@pytest.mark.parametrize("codec, declarada", [
+    ("utf-8", "UTF-8"), ("utf-8", "utf-8"), ("utf-16", "UTF-16"), ("utf-16-le", None)])
+def test_r1_4_xlsx_normal_em_utf8_ou_utf16_e_lido(tmp_path, codec, declarada):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", "")])
+    enc = f' encoding="{declarada}"' if declarada else ""
+    texto = (f'<?xml version="1.0"{enc}?><worksheet {NS}><sheetData><row r="1"><c r="A1" t="inlineStr">'
+             '<is><t>IÑIGO</t></is></c></row></sheetData></worksheet>')
+    arq = _regravar_bytes(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", texto.encode(codec))
+    assert list(rows(arq, "X")) == [(1, ["IÑIGO"])]
+
+
+@pytest.mark.parametrize("membro, operacao", _MEMBROS)
+def test_r1_4_o_parser_recusa_dtd_mesmo_sem_a_pre_checagem(tmp_path, monkeypatch, membro, operacao):
+    """Defesa em profundidade: com a pré-checagem desligada, os handlers do expat ainda recusam DTD."""
+    import namescommons.spreadsheet as planilha
+    monkeypatch.setattr(planilha, "_prologo", lambda dados, onde="": "raiz")
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    for dtd in (_DTD, BILLION_LAUGHS.split("<worksheet")[0].removeprefix('<?xml version="1.0"?>')):
+        arq = _regravar(base, tmp_path / "a.xlsx", membro, f'<?xml version="1.0"?>{dtd}{_RAIZ[membro]}')
+        with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
+            operacao(arq)
