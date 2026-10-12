@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/OpenSoftwareAlliance/names-commons-dataset/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenSoftwareAlliance/names-commons-dataset/actions/workflows/ci.yml)
 
-<img src='assets/logo.png' alt='Names Commons Dataset logo'/>
+<img src='assets/names-commons-logo.png' alt='Names Commons Dataset logo' width='200'/>
 
 An open, reproducible dataset of given names and family names from around the world. Each name comes with the country that attests it, how frequent it is, its gender (only when the source publishes it) and its writing script. It is built only from official statistics and Wikidata, and every source and licence is declared in [`sources.yaml`](sources.yaml).
 
