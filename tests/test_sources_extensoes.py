@@ -61,6 +61,7 @@ def test_retrieved_com_hora_no_yaml_e_recusado(tmp_path):
 
 @pytest.mark.parametrize("url", [
     "ftp://example.org/nomes", "example.org/nomes", "file:///tmp/nomes.csv", "https://", "mailto:a@b.c",
+    "http://[::1", " https://example.org/nomes", "https://example.org/nomes\n", "https://exam ple.org/",
 ])
 def test_url_sem_esquema_http_e_recusada(url):
     with pytest.raises(SourceError, match="http ou https"):
@@ -70,3 +71,8 @@ def test_url_sem_esquema_http_e_recusada(url):
 @pytest.mark.parametrize("url", ["http://example.org/a.csv", "HTTPS://example.org/"])
 def test_url_http_e_https_aceitas(url):
     assert parse_sources([fonte(url=url)])["pt-exemplo"].url == url
+
+
+def test_url_malformada_nomeia_a_fonte_em_vez_de_levantar_value_error():
+    with pytest.raises(SourceError, match="pt-exemplo: 'url' deve usar o esquema http ou https"):
+        parse_sources([fonte(url="http://[::1")])

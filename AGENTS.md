@@ -8,7 +8,7 @@ Dataset mundial de nomes: primeiros nomes e sobrenomes com país, frequência, g
 
 ## Stack
 
-Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`. Build com `hatchling`.
+Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`, `xlrd` (XLS, [ADR 0005](docs/adr/0005-leitor-de-planilhas.md)). Build com `hatchling`.
 
 ## Comandos
 
@@ -24,6 +24,17 @@ A CI também roda o pipeline offline sobre as amostras de `tests/fixtures/`:
 PYTHONPATH=tests uv run namescommons run --offline --sources tests/fixtures/sources.yaml \
   --adapters adaptadores --cache <cache> --out <saida> --release 2026.10
 ```
+
+## Passo anual do INSEE
+
+O INSEE publica cada edição do Fichier des prénoms numa página nova, sem listagem estável da mais recente (conferido em 2026-10: nem a página antiga nem o data.gouv.fr apontam para a nova edição). Quando sair uma edição nova (em geral no começo do ano):
+
+1. Abra a [página do Fichier des prénoms](https://www.insee.fr/fr/statistiques/8595130), siga o link da edição mais recente e anote o id da página e o ano.
+2. Em `src/namescommons/adapters/fr_insee_births.py`, troque `EDICAO` e `PAGINA`.
+3. Em `sources.yaml`, troque `url`, o ano em `attribution` e `retrieved` da fonte `fr-insee-births`.
+4. Baixe `prenoms-<ano>-nat_csv.zip`, gere a amostra (cabeçalho e cerca de 10 linhas, com `_PRENOMS_RARES` e `XXXX` se ainda existirem), renomeie com `git mv tests/fixtures/fr-insee-births/<antigo>.zip tests/fixtures/fr-insee-births/<novo>.zip` e atualize a linha em `tests/fixtures/ATRIBUICAO.md`.
+5. Confira o formato (colunas `sexe;prenom;periode;valeur;rang`, códigos de sexo) e ajuste `tests/test_fr_insee_births.py` e o `README.md` se algo mudou.
+6. Rode `uv run pytest -q`: `tests/test_insee_edicao.py` falha se algum dos lugares acima ficou para trás.
 
 ## Convenções
 
