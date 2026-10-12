@@ -1,14 +1,17 @@
 """Spec 002, R7: o workflow da CI roda uv sync, pytest e namescommons run --offline sobre as fixtures."""
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
+import pyarrow.parquet as pq
 import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
+FONTES_OFICIAIS = ("fr-insee-births", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
@@ -27,11 +30,42 @@ def test_roda_em_todo_push_e_pull_request():
     assert set(gatilhos) == {"push", "pull_request"}
 
 
+def test_push_so_na_branch_principal_para_nao_rodar_duas_vezes_em_pr_do_mesmo_repositorio():
+    dados = _workflow()
+    gatilhos = dados.get("on", dados.get(True))
+    assert gatilhos["push"] == {"branches": ["master"]}
+    assert gatilhos["pull_request"] in (None, {})
+
+
+def test_permissoes_minimas_e_cache_do_uv():
+    dados = _workflow()
+    assert dados["permissions"] == {"contents": "read"}
+    uv = next(p for p in dados["jobs"]["testes"]["steps"] if p.get("uses", "").startswith("astral-sh/setup-uv"))
+    assert uv["with"]["enable-cache"] is True
+
+
+def _indice(comandos, trecho):
+    return next(i for i, c in enumerate(comandos) if trecho in c)
+
+
 def test_passos_da_ci():
+    """Confere os passos pelo conteúdo e pela ordem, não pela posição na lista."""
     comandos = _comandos()
-    assert comandos[0] == "uv sync"
-    assert comandos[1] == "uv run pytest -q"
-    assert "namescommons run --offline" in comandos[2]
+    assert comandos[_indice(comandos, "uv sync")].strip() == "uv sync"
+    assert comandos[_indice(comandos, "uv run pytest")].strip() == "uv run pytest -q"
+    assert _indice(comandos, "uv sync") < _indice(comandos, "uv run pytest") < _indice(comandos, "namescommons run --offline")
+
+
+def test_release_da_ci_nao_e_fixa():
+    for comando in _comandos():
+        if "--release" in comando:
+            assert "--release 2026.10" not in comando
+            assert '--release "$(date -u +%Y.%m)"' in comando
+
+
+def test_cache_das_fontes_oficiais_copia_so_as_amostras_das_fontes():
+    passo = next(c for c in _comandos() if "cache-oficiais" in c)
+    assert "tests/fixtures/." not in passo
 
 
 def test_cache_fica_fora_do_git():
@@ -69,5 +103,8 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
-    assert "OK: 39 observações, 4 países" in r.stdout
+    resumo = re.search(r"OK: (\d+) observações, 4 países", r.stdout)
+    assert resumo, r.stdout
+    assert int(resumo.group(1)) == pq.ParquetFile(tmp_path / "dist-oficiais" / "observations.parquet").metadata.num_rows > 0
+    assert sorted(p.name for p in (tmp_path / "cache-oficiais").iterdir()) == sorted(FONTES_OFICIAIS)
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
