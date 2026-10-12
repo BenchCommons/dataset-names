@@ -5,6 +5,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 VERSAO = "0.1.0"
+COMMIT = "f3251d805f1f7839e59c5472d54833ea7bef840d"  # commit da tag v0.1.0 (ADR 0013)
 DISTRIBUICAO = "benchcommons-tools-dataset"
 
 
@@ -26,7 +27,15 @@ def test_uv_lock_aponta_a_tag():
     lock = tomllib.loads((RAIZ / "uv.lock").read_text(encoding="utf-8"))
     pacote = next(p for p in lock["package"] if p["name"] == DISTRIBUICAO)
     assert pacote["version"] == VERSAO
-    assert pacote["source"]["git"].startswith(f"https://github.com/BenchCommons/tools-dataset?tag=v{VERSAO}#")
+    assert pacote["source"]["git"] == f"https://github.com/BenchCommons/tools-dataset?tag=v{VERSAO}#{COMMIT}"
+
+
+def test_kit_instalado_do_commit_da_tag():
+    import json
+    from importlib.metadata import distribution
+    origem = json.loads(distribution(DISTRIBUICAO).read_text("direct_url.json"))
+    assert origem["url"] == "https://github.com/BenchCommons/tools-dataset"
+    assert origem["vcs_info"]["commit_id"] == COMMIT
 
 
 def test_kit_instalado_na_versao_fixada():
