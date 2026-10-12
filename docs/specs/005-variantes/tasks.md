@@ -41,9 +41,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/aggregate.py`, `tests/test_aggregate.py`.
 
-- [ ] Testes que falham: a forma com mais nascimentos somados num país e a com mais pessoas vivas em outro não somam contagens no índice (o critério é o número de países); por país, só as observações contadas pesam (fonte não `primary` e edição antiga não pesam); forma publicada vence a gerada por caixa uniforme, no país e no índice; sem fontes (`sources=None`), comportamento por contagens dentro do país continua.
-- [ ] `display_name` recebe as observações candidatas, os pesos contados e devolve a forma; `by_country` e `name_index` aplicam R4.1 a R4.3; `CountryRow.published_case` interno.
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: a forma com mais nascimentos somados num país e a com mais pessoas vivas em outro não somam contagens no índice (o critério é o número de países); por país, só as observações contadas pesam (fonte não `primary` e edição antiga não pesam); forma publicada vence a gerada por caixa uniforme, no país e no índice; sem fontes (`sources=None`), comportamento por contagens dentro do país continua.
+- [x] `display_name` recebe as observações candidatas, os pesos contados e devolve a forma; `by_country` e `name_index` aplicam R4.1 a R4.3; `CountryRow.published_case` interno.
+- [x] `uv run pytest -q` e commit.
 
 ### Task 6: agrupamento (R5)
 
