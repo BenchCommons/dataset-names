@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
-FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births", "wikidata")
+FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "nz-dia-births", "us-ssa-births", "wikidata")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
@@ -132,6 +132,24 @@ given,D'Arcy,d'arcy,d'arcy,Latn,13,births,6,0.000000,13,1991,1991
 """
 
 
+NZ_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+given,John,john,john,Latn,636,births,1,0.000000,636,1900,1900
+given,Mary,mary,mary,Latn,410,births,2,1.000000,410,1900,1900
+given,Esmé,esmé,esme,Latn,45,births,3,1.000000,45,2022,2025
+given,Nikau,nikau,nikau,Latn,36,births,4,0.000000,36,2025,2025
+given,Te Ariki,te ariki,te ariki,Latn,34,births,5,0.000000,34,2025,2025
+given,Te Ao,te ao,te ao,Latn,27,births,6,0.555556,27,2024,2024
+given,Zoé,zoé,zoe,Latn,26,births,7,1.000000,26,2007,2007
+given,Anne-Marie,anne-marie,anne-marie,Latn,24,births,8,1.000000,24,1967,1967
+given,Aroha,aroha,aroha,Latn,22,births,9,1.000000,22,2025,2025
+given,André,andré,andre,Latn,20,births,10,0.000000,20,2003,2003
+given,Aadhya,aadhya,aadhya,Latn,13,births,11,1.000000,13,2022,2022
+given,Zoya,zoya,zoya,Latn,11,births,12,1.000000,11,2015,2015
+given,Björn,björn,bjorn,Latn,10,births,13,0.000000,10,2025,2025
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     """Spec 003, R5, e spec 004, R7: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
@@ -140,7 +158,7 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
-    resumo = re.search(r"OK: (\d+) observações, 6 países", r.stdout)
+    resumo = re.search(r"OK: (\d+) observações, 7 países", r.stdout)
     assert resumo, r.stdout
     assert int(resumo.group(1)) == pq.ParquetFile(tmp_path / "dist-oficiais" / "observations.parquet").metadata.num_rows > 0
     assert sorted(p.name for p in (tmp_path / "cache-oficiais").iterdir()) == sorted(FONTES_OFICIAIS)
@@ -148,6 +166,9 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert (tmp_path / "dist-oficiais" / "by_country" / "CA.csv").read_text(encoding="utf-8") == CA_CSV
     # Spec 003b, R4: Espanha com nomes e sobrenomes population de 2025; ANDREA dos dois sexos
     assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
+    # Spec 003e, R6: a Nova Zelândia entra no passo, sem os nomes corrompidos na fonte.
+    assert (tmp_path / "dist-oficiais" / "by_country" / "NZ.csv").read_text(encoding="utf-8") == NZ_CSV
+    assert "nz-dia-births: 3 linha(s) com nome corrompido" in r.stderr
     # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
     assert "variant_links.parquet" in passo["run"]
     assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
@@ -156,4 +177,4 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():
     """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA e ES."""
     passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
-    assert "for pais in CA ES FR IE NO US;" in passo["run"]
+    assert "for pais in CA ES FR IE NO NZ US;" in passo["run"]

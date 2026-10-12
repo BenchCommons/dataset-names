@@ -35,5 +35,5 @@ jobs:
           find tests/fixtures -mindepth 1 -maxdepth 1 -type d ! -name exemplo ! -name planilhas -exec cp -R {} "$RUNNER_TEMP/cache-oficiais/" \;
           uv run namescommons run --offline --cache "$RUNNER_TEMP/cache-oficiais" \
             --out "$RUNNER_TEMP/dist-oficiais" --release "$(date -u +%Y.%m)"
-          for pais in CA ES FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
+          for pais in CA ES FR IE NO NZ US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
           test -s "$RUNNER_TEMP/dist-oficiais/variant_links.parquet"

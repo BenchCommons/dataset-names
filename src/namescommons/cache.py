@@ -27,6 +27,13 @@ class FetchError(Exception):
     """Falha ao obter um recurso, da rede ou do cache."""
 
 
+class BlockedError(FetchError):
+    """O servidor devolveu uma página HTML no lugar do arquivo (spec 003e, R4.1); repetir não adianta."""
+
+
+_PAGINAS = (".html", ".htm")
+
+
 def cached_path(cache_dir: Path, source_id: str, filename: str) -> Path:
     return Path(cache_dir) / source_id / filename
 
@@ -44,12 +51,16 @@ def _baixar(url: str, destino: Path, timeout: float) -> dict:
     h = hashlib.sha256()
     tamanho = 0
     try:
-        with urllib.request.urlopen(pedido, timeout=timeout) as resposta, open(temporario, "wb") as fh:
-            anunciado = resposta.headers.get("Content-Length")
-            while bloco := resposta.read(BLOCO):
-                fh.write(bloco)
-                h.update(bloco)
-                tamanho += len(bloco)
+        with urllib.request.urlopen(pedido, timeout=timeout) as resposta:
+            tipo = resposta.headers.get_content_type()  # sem parâmetros e em minúsculas
+            if tipo == "text/html" and not destino.name.lower().endswith(_PAGINAS):
+                raise BlockedError(f"o servidor devolveu uma página HTML ({tipo}) no lugar de {destino.name}")
+            with open(temporario, "wb") as fh:
+                anunciado = resposta.headers.get("Content-Length")
+                while bloco := resposta.read(BLOCO):
+                    fh.write(bloco)
+                    h.update(bloco)
+                    tamanho += len(bloco)
         if anunciado is not None:
             try:
                 esperado = int(anunciado)
@@ -111,6 +122,11 @@ def fetch_resource(
         try:
             _baixar(resource.url, destino, timeout)
             return destino
+        except BlockedError as e:
+            raise BlockedError(
+                f"falha ao baixar {resource.url}: {e}, provável bloqueio de download automático: "
+                f"baixe o arquivo pelo navegador, grave-o em {destino} e rode com --offline"
+            ) from e
         except (OSError, HTTPException, FetchError) as e:
             ultimo = e
             feitas = i + 1
