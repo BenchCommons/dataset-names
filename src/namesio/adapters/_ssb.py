@@ -38,8 +38,13 @@ def cells(caminho: Path, dimensao: str) -> Iterator[tuple[str, str, int, int]]:
     valores, status = dados["value"], dados.get("status") or {}
     if not isinstance(valores, list) or len(valores) != len(nomes) * len(anos):
         raise FormatError(f"{Path(caminho).name}: 'value' não é uma lista densa de {len(nomes) * len(anos)} células")
+    if not isinstance(status, (list, dict)):
+        raise FormatError(f"{Path(caminho).name}: 'status' deve ser lista ou dicionário, veio {type(status).__name__}")
     if isinstance(status, list):
         status = {str(k): s for k, s in enumerate(status) if s is not None}
+    for ano, _ in anos:
+        if not ano.isdigit():
+            raise FormatError(f"{Path(caminho).name}: ano {ano!r} não é numérico em 'Tid'")
     for i, (codigo, rotulo) in enumerate(nomes):
         for j, (ano, _) in enumerate(anos):
             k = i * len(anos) + j

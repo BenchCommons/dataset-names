@@ -46,3 +46,24 @@ def test_valor_vazio_e_rank_sao_ignorados(cso, tmp_path):
 def test_formato_inesperado_falha(cso, tmp_path, texto, trecho):
     with pytest.raises(FormatError, match=trecho):
         list(cso.parse(_arquivos(tmp_path, texto)))
+
+
+@pytest.mark.parametrize("tabela, codigo, coluna", [
+    ("VSA50.csv", "VSA50C01", "Boys Names"),
+    ("VSA60.csv", "VSA60C01", "Girls Names"),
+])
+def test_estatistica_de_contagem_renomeada_falha(cso, tmp_path, tabela, codigo, coluna):
+    cab = CABECALHO.replace("Boys Names", coluna)
+    novo = codigo.replace("C01", "C09")
+    (tmp_path / tabela).write_text(cab + f'"{novo}","x","2020","2020","1","Ola","Number","5"\r\n',
+                                   encoding="utf-8", newline="")
+    arquivos = {n: FIXTURES / n for n in ("VSA50.csv", "VSA60.csv")}
+    arquivos[tabela] = tmp_path / tabela
+    with pytest.raises(FormatError, match=f"{tabela}: nenhuma linha com a estatística '{codigo}'; vistas \\['{novo}'\\]"):
+        list(cso.parse(arquivos))
+
+
+def test_linha_curta_vira_format_error_com_arquivo_e_linha(cso, tmp_path):
+    texto = CABECALHO + '"VSA50C01","x","2020","2020","1","Ola","Number","5"\r\n"VSA50C01","x","2020"\r\n'
+    with pytest.raises(FormatError, match="VSA50.csv, linha 3: 3 campos, o cabeçalho tem 8"):
+        list(cso.parse(_arquivos(tmp_path, texto)))

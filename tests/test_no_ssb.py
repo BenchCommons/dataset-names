@@ -68,6 +68,8 @@ def _alterado(tmp_path, **mudancas) -> dict[str, Path]:
     ({"status": {}}, "célula 0 vazia sem marcador conhecido"),
     ({"value": [1.5] * 15}, "célula 0 com valor 1.5"),
     ({"value": [1] * 14}, "lista densa de 15 células"),
+    ({"status": "."}, "'status' deve ser lista ou dicionário, veio str"),
+    ({"dimension__Tid__category__index": {"1944": 0, "1990": 1, "20x5": 2}}, "ano '20x5' não é numérico em 'Tid'"),
 ])
 def test_formato_inesperado_falha(tmp_path, mudancas, trecho):
     mod = load_adapter("no-ssb-fornavn")

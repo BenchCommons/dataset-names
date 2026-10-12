@@ -74,3 +74,9 @@ def test_403_explica_como_colocar_o_arquivo_no_cache(servidor, tmp_path):
     assert "HTTP Error 403" in mensagem
     assert f"grave-o em {tmp_path / 'us-ssa-births' / 'names.zip'} e rode com --offline" in mensagem
     assert len(servidor.requisicoes) == 3
+
+
+def test_byte_nao_ascii_vira_format_error_com_membro_e_linha(ssa, tmp_path):
+    arquivos = _zip(tmp_path, {"yob2000.txt": b"Mary,F,10\nJos\xc3\xa9,M,5\n"})
+    with pytest.raises(FormatError, match="yob2000.txt, linha 2: byte fora de ASCII"):
+        list(ssa.parse(arquivos))

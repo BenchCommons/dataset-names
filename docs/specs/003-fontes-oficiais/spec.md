@@ -74,7 +74,7 @@ A CI ganha um passo que monta um cache com `tests/fixtures/`, roda `namesio run 
 
 ### R6. Desempenho com os dados reais
 
-O lote inteiro, com os arquivos reais no cache, roda `namesio run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB: 3.077.139 observações, `run` em 59 s com pico de 1,5 GB; `ingest` sozinho em 48 s e 1,7 GB; `build` sozinho em 36 s e 1,5 GB. A margem é suficiente; agregação fora da memória não entra nesta spec.
+O lote inteiro, com os arquivos reais no cache, roda `namesio run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB: 3.077.139 observações de 4 países, `run --offline` em 68 s com pico de 1,63 GB. O ZIP da SSA usado na medição foi um repack de espelho, porque o ZIP oficial não pôde ser baixado automaticamente (R4). A margem é suficiente; agregação fora da memória não entra nesta spec.
 
 ### R7. Fontes avaliadas e deixadas fora deste lote
 

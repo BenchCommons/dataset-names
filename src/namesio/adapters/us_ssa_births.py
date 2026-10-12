@@ -5,7 +5,6 @@ A SSA omite nomes com menos de 5 ocorrências; não há marcador de supressão n
 """
 
 import csv
-import io
 import re
 import zipfile
 from collections.abc import Iterator
@@ -27,8 +26,12 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
             raise FormatError("names.zip sem arquivos yobAAAA.txt")
         for ano, nome in anuais:
             with z.open(nome) as bruto:
-                texto = io.TextIOWrapper(bruto, encoding="ascii", newline="")
-                for linha, campos in enumerate(csv.reader(texto), start=1):
+                for linha, bruta in enumerate(bruto, start=1):
+                    try:
+                        texto = bruta.decode("ascii")
+                    except UnicodeDecodeError as e:
+                        raise FormatError(f"{nome}, linha {linha}: byte fora de ASCII ({e.reason})") from e
+                    campos = next(csv.reader([texto]), [])
                     if len(campos) != 3:
                         raise FormatError(f"{nome}, linha {linha}: esperava nome,sexo,contagem, veio {campos!r}")
                     yield RawRecord(

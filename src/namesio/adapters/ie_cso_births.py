@@ -27,15 +27,25 @@ def _ler(caminho: Path, estatistica: str, coluna: str, genero: str) -> Iterator[
         faltando = {"STATISTIC", "TLIST(A1)", coluna, "VALUE"} - set(leitor.fieldnames or ())
         if faltando:
             raise FormatError(f"{caminho.name}: colunas ausentes {sorted(faltando)}; cabeçalho {leitor.fieldnames}")
+        cabecalho, vistas, casadas = leitor.fieldnames, set(), 0
         for linha in leitor:
+            if None in linha or None in linha.values():
+                n = sum(v is not None for k, v in linha.items() if k is not None) + len(linha.get(None, ()))
+                raise FormatError(f"{caminho.name}, linha {leitor.line_num}: {n} campos, o cabeçalho tem {len(cabecalho)}")
+            vistas.add(linha["STATISTIC"])
             if linha["STATISTIC"] != estatistica:
                 continue
+            casadas += 1
             contagem = parse_count(linha["VALUE"], missing={""})
             if contagem is None:
                 continue
             yield RawRecord(
                 name=linha[coluna], kind="given", country="IE", gender=genero,
                 year=parse_count(linha["TLIST(A1)"], field="TLIST(A1)"), count=contagem,
+            )
+        if casadas == 0:
+            raise FormatError(
+                f"{caminho.name}: nenhuma linha com a estatística '{estatistica}'; vistas {sorted(vistas)}"
             )
 
 
