@@ -6,7 +6,7 @@
 
 **Stack:** a mesma da spec 003 (Python 3.12 via `uv`, `pyarrow`, `pyyaml`, `pycountry`, `pytest`), sem dependência nova. Formato lido: SPARQL 1.1 Query Results JSON.
 
-**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0007`](../../adr/0007-acesso-ao-wikidata.md), [`0008`](../../adr/0008-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
+**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0008`](../../adr/0008-acesso-ao-wikidata.md), [`0009`](../../adr/0009-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
 
 ## Restrições globais
 
@@ -20,7 +20,7 @@
 
 | Decisão | Motivo |
 |---|---|
-| QLever em vez de WDQS ou dump (ADR 0007) | O WDQS estourou o tempo nas consultas de sobrenome; o dump tem mais de 100 GB |
+| QLever em vez de WDQS ou dump (ADR 0008) | O WDQS estourou o tempo nas consultas de sobrenome; o dump tem mais de 100 GB |
 | Páginas de 200.000 linhas, número fixo por consulta (1, 5, 3, 1, 1, 1, 2, 1) | Cerca de 500 MB por página lida; o arquivo de sobrenomes inteiro passava de 1,8 GB. A folga sobre o medido é de 36% a 49% nos sobrenomes e prenomes |
 | URL com `action=sparql_json` | O cache baixa só com `User-Agent`; o formato fica determinado pela URL e não pelo cabeçalho `Accept` |
 | Uma consulta por propriedade de ligação | A consulta única com `VALUES ?property` estourou memória e tempo no QLever |

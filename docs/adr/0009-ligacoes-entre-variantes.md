@@ -1,4 +1,4 @@
-# 0008. Ligações entre variantes numa tabela própria, fora das observações
+# 0009. Ligações entre variantes numa tabela própria, fora das observações
 
 ## Status
 

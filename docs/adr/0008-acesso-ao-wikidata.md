@@ -1,4 +1,4 @@
-# 0007. Acesso ao Wikidata: consultas SPARQL no QLever, paginadas e guardadas no cache
+# 0008. Acesso ao Wikidata: consultas SPARQL no QLever, paginadas e guardadas no cache
 
 ## Status
 

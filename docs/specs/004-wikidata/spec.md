@@ -1,6 +1,6 @@
 # 004. Wikidata
 
-Parte do [roadmap](../ROADMAP.md). Depende da [spec 002](../002-pipeline/spec.md) e segue o contrato do adaptador da [spec 003](../003-fontes-oficiais/spec.md) (R2). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Acesso aos dados: [ADR 0007](../../adr/0007-acesso-ao-wikidata.md). Ligações entre variantes: [ADR 0008](../../adr/0008-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
+Parte do [roadmap](../ROADMAP.md). Depende da [spec 002](../002-pipeline/spec.md) e segue o contrato do adaptador da [spec 003](../003-fontes-oficiais/spec.md) (R2). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Acesso aos dados: [ADR 0008](../../adr/0008-acesso-ao-wikidata.md). Ligações entre variantes: [ADR 0009](../../adr/0009-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
 
 Status: Em implementação.
 
@@ -30,7 +30,7 @@ Licença conferida em https://www.wikidata.org/wiki/Wikidata:Licensing: "All str
 
 ### R2. Acesso aos dados
 
-- **R2.1 Endpoint e formato.** Cada recurso é o resultado de uma consulta SPARQL ao QLever (`https://qlever.dev/api/wikidata`) no formato SPARQL 1.1 Query Results JSON, pedido por GET com a consulta no parâmetro `query` e o formato no parâmetro `action=sparql_json`, de modo que a URL sozinha determina a resposta (ADR 0007). O texto das consultas fica no módulo e usa só SPARQL 1.1 padrão. O `User-Agent` é o do pipeline (spec 002, R4), com a URL do repositório como contato, como pede a política de User-Agent da Wikimedia; hoje `https://github.com/BenchCommons/dataset-names`.
+- **R2.1 Endpoint e formato.** Cada recurso é o resultado de uma consulta SPARQL ao QLever (`https://qlever.dev/api/wikidata`) no formato SPARQL 1.1 Query Results JSON, pedido por GET com a consulta no parâmetro `query` e o formato no parâmetro `action=sparql_json`, de modo que a URL sozinha determina a resposta (ADR 0008). O texto das consultas fica no módulo e usa só SPARQL 1.1 padrão. O `User-Agent` é o do pipeline (spec 002, R4), com a URL do repositório como contato, como pede a política de User-Agent da Wikimedia; hoje `https://github.com/BenchCommons/dataset-names`.
 - **R2.2 Consultas.** Cada consulta é ordenada e paginada com `LIMIT 200000 OFFSET k`, num número fixo de páginas:
 
 | Consulta | Variáveis | Conteúdo | Linhas medidas | Páginas | Arquivos |
