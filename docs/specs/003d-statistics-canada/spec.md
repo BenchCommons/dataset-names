@@ -70,6 +70,8 @@ O passo da CI que roda `namescommons run --offline` sobre as amostras das fontes
 
 Com o ZIP real no cache, `namescommons run --offline` só com esta fonte termina dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). O tempo, o pico de memória e a máquina vão para a descrição do pull request e para esta spec.
 
+Medido num Apple M4 com 24 GB, com o ZIP baixado em 2026-10-12: `run --offline` em 11,4 s, pico de memória (RSS máximo) de 197 MB, 218.198 observações e 18.999 nomes em `by_country/CA.csv`. Somado ao lote da spec 003 (68 s e 1,63 GB, R6 daquela spec), o total continua dentro dos limites.
+
 ### R7. Documentação
 
 O README lista a fonte na tabela de fontes. O roadmap marca a linha 3d e lista o ADR novo.
