@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
-FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births")
+FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births", "wikidata")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
