@@ -2,6 +2,7 @@
 
 import unicodedata
 from dataclasses import dataclass
+from datetime import date
 
 from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
 from namesio.sources import COUNT_TYPES, Source, is_country
@@ -9,6 +10,7 @@ from namesio.sources import COUNT_TYPES, Source, is_country
 SCHEMA_VERSION = "1.0.0"
 KINDS = ("given", "family")
 GENDERS = ("F", "M")
+ANO_MINIMO = 1800
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,7 @@ def make_observation(
 
 def validate(observations: list[Observation], sources: dict[str, Source]) -> None:
     """Levanta ValidationError com todos os problemas encontrados."""
+    ano_maximo = date.today().year + 1
     erros: list[str] = []
     vistas: set[tuple] = set()
     for i, o in enumerate(observations):
@@ -83,14 +86,23 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
             erros.append(f"{r}: 'ascii' vazio em escrita latina")
         if o.kind and o.kind not in KINDS:
             erros.append(f"{r}: kind '{o.kind}' inválido")
+        fonte = sources.get(o.source_id)
         if o.country is not None and not is_country(o.country):
             erros.append(f"{r}: país '{o.country}' fora da ISO 3166-1 alfa-2")
+        elif fonte is not None and fonte.country is not None and o.country != fonte.country:
+            erros.append(f"{r}: país {o.country!r} diverge da fonte '{fonte.id}' ('{fonte.country}')")
         if o.gender is not None and o.gender not in GENDERS:
             erros.append(f"{r}: gender '{o.gender}' inválido")
         if o.count is not None and o.count < 0:
             erros.append(f"{r}: count negativo")
         if o.count_type and o.count_type not in COUNT_TYPES:
             erros.append(f"{r}: count_type '{o.count_type}' inválido")
+        elif fonte is not None and o.count_type != fonte.count_type:
+            erros.append(
+                f"{r}: count_type '{o.count_type}' diverge da fonte '{fonte.id}' ('{fonte.count_type}')"
+            )
+        if o.year is not None and not ANO_MINIMO <= o.year <= ano_maximo:
+            erros.append(f"{r}: year {o.year} fora de {ANO_MINIMO} a {ano_maximo}")
         if (o.count is None) != (o.count_type == "attested"):
             erros.append(f"{r}: count vazio exige count_type 'attested' e vice-versa (R1.1)")
         if o.source_id and o.source_id not in sources:
