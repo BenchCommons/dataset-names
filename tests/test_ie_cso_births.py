@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import FormatError, RawRecord, load_adapter
+from namescommons.adapters import FormatError, RawRecord, load_adapter
 
 FIXTURES = Path(__file__).parent / "fixtures" / "ie-cso-births"
 CABECALHO = '﻿"STATISTIC","Statistic Label","TLIST(A1)","Year","C02512V04117","Boys Names","UNIT","VALUE"\r\n'

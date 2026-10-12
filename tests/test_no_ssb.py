@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import FormatError, RawRecord, load_adapter
-from namesio.sources import SourceError, load_sources
+from namescommons.adapters import FormatError, RawRecord, load_adapter
+from namescommons.sources import SourceError, load_sources
 
 RAIZ = Path(__file__).resolve().parent.parent
 FIXTURES = RAIZ / "tests" / "fixtures"

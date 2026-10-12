@@ -4,7 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 
-from namesio.io import read_observations, write_observations
+from namescommons.io import read_observations, write_observations
 
 RAIZ = Path(__file__).resolve().parent.parent
 

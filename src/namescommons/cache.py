@@ -15,10 +15,10 @@ from http.client import HTTPException
 from importlib.metadata import version
 from pathlib import Path
 
-from namesio.adapters import Resource
+from namescommons.adapters import Resource
 
-REPOSITORIO = "https://github.com/webminas/names.io"
-USER_AGENT = f"namesio/{version('namesio')} (+{REPOSITORIO})"
+REPOSITORIO = "https://github.com/OpenSoftwareAlliance/names-commons-dataset"
+USER_AGENT = f"namescommons/{version('names-commons-dataset')} (+{REPOSITORIO})"
 BLOCO = 1 << 16
 ESPERA = 2.0  # segundos antes da segunda tentativa; dobra a cada nova tentativa
 

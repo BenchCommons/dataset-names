@@ -3,9 +3,9 @@
 from collections import defaultdict
 from dataclasses import dataclass, replace
 
-from namesio.normalize import ascii_form, detect_script
-from namesio.schema import Observation
-from namesio.sources import Source
+from namescommons.normalize import ascii_form, detect_script
+from namescommons.schema import Observation
+from namescommons.sources import Source
 
 # Ordem de preferência quando o mesmo nome tem contagens de tipos diferentes no país.
 PRECEDENCIA = ("population", "births")

@@ -16,7 +16,7 @@ O lote é pequeno de propósito. Ele cobre só fontes nacionais, publicadas em t
 
 ### R1. Fontes do primeiro lote
 
-Cada linha vira uma entrada de `sources.yaml` com `primary: true` (nenhuma divide o par `country`, `count_type` com outra) e um adaptador em `src/namesio/adapters/`. Números medidos nos arquivos reais em 2026-10-12.
+Cada linha vira uma entrada de `sources.yaml` com `primary: true` (nenhuma divide o par `country`, `count_type` com outra) e um adaptador em `src/namescommons/adapters/`. Números medidos nos arquivos reais em 2026-10-12.
 
 | `id` | Instituto | País | `kind` | `count_type` | Anos | Supressão (`suppression`) | Recurso e formato | Tamanho medido | Contagens |
 |---|---|---|---|---|---|---|---|---|---|
@@ -48,7 +48,7 @@ Particularidades que o adaptador trata:
 - **R2.1 O adaptador converte os valores.** `RawRecord` leva `year` e `count` como `int`, `gender` como `F`, `M` ou vazio, `country` em ISO 3166-1 alfa-2 e `kind` como `given` ou `family`. "Como a fonte publica" (spec 002, R1) vale para o nome, não para códigos. O adaptador preenche `country` mesmo quando `sources.yaml` declara o país. O pipeline confere `kind`, `gender` e `country` em cada registro, na ordem em que `parse` os produz, e recusa o primeiro inválido com `registro N: ...` (N começa em 1).
 - **R2.2 Códigos da fonte só por mapeamento explícito.** O pacote oferece `parse_count(value, missing=(), field="contagem")` e `parse_code(value, mapping, field)`. Um código fora do mapeamento, ou um texto que não é inteiro nem marcador declarado, levanta `FormatError` com o valor e o esperado. Assim o `M` de "Mujer" nunca passa como masculino, e um marcador novo de supressão nunca vira zero.
 - **R2.3 Valores suprimidos são omitidos** ([ADR 0002](../../adr/0002-valores-suprimidos.md)). O adaptador não emite registro para célula suprimida ou ausente (`<5`, `.`, `..`, vazio). Numa fonte `births` ou `population`, registro com `count` vazio é recusado pelo pipeline com `registro N: count vazio numa fonte '<tipo>'; valor suprimido deve ser omitido pelo adaptador`. Numa fonte `attested`, registro com `count` é recusado. O limite de supressão fica em `suppression` de `sources.yaml`.
-- **R2.4 Um `count_type` por fonte.** Um instituto que publica, por exemplo, primeiros nomes como `births` e sobrenomes como `population` vira duas entradas em `sources.yaml` e dois módulos. Código comum aos dois fica num módulo privado `src/namesio/adapters/_<instituto>.py`, cujo nome não corresponde a nenhum `id`.
+- **R2.4 Um `count_type` por fonte.** Um instituto que publica, por exemplo, primeiros nomes como `births` e sobrenomes como `population` vira duas entradas em `sources.yaml` e dois módulos. Código comum aos dois fica num módulo privado `src/namescommons/adapters/_<instituto>.py`, cujo nome não corresponde a nenhum `id`.
 - **R2.5 Teste contra servidor local.** A fixture `servir_fixtures` de `tests/conftest.py` serve `tests/fixtures/<SOURCE_ID>/<filename>` no servidor HTTP local da spec 002 e aponta `RESOURCES` do módulo para ele durante o teste.
 - **R2.6 Mensagens de erro.**
   - `parse` que pede um arquivo fora de `RESOURCES` recebe `AdapterError` com o nome pedido e a lista dos disponíveis, e não um `KeyError` solto.
@@ -72,11 +72,11 @@ Em 2026-10-12, `www.ssa.gov` respondeu 403 a downloads automáticos, inclusive c
 
 ### R5. CI
 
-A CI ganha um passo que monta um cache com `tests/fixtures/`, roda `namesio run --offline` com o `sources.yaml` da raiz e confere que `by_country/` tem `FR`, `IE`, `NO` e `US`.
+A CI ganha um passo que monta um cache com `tests/fixtures/`, roda `namescommons run --offline` com o `sources.yaml` da raiz e confere que `by_country/` tem `FR`, `IE`, `NO` e `US`.
 
 ### R6. Desempenho com os dados reais
 
-O lote inteiro, com os arquivos reais no cache, roda `namesio run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB: 3.077.139 observações de 4 países, `run --offline` em 68 s com pico de 1,63 GB. O ZIP da SSA usado na medição foi um repack de espelho, porque o ZIP oficial não pôde ser baixado automaticamente (R4). A margem é suficiente; agregação fora da memória não entra nesta spec.
+O lote inteiro, com os arquivos reais no cache, roda `namescommons run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB: 3.077.139 observações de 4 países, `run --offline` em 68 s com pico de 1,63 GB. O ZIP da SSA usado na medição foi um repack de espelho, porque o ZIP oficial não pôde ser baixado automaticamente (R4). A margem é suficiente; agregação fora da memória não entra nesta spec.
 
 ### R7. Fontes avaliadas e deixadas fora deste lote
 
@@ -94,7 +94,7 @@ O lote inteiro, com os arquivos reais no cache, roda `namesio run --offline` den
 1. `sources.yaml` tem as cinco fontes de R1, cada uma com licença da lista do ADR 0001, e `load_sources` o aceita.
 2. Cada adaptador passa no teste de `parse` sobre a amostra real com os registros esperados escritos à mão, e cada particularidade de R1.1 a R1.5 tem teste.
 3. Cada regra de R2.1 a R2.7 tem teste, inclusive: código de sexo fora do mapeamento, marcador de supressão desconhecido, `count` vazio numa fonte `births`, arquivo fora de `RESOURCES`, adaptador ausente com caminho esperado, adaptador quebrado e `country: NO` sem aspas.
-4. `namesio run --offline` sobre um cache montado com `tests/fixtures/` gera `by_country/NO.csv` igual a valores escritos à mão, com sobrenomes `population` da edição 2025 e primeiros nomes `births` com `female_share`.
+4. `namescommons run --offline` sobre um cache montado com `tests/fixtures/` gera `by_country/NO.csv` igual a valores escritos à mão, com sobrenomes `population` da edição 2025 e primeiros nomes `births` com `female_share`.
 5. Um download que termina em 403 gera mensagem com o caminho do cache onde gravar o arquivo (R4).
 6. A CI roda verde no pull request desta spec, com o passo de R5.
 7. A medição de R6 é repetida com os arquivos reais e a linha de tempo e memória vai para a descrição do pull request.

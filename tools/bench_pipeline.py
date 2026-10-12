@@ -1,4 +1,4 @@
-"""Medição de R8 (spec 002): namesio ingest e build sobre observações sintéticas.
+"""Medição de R8 (spec 002): namescommons ingest e build sobre observações sintéticas.
 
 Gera um CSV sintético num cache, um adaptador temporário e um sources.yaml, e roda
 os comandos reais da CLI. Registra tempo de cada etapa e pico de memória do processo.
@@ -17,7 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from namesio.cli import main as namesio
+from namescommons.cli import main as namescommons
 
 LIMITE_SEGUNDOS = 600
 LIMITE_MB = 4096
@@ -34,7 +34,7 @@ sources:
     name: Fonte sintética da medição de R8
     url: https://example.org/sintetica/
     license: CC0-1.0
-    attribution: namesio
+    attribution: namescommons
     country: null
     count_type: births
     primary: true
@@ -45,7 +45,7 @@ sources:
 
 ADAPTADOR = '''\
 import csv
-from namesio.adapters import RawRecord, Resource
+from namescommons.adapters import RawRecord, Resource
 
 SOURCE_ID = "sintetica"
 RESOURCES = [Resource("https://example.org/sintetica/dados.csv", "dados.csv")]
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--registro", type=Path, help="grava o resultado em JSON")
     args = ap.parse_args(argv)
     total = total_de_observacoes(args.observacoes)
-    base = args.dir or Path(tempfile.mkdtemp(prefix="namesio-r8-"))
+    base = args.dir or Path(tempfile.mkdtemp(prefix="namescommons-r8-"))
     base.mkdir(parents=True, exist_ok=True)
 
     inicio = time.perf_counter()
@@ -109,13 +109,13 @@ def main(argv: list[str] | None = None) -> int:
     sys.path.insert(0, str(base))
     try:
         inicio = time.perf_counter()
-        codigo = namesio(["ingest", "--offline", "--out", str(base / "observations.parquet"),
+        codigo = namescommons(["ingest", "--offline", "--out", str(base / "observations.parquet"),
                           "--cache", str(base / "cache"), "--adapters", "bench_adaptadores", *comum])
         ingest = time.perf_counter() - inicio
         if codigo != 0:
             return codigo
         inicio = time.perf_counter()
-        codigo = namesio(["build", str(base / "observations.parquet"), "--out", str(base / "dist"),
+        codigo = namescommons(["build", str(base / "observations.parquet"), "--out", str(base / "dist"),
                           "--release", "2026.10", *comum])
         build = time.perf_counter() - inicio
         if codigo != 0:

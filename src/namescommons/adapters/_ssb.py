@@ -7,7 +7,7 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import FormatError
+from namescommons.adapters import FormatError
 
 API = (
     "https://data.ssb.no/api/pxwebapi/v2/tables/{tabela}/data?lang=en&outputFormat=json-stat2"

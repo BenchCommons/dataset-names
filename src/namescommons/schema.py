@@ -4,8 +4,8 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import date
 
-from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
-from namesio.sources import COUNT_TYPES, Source, is_country
+from namescommons.normalize import ascii_form, detect_script, name_key, normalize_name
+from namescommons.sources import COUNT_TYPES, Source, is_country
 
 SCHEMA_VERSION = "1.0.0"
 KINDS = ("given", "family")

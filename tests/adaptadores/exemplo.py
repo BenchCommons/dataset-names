@@ -8,7 +8,7 @@ import csv
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import RawRecord, Resource
+from namescommons.adapters import RawRecord, Resource
 
 SOURCE_ID = "exemplo"
 RESOURCES = [

@@ -8,8 +8,8 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from namesio.aggregate import CountryRow, IndexRow
-from namesio.schema import Observation
+from namescommons.aggregate import CountryRow, IndexRow
+from namescommons.schema import Observation
 
 OBSERVATION_SCHEMA = pa.schema([
     ("name", pa.string()), ("name_key", pa.string()), ("ascii", pa.string()),

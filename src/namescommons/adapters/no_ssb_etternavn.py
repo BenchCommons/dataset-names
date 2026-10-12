@@ -6,8 +6,8 @@ Mesmo instituto de no-ssb-fornavn, mas outro count_type (population), por isso o
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import RawRecord, Resource
-from namesio.adapters._ssb import API, cells
+from namescommons.adapters import RawRecord, Resource
+from namescommons.adapters._ssb import API, cells
 
 SOURCE_ID = "no-ssb-etternavn"
 RESOURCES = [Resource(API.format(tabela="12891", dimensao="Etternavn"), "12891.json")]

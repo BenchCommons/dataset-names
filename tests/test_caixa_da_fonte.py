@@ -2,8 +2,8 @@
 
 import pytest
 
-from namesio.normalize import normalize_name
-from namesio.schema import derive_name_fields, make_observation
+from namescommons.normalize import normalize_name
+from namescommons.schema import derive_name_fields, make_observation
 
 
 @pytest.mark.parametrize("bruto, esperado", [

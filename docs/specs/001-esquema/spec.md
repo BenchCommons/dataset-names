@@ -85,7 +85,7 @@ legacy/                   listas atuais, congeladas
 docs/specs/, docs/adr/
 ```
 
-`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é `namesio`.
+`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é `namescommons`.
 
 ### R5. Versionamento
 

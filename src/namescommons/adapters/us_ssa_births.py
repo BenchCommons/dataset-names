@@ -10,7 +10,7 @@ import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import FormatError, RawRecord, Resource, parse_code, parse_count
+from namescommons.adapters import FormatError, RawRecord, Resource, parse_code, parse_count
 
 SOURCE_ID = "us-ssa-births"
 RESOURCES = [Resource("https://www.ssa.gov/oact/babynames/names.zip", "names.zip")]

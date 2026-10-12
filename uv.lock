@@ -21,7 +21,7 @@ wheels = [
 ]
 
 [[package]]
-name = "namesio"
+name = "names-commons-dataset"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

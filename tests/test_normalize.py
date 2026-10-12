@@ -1,4 +1,4 @@
-from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
+from namescommons.normalize import ascii_form, detect_script, name_key, normalize_name
 
 
 def test_caixa_uniforme_vira_capitalizada_por_palavra():

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from namesio.schema import SCHEMA_VERSION
-from namesio.sources import Source
+from namescommons.schema import SCHEMA_VERSION
+from namescommons.sources import Source
 
 RELEASE = re.compile(r"\d{4}\.(0[1-9]|1[0-2])(\.[1-9]\d*)?")
 

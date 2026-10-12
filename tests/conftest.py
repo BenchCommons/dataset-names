@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import Resource
-from namesio.schema import make_observation
-from namesio.sources import parse_sources
+from namescommons.adapters import Resource
+from namescommons.schema import make_observation
+from namescommons.sources import parse_sources
 
 FONTES = [
     {"id": "us-ssa", "name": "SSA", "url": "https://www.ssa.gov/oact/babynames/",

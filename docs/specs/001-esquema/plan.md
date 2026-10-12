@@ -2,7 +2,7 @@
 
 **Objetivo:** implementar o esquema canônico de observações, o registro de fontes, as saídas agregadas e o manifesto da spec 001, com uma CLI que valida e gera as saídas a partir de um `observations.parquet`.
 
-**Arquitetura:** pacote Python `namesio` em `src/`, com um módulo por responsabilidade: normalização de nomes, registro de fontes, esquema e validação, agregação, entrada e saída, manifesto, CLI. As observações são `dataclass` imutáveis em memória; a agregação usa Python puro (dicionários), e o pyarrow só entra na leitura e na escrita de Parquet. Os adaptadores de fonte (specs 003 e 004) produzirão `list[Observation]` com `make_observation`.
+**Arquitetura:** pacote Python `namescommons` em `src/`, com um módulo por responsabilidade: normalização de nomes, registro de fontes, esquema e validação, agregação, entrada e saída, manifesto, CLI. As observações são `dataclass` imutáveis em memória; a agregação usa Python puro (dicionários), e o pyarrow só entra na leitura e na escrita de Parquet. Os adaptadores de fonte (specs 003 e 004) produzirão `list[Observation]` com `make_observation`.
 
 **Stack:** Python 3.12 via `uv`, `pyarrow` (Parquet), `pyyaml` (`sources.yaml`), `pycountry` (ISO 3166-1), `pytest`, build com `hatchling`.
 
@@ -11,7 +11,7 @@
 ## Restrições globais
 
 - Python `>=3.12`; dependências de runtime só `pyarrow>=17`, `pycountry>=24.6`, `pyyaml>=6.0`; dev só `pytest>=8`.
-- Nome do pacote e do comando: `namesio` (R4).
+- Nome do pacote e do comando: `namescommons` (R4).
 - `SCHEMA_VERSION = "1.0.0"`.
 - Licenças aceitas em `sources.yaml`: `public-domain`, `CC0-1.0`, `CC-BY-3.0`, `CC-BY-4.0`, `ODC-By-1.0`, `OGL-UK-3.0`, `etalab-2.0`.
 - `count_type`: `births`, `population`, `attested`. `kind`: `given`, `family`. `gender`: `F`, `M` ou vazio.
@@ -44,13 +44,13 @@ Casos que a spec implica e que um usuário vai encontrar. Cada um tem teste na t
 
 | Arquivo | Responsabilidade | Tarefa |
 |---|---|---|
-| `pyproject.toml`, `src/namesio/__init__.py`, `.gitignore`, `DATA_LICENSE`, `sources.yaml`, `legacy/` | Estrutura, licença dos dados, legado | 1 |
-| `src/namesio/normalize.py` | `normalize_name`, `name_key`, `detect_script`, `ascii_form` | 2 |
-| `src/namesio/sources.py` | `Source`, `load_sources`, `parse_sources`, `is_country`, `SourceError` | 3 |
-| `src/namesio/schema.py` | `Observation`, `make_observation`, `validate`, `ValidationError`, `SCHEMA_VERSION` | 4 |
-| `src/namesio/aggregate.py` | `by_country`, `name_index`, `display_name`, `CountryRow`, `CountryEntry`, `IndexRow`, `AggregationError` | 5 |
-| `src/namesio/io.py`, `src/namesio/manifest.py` | Parquet e CSV; `build_manifest` | 6 |
-| `src/namesio/cli.py` | `namesio validate` e `namesio build` | 7 |
+| `pyproject.toml`, `src/namescommons/__init__.py`, `.gitignore`, `DATA_LICENSE`, `sources.yaml`, `legacy/` | Estrutura, licença dos dados, legado | 1 |
+| `src/namescommons/normalize.py` | `normalize_name`, `name_key`, `detect_script`, `ascii_form` | 2 |
+| `src/namescommons/sources.py` | `Source`, `load_sources`, `parse_sources`, `is_country`, `SourceError` | 3 |
+| `src/namescommons/schema.py` | `Observation`, `make_observation`, `validate`, `ValidationError`, `SCHEMA_VERSION` | 4 |
+| `src/namescommons/aggregate.py` | `by_country`, `name_index`, `display_name`, `CountryRow`, `CountryEntry`, `IndexRow`, `AggregationError` | 5 |
+| `src/namescommons/io.py`, `src/namescommons/manifest.py` | Parquet e CSV; `build_manifest` | 6 |
+| `src/namescommons/cli.py` | `namescommons validate` e `namescommons build` | 7 |
 
 ## Cobertura da spec
 

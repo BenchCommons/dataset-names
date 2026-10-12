@@ -14,7 +14,7 @@ Esta spec define o contrato do adaptador, o cache de downloads, os comandos que 
 
 ### R1. Contrato do adaptador
 
-Cada fonte de `sources.yaml` com adaptador tem um módulo `src/namesio/adapters/<id_com_underscore>.py` que expõe:
+Cada fonte de `sources.yaml` com adaptador tem um módulo `src/namescommons/adapters/<id_com_underscore>.py` que expõe:
 
 | Nome | Tipo | Regra |
 |---|---|---|
@@ -61,10 +61,10 @@ Campos novos, opcionais:
 
 | Comando | Faz |
 |---|---|
-| `namesio fetch [ID ...] [--refresh]` | Baixa os recursos das fontes indicadas (todas com adaptador, se nenhuma) |
-| `namesio ingest [ID ...] --out observations.parquet [--offline]` | Roda `parse` sobre o cache, aplica R1, valida (001 e R3) e grava as observações |
-| `namesio validate` e `namesio build` | Como na 001 |
-| `namesio run --out DIR --release AAAA.MM [--offline] [--refresh]` | `fetch`, `ingest` e `build` em sequência |
+| `namescommons fetch [ID ...] [--refresh]` | Baixa os recursos das fontes indicadas (todas com adaptador, se nenhuma) |
+| `namescommons ingest [ID ...] --out observations.parquet [--offline]` | Roda `parse` sobre o cache, aplica R1, valida (001 e R3) e grava as observações |
+| `namescommons validate` e `namescommons build` | Como na 001 |
+| `namescommons run --out DIR --release AAAA.MM [--offline] [--refresh]` | `fetch`, `ingest` e `build` em sequência |
 
 Uma fonte que falha em `fetch` ou `ingest` interrompe o comando com código 1 e mensagem que nomeia a fonte e a causa. Não há ingestão parcial silenciosa.
 
@@ -76,7 +76,7 @@ Com o mesmo cache, a mesma versão do pacote e o mesmo `sources.yaml`, dois `run
 
 - Cada adaptador tem uma amostra pequena do arquivo real da fonte em `tests/fixtures/<source_id>/` e testes que rodam `parse` sobre ela, sem rede.
 - Os testes nunca acessam a rede. Downloads são testados com um servidor HTTP local.
-- A CI (GitHub Actions) roda `uv sync`, `uv run pytest -q` e `namesio run --offline` sobre um cache montado a partir das fixtures, em todo push e pull request.
+- A CI (GitHub Actions) roda `uv sync`, `uv run pytest -q` e `namescommons run --offline` sobre um cache montado a partir das fixtures, em todo push e pull request.
 
 ### R8. Desempenho
 
