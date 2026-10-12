@@ -38,7 +38,6 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pycountry" },
     { name = "pyyaml" },
-    { name = "xlrd" },
 ]
 
 [package.dev-dependencies]
@@ -52,7 +51,6 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=17" },
     { name = "pycountry", specifier = ">=24.6" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "xlrd", specifier = "==2.0.2" },
 ]
 
 [package.metadata.requires-dev]

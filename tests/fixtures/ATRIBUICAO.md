@@ -1,6 +1,6 @@
 # Amostras das fontes oficiais
 
-Cada diretório guarda um trecho pequeno do arquivo real da fonte, só para os testes (spec 003, R3; spec 003b, R3). As linhas foram copiadas sem alteração. Os ZIPs foram remontados só com as linhas copiadas. As amostras do SSB são a resposta real da API para uma consulta restrita a poucos nomes e anos. As planilhas do INE mantêm os números de linha do arquivo real. `planilhas/tipos.xls` é sintética, para os testes do leitor de planilhas.
+Cada diretório guarda um trecho pequeno do arquivo real da fonte, só para os testes (spec 003, R3; spec 003b, R3). As linhas foram copiadas sem alteração. Os ZIPs foram remontados só com as linhas copiadas. As amostras do SSB são a resposta real da API para uma consulta restrita a poucos nomes e anos. As planilhas do INE mantêm os números de linha do arquivo real.
 
 | Fonte | Licença | Origem | Trecho |
 |---|---|---|---|

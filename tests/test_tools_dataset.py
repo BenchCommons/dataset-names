@@ -61,3 +61,10 @@ def test_check_adapter_confere_links():
     check_adapter(SimpleNamespace(**base, links=lambda f: iter(())), "x")
     with pytest.raises(AdapterError, match="'x': links must be a function"):
         check_adapter(SimpleNamespace(**base, links="não"), "x")
+
+
+# R2: módulos movidos para o kit não existem mais aqui ---------------------------------------------
+
+def test_namescommons_spreadsheet_nao_existe():
+    import importlib.util
+    assert importlib.util.find_spec("namescommons.spreadsheet") is None

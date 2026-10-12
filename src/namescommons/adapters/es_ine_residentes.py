@@ -8,8 +8,9 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
+from datasettool.sources.spreadsheet import cell_count, rows, sheet_names
+
 from namescommons.adapters import FormatError, RawRecord, Resource, parse_code
-from namescommons.spreadsheet import cell_count, rows, sheet_names
 
 SOURCE_ID = "es-ine-residentes"
 _BASE = "https://www.ine.es/daco/daco42/nombyapel/"
