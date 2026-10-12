@@ -18,6 +18,7 @@ O contrato do kit é do tools-dataset ([spec 004 de lá](https://github.com/Benc
 uv sync --locked             # instala as dependências do uv.lock
 uv run pytest -q             # testes (nunca usam a rede)
 uv run namescommons --help        # CLI do pipeline
+tools/release.sh build <AAAA.MM> <cache> <saida>   # release local, sem publicar (spec 006)
 ```
 
 A CI também roda o pipeline offline sobre as amostras de `tests/fixtures/`:
@@ -50,6 +51,27 @@ O INSEE publica cada edição do Fichier des prénoms numa página nova, sem lis
 4. Baixe `prenoms-<ano>-nat_csv.zip`, gere a amostra (cabeçalho e cerca de 10 linhas, com `_PRENOMS_RARES` e `XXXX` se ainda existirem), renomeie com `git mv tests/fixtures/fr-insee-births/<antigo>.zip tests/fixtures/fr-insee-births/<novo>.zip` e atualize a linha em `tests/fixtures/ATRIBUICAO.md`.
 5. Confira o formato (colunas `sexe;prenom;periode;valeur;rang`, códigos de sexo) e ajuste `tests/test_fr_insee_births.py` e o `README.md` se algo mudou.
 6. Rode `uv run pytest -q`: `tests/test_insee_edicao.py` falha se algum dos lugares acima ficou para trás.
+
+## Publicar uma release
+
+Procedimento da [spec 006](docs/specs/006-publicacao/spec.md) e do [ADR 0014](docs/adr/0014-processo-de-release.md). Só o dono publica; nenhum agente cria tag, rascunho ou release sem aprovação explícita.
+
+1. Escolha o nome em CalVer (`AAAA.MM`, ou `AAAA.MM.N` para mais de uma no mês). Releases são imutáveis: nunca reaproveite um nome.
+2. Confira se a [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence) mudou desde a versão "Date modified: 2025-07-10". Se mudou, reavalie o [ADR 0004](docs/adr/0004-licenca-statistics-canada.md) antes de seguir.
+3. Monte o cache completo: `uv run namescommons fetch --refresh`; baixe pelo navegador o ZIP nacional da SSA e o CSV da Nova Zelândia para os caminhos que as mensagens de erro indicam (por cópia, não link simbólico); atualize `retrieved` em `sources.yaml` e faça o commit em `master` por PR.
+4. Ensaie localmente: `tools/release.sh build AAAA.MM cache /tmp/dist/AAAA.MM`. Leia `DATASET_CARD.md` e `ATTRIBUTION.txt` da saída.
+5. Empacote o cache e prepare o rascunho:
+
+   ```sh
+   tar -czf source-cache.tar.gz -C cache .
+   gh release create AAAA.MM --draft --title AAAA.MM --notes "Names Commons Dataset AAAA.MM"
+   gh release upload AAAA.MM source-cache.tar.gz
+   ```
+
+6. Crie e envie a tag assinada no commit de `master` que gera a release: `git tag -s AAAA.MM -m AAAA.MM && git push origin AAAA.MM`. O workflow `Release` baixa o cache do rascunho, roda o build offline, confere `SHA256SUMS`, envia os assets ao rascunho e remove dele `source-cache.tar.gz`.
+7. Revise o rascunho (assets, cartão, atribuições) e publique pelo GitHub. Se o workflow falhar no meio, apague os assets enviados ao rascunho antes de rodar de novo: o envio nunca sobrescreve.
+
+O disparo manual do workflow (`workflow_dispatch`) é só ensaio, sobre as amostras de `tests/fixtures/`.
 
 ## Convenções
 

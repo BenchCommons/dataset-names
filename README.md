@@ -22,19 +22,39 @@ Originally forked from [Debdut/names.io](https://github.com/Debdut/names.io).
 
 Attribution text for each source is in `sources.yaml`.
 
-## Output layout
+## Releases
 
-A release contains:
+Releases are published on the [GitHub Releases page](https://github.com/BenchCommons/dataset-names/releases), tagged in CalVer (`YYYY.MM`, with `.N` for more than one in a month). Each release contains:
 
 ```
-by_country/<CC>.csv       one file per country (ISO 3166-1 alpha-2)
 given_names.csv           one row per given name, all countries
 family_names.csv          one row per family name, all countries
+given_names.parquet       the same, with typed nested columns
+family_names.parquet
 observations.parquet      the full observation table
-manifest.json             schema version, sources, row counts, SHA-256 of each file
+variant_links.parquet     links between name variants (Wikidata)
+by_country.zip            by_country/<CC>.csv, one file per country (ISO 3166-1 alpha-2)
+manifest.json             schema version, sources, dropped records, row counts and SHA-256 of each table
+DATASET_CARD.md           fields, sources, coverage, suppression, known limitations, licence, how to cite
+ATTRIBUTION.txt           attribution text and licence of every source, and required notices
+DATA_LICENSE              CC BY 4.0, with the dataset's attribution line
+SHA256SUMS                SHA-256 of every asset
 ```
 
-`given_names` and `family_names` are also written as Parquet. Counts of different types (`births`, `population`, `attested`) are never added together. The schema is defined in [spec 001](docs/specs/001-esquema/spec.md).
+Counts of different types (`births`, `population`, `attested`) are never added together. The schema is defined in [spec 001](docs/specs/001-esquema/spec.md); the release files in [spec 006](docs/specs/006-publicacao/spec.md).
+
+Verify a download with `sha256sum -c SHA256SUMS` in the directory with the assets. Cite a release as written in its `DATASET_CARD.md`:
+
+> Names Commons Dataset, release YYYY.MM, BenchCommons (https://github.com/BenchCommons/dataset-names), licensed under CC BY 4.0. Upstream sources and notices: see ATTRIBUTION.txt.
+
+Keep `ATTRIBUTION.txt` with the data when you redistribute it. The release layout follows the input contract of [tools-dataset](https://github.com/BenchCommons/tools-dataset/blob/main/docs/specs/001-input-contract/spec.md) (`DATA_LICENSE`, `ATTRIBUTION.txt` and `SHA256SUMS` at the top level), so benchmark inputs can be added to the same releases.
+
+Releases are built by the [release workflow](.github/workflows/release.yml) from a source cache attached to a draft release, and published by the maintainer ([ADR 0014](docs/adr/0014-processo-de-release.md)). To build a release locally without publishing anything:
+
+```sh
+tools/release.sh fixture-cache /tmp/cache                     # or a full cache from namescommons fetch
+tools/release.sh build 2026.10 /tmp/cache /tmp/dist/2026.10   # namescommons run --offline + checksum verification
+```
 
 ## Quick start
 
@@ -48,6 +68,8 @@ uv run namescommons validate observations.parquet          # check the observati
 uv run namescommons build observations.parquet --out dist --release 2026.10
 uv run namescommons run --out dist --release 2026.10       # fetch, ingest and build in sequence
 ```
+
+`build` and `run` write the whole release directory, including the publication files listed above; `--data-license` points to the licence file copied into it (default `DATA_LICENSE`).
 
 Add `--offline` to `ingest` or `run` to use only files already in the cache. Use `--help` on any command for its options.
 
