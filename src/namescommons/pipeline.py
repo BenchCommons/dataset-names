@@ -40,11 +40,18 @@ def _ordem(o: Observation) -> tuple:
     return (o.source_id, o.kind, o.country or "", o.name_key, -1 if o.year is None else o.year, o.gender or "")
 
 
-def _somar(a: Observation, b: Observation) -> Observation:
-    """R1.4: soma duas observações com a mesma chave; mantém a forma do primeiro registro."""
-    if (a.count is None) != (b.count is None):
-        raise RecordError(f"R1.4: registros repetidos com e sem count para {a.key()}")
-    return a if a.count is None else replace(a, count=a.count + b.count)
+def _forma_de_maior_peso(formas: dict[str, tuple[Observation, int | None]]) -> Observation:
+    """R1.4: soma as contagens das formas de um mesmo nome e fica com a de maior peso.
+
+    Mesmo critério de `display_name` na agregação; no empate vale a forma do primeiro registro.
+    """
+    pesos = [c for _, c in formas.values()]
+    if any(c is None for c in pesos) and not all(c is None for c in pesos):
+        primeira = next(iter(formas.values()))[0]
+        raise RecordError(f"R1.4: registros repetidos com e sem count para {primeira.key()}")
+    melhor = max(formas.values(), key=lambda f: -1 if f[1] is None else f[1])[0]
+    total = None if pesos[0] is None else sum(pesos)
+    return replace(melhor, count=total)
 
 
 def _checar_genero(observacoes: Iterable[Observation]) -> None:
@@ -76,10 +83,14 @@ def _checar_tipos(r: RawRecord, posicao: int) -> None:
             )
 
 
+def _checar_kind(kind: str, posicao: int) -> None:
+    """Spec 003, R2.1: kind é conferido antes de derivar o nome, para ser o primeiro erro do registro."""
+    if kind not in KINDS:
+        raise RecordError(f"registro {posicao}: kind {kind!r} inválido; use 'given' ou 'family'")
+
+
 def _checar_valores(o: Observation, posicao: int, paises: dict[str, bool]) -> None:
     """Spec 003, R2.1 e R2.3: valores convertidos pelo adaptador, conferidos na ordem do arquivo."""
-    if o.kind not in KINDS:
-        raise RecordError(f"registro {posicao}: kind {o.kind!r} inválido; use 'given' ou 'family'")
     if o.gender is not None and o.gender not in GENDERS:
         raise RecordError(f"registro {posicao}: gender {o.gender!r} inválido; use 'F', 'M' ou vazio")
     if o.country is not None:
@@ -101,9 +112,10 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
     """Aplica R1.1 a R1.5 aos registros brutos de uma fonte."""
     derivados: dict[str, tuple[str, str, str, str]] = {}
     paises: dict[str, bool] = {}
-    unicas: dict[tuple, Observation] = {}
+    formas: dict[tuple, dict[str, tuple[Observation, int | None]]] = {}
     for posicao, r in enumerate(records, start=1):
         _checar_tipos(r, posicao)
+        _checar_kind(r.kind, posicao)
         campos = derivados.get(r.name)
         if campos is None:
             campos = derivados[r.name] = derive_name_fields(r.name, source.uniform_case)
@@ -114,8 +126,15 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
             count_type=source.count_type, source_id=source.id,
         )
         _checar_valores(o, posicao, paises)
-        anterior = unicas.get(o.key())
-        unicas[o.key()] = o if anterior is None else _somar(anterior, o)
+        por_forma = formas.setdefault(o.key(), {})
+        visto = por_forma.get(o.name)
+        if visto is None:
+            por_forma[o.name] = (o, o.count)
+        elif (visto[1] is None) != (o.count is None):
+            raise RecordError(f"R1.4: registros repetidos com e sem count para {o.key()}")
+        elif o.count is not None:
+            por_forma[o.name] = (visto[0], visto[1] + o.count)
+    unicas = {chave: _forma_de_maior_peso(f) for chave, f in formas.items()}
     _checar_genero(unicas.values())
     return sorted(unicas.values(), key=_ordem)
 

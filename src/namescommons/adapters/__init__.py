@@ -9,7 +9,7 @@ country em ISO 3166-1 alfa-2, kind como given ou family. Valores suprimidos são
 import importlib
 import importlib.util
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -127,7 +127,7 @@ class SourceFiles(dict):
 _INTEIRO = re.compile(r"[0-9]+")
 
 
-def parse_count(value: str, missing: Iterable[str] = (), field: str = "contagem") -> int | None:
+def parse_count(value: str, missing: Collection[str] = (), field: str = "contagem") -> int | None:
     """Inteiro publicado (contagem ou ano); um marcador de `missing` (valor suprimido ou ausente) vira None.
 
     Qualquer outro texto levanta FormatError, para que um marcador novo da fonte não passe calado.
