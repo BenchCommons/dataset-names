@@ -50,7 +50,7 @@ Cada tarefa segue TDD: escrever os testes, ver falhar com `uv run pytest -q <arq
   - `test_r1_5_xlrd_fixado` (`pyproject.toml` declara `xlrd==2.0.2`)
 - [ ] **Passo 2:** `uv add 'xlrd==2.0.2'`; implementar o caminho XLS em `spreadsheet.py` (`on_demand=True`, `sheet_by_name`, normalização de tipos, `release_resources()` no fim); `AGENTS.md` ganha `xlrd` na stack.
 - [ ] **Passo 3:** gerar `tipos.xls` com `uv run --with xlwt==1.3.0 python -I <script>`; o script grava a aba `Dados` com as mesmas células de `test_r1_3_mesmos_valores_nos_dois_formatos` e a aba `Erros` com uma célula `#N/A`.
-- [ ] **Passo 4:** `uv run pytest -q` verde; commit "Lê XLS com xlrd 2.0.2 (spec 003b, R1.5, ADR 0004)".
+- [ ] **Passo 4:** `uv run pytest -q` verde; commit "Lê XLS com xlrd 2.0.2 (spec 003b, R1.5, ADR 0005)".
 
 ### Task 3: fonte `es-ine-residentes`
 

@@ -1,4 +1,4 @@
-"""Leitor de planilhas XLS e XLSX para adaptadores de fontes (spec 003b, R1; ADR 0004).
+"""Leitor de planilhas XLS e XLSX para adaptadores de fontes (spec 003b, R1; ADR 0005).
 
 O formato é reconhecido pelos primeiros bytes. XLSX é lido em fluxo com a biblioteca padrão;
 XLS, com xlrd. Os dois devolvem valores do mesmo tipo: str, int, float, bool ou None.

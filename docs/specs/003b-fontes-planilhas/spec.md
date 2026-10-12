@@ -1,6 +1,6 @@
 # 003b. Fontes em planilha: leitor de XLS e XLSX e INE
 
-Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md), cujo contrato do adaptador (R2) vale aqui sem mudança. Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Leitor de planilha: [ADR 0004](../../adr/0004-leitor-de-planilhas.md). Pendência herdada: issue #13.
+Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md), cujo contrato do adaptador (R2) vale aqui sem mudança. Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Leitor de planilha: [ADR 0005](../../adr/0005-leitor-de-planilhas.md). Pendência herdada: issue #13.
 
 Status: Em implementação.
 
@@ -20,7 +20,7 @@ Módulo `namescommons.spreadsheet`, usado por adaptadores de fontes em planilha.
 - **R1.2 Formato pelo conteúdo.** O formato é reconhecido pelos primeiros bytes, não pela extensão: `PK\x03\x04` é XLSX (ZIP do Office Open XML) e `D0 CF 11 E0` é XLS (documento composto do Excel, da versão 5 em diante). Outro conteúdo, inclusive uma página HTML de erro gravada no lugar do arquivo, levanta `FormatError`.
 - **R1.3 Valores iguais nos dois formatos.** Texto vira `str` sem alteração, número inteiro vira `int`, número com fração vira `float`, booleano vira `bool` e célula vazia vira `None`. Valores `None` no fim da linha são cortados, e linhas sem nenhum valor são puladas. Datas chegam como o número de série do Excel (nenhuma fonte de nomes usa datas em célula). Célula com erro de fórmula (`#N/A`, `#REF!`) levanta `FormatError` com a aba e a referência da célula.
 - **R1.4 XLSX com a biblioteca padrão.** O XLSX é lido com `zipfile` e `xml.etree.ElementTree.iterparse`, linha a linha, sem carregar a aba inteira na memória. São aceitos os tipos de célula `s` (texto compartilhado, inclusive com trechos de formatação; o texto fonético `rPh` é ignorado), `inlineStr`, `str`, `n` (ou sem tipo), `b` e `e`. A aba é localizada pelo nome em `xl/workbook.xml` e pelo alvo em `xl/_rels/workbook.xml.rels`.
-- **R1.5 XLS com `xlrd` fixado.** O XLS é lido com `xlrd` 2.0.2 ([ADR 0004](../../adr/0004-leitor-de-planilhas.md)), única dependência nova de runtime. Arquivo XLS que `xlrd` não consegue abrir levanta `FormatError` com a mensagem original.
+- **R1.5 XLS com `xlrd` fixado.** O XLS é lido com `xlrd` 2.0.2 ([ADR 0005](../../adr/0005-leitor-de-planilhas.md)), única dependência nova de runtime. Arquivo XLS que `xlrd` não consegue abrir levanta `FormatError` com a mensagem original.
 - **R1.6 Contagem em célula.** `cell_count(value, missing=(), field="contagem") -> int | None` converte uma célula numa contagem pelo mesmo critério de `parse_count` (spec 003, R2.2): `int` não negativo passa, `float` com fração, negativo ou `bool` é `FormatError`, texto passa por `parse_count` com os marcadores de `missing`, e célula vazia só é aceita se `""` estiver em `missing`.
 
 O que a spec 003c vai precisar do leitor, conferido em 2026-10-12 nos arquivos reais da ONS de 2025 (`2025boysbabynames.xlsx`, 11 abas, 233 KB) e de 2018 (`2018boysnames.xls`, 774 KB): várias abas por arquivo escolhidas pelo nome, cabeçalho em linhas variáveis e marcadores de texto em células numéricas. R1.1, R1.3 e R1.6 cobrem esses casos; a regra subnacional e o adaptador da ONS ficam na 003c.
@@ -86,7 +86,7 @@ A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` 
 5. `namescommons run --offline` sobre um cache montado com `tests/fixtures/` gera `by_country/ES.csv` igual a valores escritos à mão, com nomes e sobrenomes `population` de 2025.
 6. A CI roda verde no pull request desta spec, com o passo de R4.
 7. A medição de R5 com os arquivos reais vai para a descrição do pull request.
-8. `xlrd` entra em `pyproject.toml` com versão fixada (`==2.0.2`), justificada no ADR 0004, e o `uv.lock` é atualizado.
+8. `xlrd` entra em `pyproject.toml` com versão fixada (`==2.0.2`), justificada no ADR 0005, e o `uv.lock` é atualizado.
 9. As fontes adiadas de R6 viram issues, e a issue #13 é fechada pelo pull request.
 
 ## Fora de escopo

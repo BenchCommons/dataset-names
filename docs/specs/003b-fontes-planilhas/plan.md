@@ -4,9 +4,9 @@
 
 **Arquitetura:** um módulo novo, `namescommons.spreadsheet`, reconhece o formato pelos primeiros bytes e devolve as linhas de uma aba como `(número, valores)`. O XLSX é lido em fluxo com `zipfile` e `iterparse`; o XLS, com `xlrd` 2.0.2 aberto sob demanda. Os dois caminhos normalizam os valores para `str`, `int`, `float`, `bool` ou `None`. `cell_count` estende o `parse_count` da spec 003 para células já tipadas. O adaptador `es_ine_residentes` lê os dois arquivos do INE só pela interface do leitor, valida cabeçalhos e o ano da edição e emite `RawRecord` de `given` (com sexo pela aba) e de `family` (pelo primeiro apellido).
 
-**Stack:** a mesma da spec 003, mais `xlrd==2.0.2` em runtime ([ADR 0004](../../adr/0004-leitor-de-planilhas.md)). As amostras XLS são geradas com `xlwt` 1.3.0 executado à parte (`uv run --with xlwt==1.3.0`), sem entrar em `pyproject.toml`.
+**Stack:** a mesma da spec 003, mais `xlrd==2.0.2` em runtime ([ADR 0005](../../adr/0005-leitor-de-planilhas.md)). As amostras XLS são geradas com `xlwt` 1.3.0 executado à parte (`uv run --with xlwt==1.3.0`), sem entrar em `pyproject.toml`.
 
-**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0002`](../../adr/0002-valores-suprimidos.md), [`0004`](../../adr/0004-leitor-de-planilhas.md). Pendência herdada: issue #13.
+**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0002`](../../adr/0002-valores-suprimidos.md), [`0005`](../../adr/0005-leitor-de-planilhas.md). Pendência herdada: issue #13.
 
 ## Restrições globais
 
@@ -20,7 +20,7 @@
 
 | Decisão | Motivo |
 |---|---|
-| XLSX pela biblioteca padrão, XLS pelo `xlrd` | ADR 0004: o XLSX é XML simples e cabe em poucas linhas; o BIFF8 é binário delicado e o `xlrd` é Python puro e sem dependências |
+| XLSX pela biblioteca padrão, XLS pelo `xlrd` | ADR 0005: o XLSX é XML simples e cabe em poucas linhas; o BIFF8 é binário delicado e o `xlrd` é Python puro e sem dependências |
 | Formato pelos primeiros bytes | Um servidor que devolve HTML de erro com status 200 grava uma página no lugar da planilha; a extensão não diz nada |
 | Valores normalizados (`int` para número inteiro, inclusive o `1446937.0` do XLS) | O adaptador não precisa saber de qual formato veio a célula; R1.3 da spec |
 | Linhas vazias puladas e `None` do fim cortado nos dois formatos | O XLSX omite linhas e células vazias, e o `xlrd` preenche até `ncols`; cortar dá o mesmo resultado nos dois |

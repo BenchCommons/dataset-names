@@ -16,4 +16,4 @@ Cada spec abaixo passa pelo próprio ciclo spec → plano → implementação �
 | 5 | `005-variantes` | 003, 004 | Transliteração para ASCII, agrupamento de variantes (`group_id`), deduplicação | Planejada |
 | 6 | `006-publicacao` | 005 | Releases, manifesto, README, cartão do dataset, retirada do legado | Planejada |
 
-Decisões transversais ficam em [`docs/adr/`](../adr/): [0001 licença dos dados](../adr/0001-licenca-dos-dados.md), [0002 valores suprimidos](../adr/0002-valores-suprimidos.md), [0003 nome do projeto e do pacote](../adr/0003-nome-do-projeto-e-do-pacote.md), [0004 leitor de planilhas](../adr/0004-leitor-de-planilhas.md).
+Decisões transversais ficam em [`docs/adr/`](../adr/): [0001 licença dos dados](../adr/0001-licenca-dos-dados.md), [0002 valores suprimidos](../adr/0002-valores-suprimidos.md), [0003 nome do projeto e do pacote](../adr/0003-nome-do-projeto-e-do-pacote.md), [0005 leitor de planilhas](../adr/0005-leitor-de-planilhas.md).

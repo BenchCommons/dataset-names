@@ -1,4 +1,4 @@
-# 0004. Leitor de planilhas: XLSX pela biblioteca padrão, XLS pelo xlrd 2.0.2
+# 0005. Leitor de planilhas: XLSX pela biblioteca padrão, XLS pelo xlrd 2.0.2
 
 ## Status
 
