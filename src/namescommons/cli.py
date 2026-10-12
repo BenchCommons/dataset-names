@@ -115,8 +115,8 @@ def _build(obs: list[Observation], fontes: dict[str, Source], out: Path, release
         (temporario / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        if out.is_dir():
-            out.rmdir()  # já checado como vazio por _saida_invalida
+        # rename sobre um diretório vazio existente (já checado por _saida_invalida) o substitui
+        # de forma atômica em POSIX, sem apagar antes o diretório do usuário.
         os.replace(temporario, out)
     except BaseException:
         shutil.rmtree(temporario, ignore_errors=True)

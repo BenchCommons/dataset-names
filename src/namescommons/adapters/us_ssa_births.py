@@ -2,6 +2,7 @@
 
 names.zip traz um arquivo yobAAAA.txt por ano de nascimento, com linhas nome,sexo,contagem.
 A SSA omite nomes com menos de 5 ocorrências; não há marcador de supressão no arquivo.
+Cada arquivo anual é lido inteiro na memória (cerca de 1 MB) para aceitar CR, LF e CRLF como fim de linha.
 """
 
 import csv

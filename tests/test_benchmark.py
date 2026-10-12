@@ -46,8 +46,9 @@ def test_leitura_compartilha_textos_repetidos(observacoes, tmp_path):
     assert lidas[0].name is lidas[1].name
 
 
-def test_nomes_sao_distintos_e_nao_colidem_acima_de_4_8_milhoes():
+def test_nomes_sao_distintos_ate_o_limite_de_3_2_milhoes():
     bench = _bench()
+    assert bench.NOMES_POSSIVEIS == 3_200_000
     nomes = {bench._nome(i) for i in range(200_000)}
     assert len(nomes) == 200_000
     # com 3 milhões de observações há 25 mil nomes, não os ~5 mil do protótipo

@@ -17,7 +17,7 @@ from pathlib import Path
 
 from namescommons.adapters import Resource
 
-REPOSITORIO = "https://github.com/OpenSoftwareAlliance/names-commons-dataset"
+REPOSITORIO = "https://github.com/BenchCommons/dataset-names"
 USER_AGENT = f"namescommons/{version('names-commons-dataset')} (+{REPOSITORIO})"
 BLOCO = 1 << 16
 ESPERA = 2.0  # segundos antes da segunda tentativa; dobra a cada nova tentativa

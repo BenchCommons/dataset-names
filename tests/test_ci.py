@@ -24,7 +24,7 @@ def _comandos() -> list[str]:
     return [p["run"] for p in passos if "run" in p]
 
 
-def test_roda_em_todo_push_e_pull_request():
+def test_gatilhos_sao_push_e_pull_request():
     dados = _workflow()
     gatilhos = dados.get("on", dados.get(True))  # PyYAML lê a chave "on" como True
     assert set(gatilhos) == {"push", "pull_request"}

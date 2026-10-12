@@ -13,7 +13,7 @@
 - Nenhuma dependência nova de runtime ou de desenvolvimento.
 - Os testes nunca acessam a rede: downloads usam o servidor de `tests/conftest.py` em `127.0.0.1`.
 - Cache em `cache/<source_id>/<filename>` e `cache/<source_id>/<filename>.meta.json` (`url`, `downloaded_at` em ISO 8601 UTC, `sha256`, `size`); `/cache/` no `.gitignore`.
-- `User-Agent`: `namescommons/<versão do pacote> (+https://github.com/OpenSoftwareAlliance/names-commons-dataset)`. Timeout de 60 s, 3 tentativas, espera de 2 s e 4 s entre elas.
+- `User-Agent`: `namescommons/<versão do pacote> (+https://github.com/BenchCommons/dataset-names)`. Timeout de 60 s, 3 tentativas, espera de 2 s e 4 s entre elas.
 - Faixa de `year`: 1800 até o ano corrente mais um, calculado na hora da validação.
 - Mensagem de falha de fonte: `fonte '<id>': <causa>`, código de saída 1, sem traceback e sem saída parcial.
 - `SCHEMA_VERSION` continua `1.0.0`: nenhum campo de saída muda.
@@ -35,7 +35,7 @@
 | `ingest --out` grava num `.part` ao lado e renomeia, avisando em stderr quando substitui um arquivo; `build` e `run` montam a release num diretório temporário ao lado de `--out` e o renomeiam no fim | Uma falha (disco, agregação) não deixa arquivo nem release parciais. Adicionada na manutenção da issue #6 |
 | Observações de `ingest` ordenadas por (`source_id`, `kind`, `country`, `name_key`, `year`, `gender`) | R6: duas execuções produzem Parquet com as mesmas linhas na mesma ordem, independente da ordem do arquivo da fonte |
 | `run` não aceita IDs; `fetch` e `ingest` aceitam; nenhuma fonte com adaptador é erro | Segue a tabela de R5; uma release sempre usa todas as fontes com adaptador |
-| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB (após a Task 10; a issue #8 mediu antes da otimização), sem dicionário por linha. Com a medição realista da manutenção da issue #6 (12.500 nomes distintos por país, 25 mil no total, em vez de 5 mil), ingest 57 s, build 30 s e pico de 3,4 GB: dentro do limite de 4 GB, mas perto dele |
+| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB (após a Task 10; a issue #8 mediu antes da otimização), sem dicionário por linha. Com o bench realista da manutenção da issue #6 (25 mil nomes distintos em vez de 5 mil), o pipeline anterior à manutenção mediu ingest 41 s e pico de 2,7 GB; com a manutenção (caminho rápido para repetidos de mesma forma, resolução da forma de maior peso só nas chaves com duas formas) ficou ingest 37 s, build 32 s e pico de 2,7 GB, dentro do limite de 4 GB |
 | O script de R8 roda `ingest` e `build` pela CLI, com um adaptador sintético gerado num diretório temporário | Mede os comandos reais, inclusive leitura do CSV, validação e escrita, e não só a agregação |
 
 ## Foco de revisão

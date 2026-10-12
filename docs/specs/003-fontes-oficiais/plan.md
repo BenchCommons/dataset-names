@@ -36,7 +36,7 @@
 | SSB: leitor comum em `src/namescommons/adapters/_ssb.py` | Duas fontes do mesmo instituto (R2.4); o `_` impede colisão com um `id` |
 | 403 explicado em `fetch_resource`, sem contornar o bloqueio e sem repetir a requisição (4xx é definitivo, ver plano da spec 002) | O site da SSA recusa robôs; a saída honesta é dizer onde gravar o arquivo baixado à mão |
 | `servir_fixtures` como fixture de `conftest.py`, e não como função do pacote | Só os testes precisam dela; o pacote publicado não carrega código de teste |
-| Passo novo na CI copia `tests/fixtures/` inteiro como cache | Os diretórios das amostras já têm os nomes de `RESOURCES`; o diretório `exemplo` e os arquivos soltos não atrapalham |
+| Passo novo na CI copia como cache só os diretórios de `tests/fixtures/` das fontes oficiais (todos menos `exemplo`) | Os diretórios das amostras já têm os nomes de `RESOURCES`. Revisada na manutenção da issue #12: antes copiava `tests/fixtures/` inteiro, levando `exemplo/` e arquivos soltos para o cache |
 
 ## Foco de revisão
 
