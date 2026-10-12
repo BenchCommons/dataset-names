@@ -118,3 +118,69 @@ def test_timeout(servidor, tmp_path):
     with pytest.raises(FetchError, match="após 1 tentativa"):
         fetch_resource(tmp_path, "exemplo", r, timeout=0.2, tentativas=1)
     assert not (tmp_path / "exemplo" / "a.csv").exists()
+
+
+def _falha(servidor, caminho, *codigos):
+    servidor.respostas[caminho] = list(codigos)
+    return _recurso(servidor, caminho)
+
+
+@pytest.mark.parametrize("codigo", [400, 401, 403, 404, 410])
+def test_4xx_nao_e_tentado_de_novo(servidor, tmp_path, codigo):
+    r = _falha(servidor, "/a.csv", codigo, codigo, codigo)
+    esperas = []
+    with pytest.raises(FetchError, match=f"após 1 tentativa.*{codigo}"):
+        fetch_resource(tmp_path, "exemplo", r, espera=1.0, dormir=esperas.append)
+    assert len(servidor.requisicoes) == 1
+    assert esperas == []
+
+
+@pytest.mark.parametrize("codigo", [408, 429, 500, 503])
+def test_408_429_e_5xx_sao_tentados_de_novo(servidor, tmp_path, codigo):
+    r = _falha(servidor, "/a.csv", codigo, codigo)
+    assert fetch_resource(tmp_path, "exemplo", r, espera=0).read_bytes() == CORPO
+    assert len(servidor.requisicoes) == 3
+
+
+def test_erro_diferente_de_403_nao_traz_a_dica_do_cache(servidor, tmp_path):
+    r = _falha(servidor, "/a.csv", 404)
+    with pytest.raises(FetchError) as e:
+        fetch_resource(tmp_path, "exemplo", r, espera=0)
+    assert "navegador" not in str(e.value) and "--offline" not in str(e.value)
+
+
+def test_403_traz_a_dica_do_cache(servidor, tmp_path):
+    r = _falha(servidor, "/a.csv", 403)
+    with pytest.raises(FetchError, match="baixe o arquivo pelo navegador"):
+        fetch_resource(tmp_path, "exemplo", r, espera=0)
+
+
+def test_content_length_malformado_vira_fetch_error(servidor, tmp_path):
+    r = _recurso(servidor)
+    servidor.cabecalho_tamanho["/a.csv"] = "abc"
+    with pytest.raises(FetchError, match="Content-Length 'abc' inválido"):
+        fetch_resource(tmp_path, "exemplo", r, espera=0, tentativas=1)
+    assert list((tmp_path / "exemplo").iterdir()) == []
+
+
+@pytest.mark.parametrize("n", [0, -1])
+def test_tentativas_menor_que_um_e_recusada(servidor, tmp_path, n):
+    with pytest.raises(ValueError, match="tentativas"):
+        fetch_resource(tmp_path, "exemplo", _recurso(servidor), tentativas=n)
+    assert servidor.requisicoes == []
+
+
+def test_refresh_nao_deixa_meta_antigo_descrevendo_o_arquivo_novo(servidor, tmp_path, monkeypatch):
+    """Se a gravação do meta falha, o meta antigo não pode continuar ao lado do arquivo novo."""
+    r = _recurso(servidor)
+    fetch_resource(tmp_path, "exemplo", r)
+    servidor.arquivos["/a.csv"] = b"versao nova\n"
+
+    def falha(destino, conteudo):
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr("namescommons.cache._gravar_atomico", falha)
+    with pytest.raises(FetchError, match="disco cheio"):
+        fetch_resource(tmp_path, "exemplo", r, refresh=True, tentativas=1)
+    meta = tmp_path / "exemplo" / "a.csv.meta.json"
+    assert not meta.exists() or json.loads(meta.read_text(encoding="utf-8"))["size"] == (tmp_path / "exemplo" / "a.csv").stat().st_size

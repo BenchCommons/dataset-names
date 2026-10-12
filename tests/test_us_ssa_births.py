@@ -73,7 +73,7 @@ def test_403_explica_como_colocar_o_arquivo_no_cache(servidor, tmp_path):
     mensagem = str(e.value)
     assert "HTTP Error 403" in mensagem
     assert f"grave-o em {tmp_path / 'us-ssa-births' / 'names.zip'} e rode com --offline" in mensagem
-    assert len(servidor.requisicoes) == 3
+    assert len(servidor.requisicoes) == 1  # 4xx não se resolve tentando de novo
 
 
 def test_byte_nao_ascii_vira_format_error_com_membro_e_linha(ssa, tmp_path):
