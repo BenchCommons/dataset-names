@@ -23,4 +23,4 @@ A tabela de observações (spec 001, R1) descreve um nome atestado numa fonte; e
 - A tabela de observações e as saídas agregadas não mudam; quem lê só `given_names.csv` não percebe a novidade.
 - A spec 005 lê as ligações de um único arquivo, com os nomes já normalizados (`name_key`), sem consultar o Wikidata de novo.
 - Outras fontes com relações entre nomes (por exemplo, listas oficiais de grafias equivalentes) podem implementar `links` sem mudar o esquema.
-- A release ganha um arquivo de cerca de um milhão de linhas, contado no `manifest.json`.
+- A release ganha um arquivo de cerca de 437 mil linhas (11 MB em Parquet, medido em 2026-10-12), contado no `manifest.json`.

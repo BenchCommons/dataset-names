@@ -1,4 +1,4 @@
-"""Tabela variant_links (spec 004, R4; ADR 0005): ligações entre nomes publicadas por uma fonte."""
+"""Tabela variant_links (spec 004, R4; ADR 0008): ligações entre nomes publicadas por uma fonte."""
 
 import re
 from dataclasses import dataclass

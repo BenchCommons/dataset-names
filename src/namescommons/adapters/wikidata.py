@@ -1,7 +1,7 @@
 """Wikidata: prenomes (Q202444) e sobrenomes (Q101352) com rótulo nativo e classe de gênero (spec 004).
 
-Os recursos são páginas de consultas SPARQL ao QLever (ADR 0004), no formato SPARQL 1.1 Query
-Results JSON. parse emite os nomes; links emite as ligações entre variantes (ADR 0005).
+Os recursos são páginas de consultas SPARQL ao QLever (ADR 0007), no formato SPARQL 1.1 Query
+Results JSON. parse emite os nomes; links emite as ligações entre variantes (ADR 0008).
 """
 
 import json

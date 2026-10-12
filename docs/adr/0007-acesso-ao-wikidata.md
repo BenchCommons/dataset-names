@@ -16,7 +16,7 @@ Há três caminhos para os dados:
 
 ## Decisão
 
-- Os recursos do adaptador `wikidata` são resultados de consultas SPARQL ao endpoint `https://qlever.dev/api/wikidata`, no formato SPARQL 1.1 Query Results JSON, pedidos por GET com a consulta inteira na URL. O texto de cada consulta fica no módulo do adaptador.
+- Os recursos do adaptador `wikidata` são resultados de consultas SPARQL ao endpoint `https://qlever.dev/api/wikidata`, no formato SPARQL 1.1 Query Results JSON, pedidos por GET com a consulta inteira na URL e o formato no parâmetro `action=sparql_json`. O texto de cada consulta fica no módulo do adaptador.
 - Cada consulta é ordenada (`ORDER BY`) e paginada com `LIMIT 200000 OFFSET k`. O número de páginas de cada consulta é fixo no módulo, com folga sobre o tamanho medido. Uma página de 200.000 linhas de JSON ocupa cerca de 28 MB e cerca de 500 MB depois de lida pelo `json` da biblioteca padrão; o arquivo inteiro de sobrenomes (104 MB) passava de 1,8 GB.
 - A última página de uma consulta não pode vir cheia: se vier, o adaptador falha com a instrução de aumentar o número de páginas. Uma página incompleta seguida de página com linhas também é erro (o índice mudou entre os downloads), com a instrução de baixar de novo com `--refresh`.
 - As consultas usam só SPARQL 1.1 padrão (sem o serviço de rótulos do WDQS), com `PREFIX` explícitos, para rodar em qualquer endpoint com o Wikidata completo.
@@ -24,7 +24,7 @@ Há três caminhos para os dados:
 
 ## Consequências
 
-- `fetch` baixa 15 arquivos (cerca de 220 MB) em menos de 2 minutos, e `ingest --offline` lê o cache sem rede, como as outras fontes.
+- `fetch` baixa 15 arquivos (216 MB, em 54 s na medição de 2026-10-12), e `ingest --offline` lê o cache sem rede, como as outras fontes.
 - O projeto depende de um serviço acadêmico sem acordo de nível de serviço. Se o QLever sair do ar, as consultas valem no WDQS só para as classes pequenas; a ingestão do dump completo fica registrada como alternativa numa issue.
 - O resultado reflete o índice do QLever no momento do download, que pode estar alguns dias atrás do Wikidata. O `.meta.json` do cache registra a data e a hora de cada página.
 - Se o índice mudar entre o download de duas páginas da mesma consulta, linhas podem se repetir (inofensivo: o pipeline soma observações repetidas de fonte `attested` sem alterar nada) ou faltar na fronteira. A falta não é detectável pela página; o risco é pequeno porque as páginas de uma consulta são baixadas em segundos.

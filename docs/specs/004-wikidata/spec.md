@@ -30,7 +30,7 @@ Licença conferida em https://www.wikidata.org/wiki/Wikidata:Licensing: "All str
 
 ### R2. Acesso aos dados
 
-- **R2.1 Endpoint e formato.** Cada recurso é o resultado de uma consulta SPARQL ao QLever (`https://qlever.dev/api/wikidata`) no formato SPARQL 1.1 Query Results JSON, pedido por GET com a consulta no parâmetro `query` e o formato no parâmetro `action=sparql_json`, de modo que a URL sozinha determina a resposta (ADR 0007). O texto das consultas fica no módulo e usa só SPARQL 1.1 padrão. O `User-Agent` é o do pipeline (spec 002, R4), com a URL do repositório como contato, como pede a política de User-Agent da Wikimedia; com a transferência do repositório, ele passa a apontar para `https://github.com/BenchCommons/names-commons-dataset`.
+- **R2.1 Endpoint e formato.** Cada recurso é o resultado de uma consulta SPARQL ao QLever (`https://qlever.dev/api/wikidata`) no formato SPARQL 1.1 Query Results JSON, pedido por GET com a consulta no parâmetro `query` e o formato no parâmetro `action=sparql_json`, de modo que a URL sozinha determina a resposta (ADR 0007). O texto das consultas fica no módulo e usa só SPARQL 1.1 padrão. O `User-Agent` é o do pipeline (spec 002, R4), com a URL do repositório como contato, como pede a política de User-Agent da Wikimedia; hoje `https://github.com/BenchCommons/dataset-names`.
 - **R2.2 Consultas.** Cada consulta é ordenada e paginada com `LIMIT 200000 OFFSET k`, num número fixo de páginas:
 
 | Consulta | Variáveis | Conteúdo | Linhas medidas | Páginas | Arquivos |
@@ -107,7 +107,7 @@ A exigência de exatamente uma fonte `primary: true` por par (`country`, `count_
 
 ### R6. Amostras e testes
 
-- `tests/fixtures/wikidata/` tem os 15 arquivos de R2.2, com menos de 20 KB no total. Cada primeira página é a resposta real do QLever à mesma consulta restrita a poucos itens (`VALUES ?item { ... }`, sem `LIMIT`); as demais páginas são a resposta real vazia de uma página além do fim. A atribuição vai em `tests/fixtures/ATRIBUICAO.md`.
+- `tests/fixtures/wikidata/` tem os 15 arquivos de R2.2, com menos de 20 KB no total. Cada arquivo é a resposta real do QLever à mesma consulta, com a mesma paginação, restrita a poucos itens (`VALUES ?item { ... }`), gerada por `tools/amostra_wikidata.py`; páginas além do fim são a resposta real vazia. Nas ligações ficam só as linhas cujo alvo também está na amostra, mais uma por propriedade com alvo de fora. A atribuição vai em `tests/fixtures/ATRIBUICAO.md`.
 - Testes de `parse` e `links` sobre a amostra com registros esperados escritos à mão, de cada regra de R2.3 a R2.5, R3 e R4, e de formato inesperado.
 - Os testes nunca acessam a rede (spec 002, R7).
 
@@ -118,6 +118,8 @@ O passo da CI que roda as fontes de `sources.yaml` sobre as amostras passa a inc
 ### R8. Desempenho com os dados reais
 
 `namescommons run --offline` só com o Wikidata, com os 15 arquivos reais no cache, fica dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). A medição vai para o pull request.
+
+Medido num Apple M4 com 24 GB, em 2026-10-12: `fetch` baixou os 15 arquivos (216 MB) em 54 s. `run --offline` só com o Wikidata gerou 816.771 observações e 436.971 ligações em 60 s, com pico de 2,01 GB. Somado às 3 milhões de observações sintéticas de `tools/bench_pipeline.py` (spec 002, R8), num único `run --offline`, gerou 3.816.771 observações em 99 s, com pico de 3,43 GB: dentro do limite, com margem pequena (issue #31).
 
 ## Critérios de aceite
 

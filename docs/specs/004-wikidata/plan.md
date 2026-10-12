@@ -6,7 +6,7 @@
 
 **Stack:** a mesma da spec 003 (Python 3.12 via `uv`, `pyarrow`, `pyyaml`, `pycountry`, `pytest`), sem dependência nova. Formato lido: SPARQL 1.1 Query Results JSON.
 
-**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0004`](../../adr/0004-acesso-ao-wikidata.md), [`0005`](../../adr/0005-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
+**Spec:** [`spec.md`](spec.md). ADRs: [`0001`](../../adr/0001-licenca-dos-dados.md), [`0007`](../../adr/0007-acesso-ao-wikidata.md), [`0008`](../../adr/0008-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
 
 ## Restrições globais
 
@@ -14,13 +14,13 @@
 - Os testes nunca acessam a rede. A amostra fica em `tests/fixtures/wikidata/`, com os mesmos 15 nomes de arquivo de `RESOURCES` e menos de 20 KB no total.
 - Mensagens: `FormatError` com o arquivo e o esperado; `ligação N: <causa>` para erros de `RawLink`, com N a partir de 1 na ordem de `links`.
 - A tabela de observações não muda. `SCHEMA_VERSION` passa a `1.1.0` porque a release ganha `variant_links.parquet`.
-- `User-Agent` com o repositório transferido: `https://github.com/BenchCommons/names-commons-dataset`.
+- `User-Agent` do pipeline, com o repositório `https://github.com/BenchCommons/dataset-names` como contato.
 
 ## Decisões de implementação
 
 | Decisão | Motivo |
 |---|---|
-| QLever em vez de WDQS ou dump (ADR 0004) | O WDQS estourou o tempo nas consultas de sobrenome; o dump tem mais de 100 GB |
+| QLever em vez de WDQS ou dump (ADR 0007) | O WDQS estourou o tempo nas consultas de sobrenome; o dump tem mais de 100 GB |
 | Páginas de 200.000 linhas, número fixo por consulta (1, 5, 3, 1, 1, 1, 2, 1) | Cerca de 500 MB por página lida; o arquivo de sobrenomes inteiro passava de 1,8 GB. A folga sobre o medido é de 36% a 49% nos sobrenomes e prenomes |
 | URL com `action=sparql_json` | O cache baixa só com `User-Agent`; o formato fica determinado pela URL e não pelo cabeçalho `Accept` |
 | Uma consulta por propriedade de ligação | A consulta única com `VALUES ?property` estourou memória e tempo no QLever |
@@ -31,7 +31,6 @@
 | Auto-ligação por `name_key` e `kind` descartada no pipeline (`to_links`), recusada em `validate_links` | `Andrea` masculino P1889 `Andrea` feminino é a mesma chave e não informa nada para agrupar chaves |
 | `ingest_links` devolve `None` quando nenhuma fonte selecionada tem `links` | `run` só grava `variant_links.parquet` quando há fonte de ligações; a release das fontes de teste da spec 002 não muda |
 | Amostra gerada por `tools/amostra_wikidata.py`, que roda as consultas do módulo com `VALUES ?item` | Reproduz a amostra a partir do código, e as consultas da amostra são as mesmas de produção |
-| `REPOSITORIO` de `cache.py` aponta para `BenchCommons` | O repositório foi transferido; o contato no `User-Agent` precisa funcionar (política da Wikimedia) |
 
 ## Foco de revisão
 
@@ -55,7 +54,6 @@
 | `src/namescommons/adapters/wikidata.py` | Consultas, recursos, leitura paginada, `parse` (R1 a R3) e `links` (R4.3) | 3, 4 |
 | `tools/amostra_wikidata.py` | Gera a amostra a partir das consultas do módulo | 3 |
 | `tests/fixtures/wikidata/`, `tests/fixtures/ATRIBUICAO.md`, `sources.yaml` | Amostra, atribuição e registro da fonte | 3 |
-| `src/namescommons/cache.py`, `tests/test_cache.py` | `User-Agent` com o repositório transferido | 3 |
 | `tests/test_wikidata.py` | Testes do adaptador | 3, 4 |
 | `src/namescommons/cli.py`, `tests/test_cli_pipeline.py` | `--links` em `ingest` e `build`; `variant_links.parquet` em `run` (R4.6) | 5 |
 | `.github/workflows/ci.yml`, `tests/test_ci.py` | Passo da CI com o Wikidata (R7) | 5 |
