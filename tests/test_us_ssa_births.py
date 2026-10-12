@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import FormatError, RawRecord, Resource, load_adapter
-from namesio.cache import FetchError, fetch_resource
+from namescommons.adapters import FormatError, RawRecord, Resource, load_adapter
+from namescommons.cache import FetchError, fetch_resource
 
 FIXTURES = Path(__file__).parent / "fixtures" / "us-ssa-births"
 

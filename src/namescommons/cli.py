@@ -1,4 +1,4 @@
-"""Linha de comando: namesio fetch | ingest | validate | build | run."""
+"""Linha de comando: namescommons fetch | ingest | validate | build | run."""
 
 import argparse
 import json
@@ -7,13 +7,13 @@ from pathlib import Path
 
 from pyarrow import ArrowException
 
-from namesio.adapters import DEFAULT_PACKAGE
-from namesio.aggregate import AggregationError, by_country, name_index
-from namesio.io import read_observations, write_by_country, write_index, write_observations
-from namesio.manifest import RELEASE, build_manifest
-from namesio.pipeline import PipelineError, fetch_sources, ingest_sources, select_sources
-from namesio.schema import Observation, ValidationError, validate
-from namesio.sources import Source, SourceError, load_sources
+from namescommons.adapters import DEFAULT_PACKAGE
+from namescommons.aggregate import AggregationError, by_country, name_index
+from namescommons.io import read_observations, write_by_country, write_index, write_observations
+from namescommons.manifest import RELEASE, build_manifest
+from namescommons.pipeline import PipelineError, fetch_sources, ingest_sources, select_sources
+from namescommons.schema import Observation, ValidationError, validate
+from namescommons.sources import Source, SourceError, load_sources
 
 
 def _n(n: int, singular: str, plural: str) -> str:
@@ -45,7 +45,7 @@ def _com_padroes(add):
 
 
 def _parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="namesio", formatter_class=_Ajuda)
+    ap = argparse.ArgumentParser(prog="namescommons", formatter_class=_Ajuda)
     sub = ap.add_subparsers(dest="cmd", required=True, metavar="{fetch,ingest,validate,build,run}")
     sub.add_parser = _com_padroes(sub.add_parser)
     p = sub.add_parser("fetch", help="baixa os recursos das fontes para o cache")

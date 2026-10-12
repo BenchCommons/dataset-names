@@ -5,8 +5,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import yaml
 
-from namesio.cli import main
-from namesio.io import write_observations
+from namescommons.cli import main
+from namescommons.io import write_observations
 
 from conftest import FONTES
 

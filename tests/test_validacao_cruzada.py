@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from namesio.schema import ValidationError, make_observation, validate
+from namescommons.schema import ValidationError, make_observation, validate
 
 
 def _ssa(**campos):

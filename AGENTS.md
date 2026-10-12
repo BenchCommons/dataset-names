@@ -15,13 +15,13 @@ Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`. Build com `hatchl
 ```sh
 uv sync                      # instala as dependências
 uv run pytest -q             # testes (nunca usam a rede)
-uv run namesio --help        # CLI do pipeline
+uv run namescommons --help        # CLI do pipeline
 ```
 
 A CI também roda o pipeline offline sobre as amostras de `tests/fixtures/`:
 
 ```sh
-PYTHONPATH=tests uv run namesio run --offline --sources tests/fixtures/sources.yaml \
+PYTHONPATH=tests uv run namescommons run --offline --sources tests/fixtures/sources.yaml \
   --adapters adaptadores --cache <cache> --out <saida> --release 2026.10
 ```
 

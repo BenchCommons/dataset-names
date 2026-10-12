@@ -8,7 +8,7 @@ import csv
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import FormatError, RawRecord, Resource, parse_count
+from namescommons.adapters import FormatError, RawRecord, Resource, parse_count
 
 SOURCE_ID = "ie-cso-births"
 _API = "https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/{}/CSV/1.0/en"

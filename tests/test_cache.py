@@ -6,8 +6,8 @@ from datetime import datetime
 
 import pytest
 
-from namesio.adapters import Resource
-from namesio.cache import FetchError, cached_path, fetch_resource
+from namescommons.adapters import Resource
+from namescommons.cache import FetchError, cached_path, fetch_resource
 
 CORPO = "nome,sexo,ano,quantidade\nMARIA,F,2020,100\n".encode()
 
@@ -32,8 +32,8 @@ def test_baixa_e_grava_metadados(servidor, tmp_path):
 def test_user_agent_identifica_projeto_e_repositorio(servidor, tmp_path):
     fetch_resource(tmp_path, "exemplo", _recurso(servidor))
     agente = servidor.requisicoes[0][1]
-    assert agente.startswith("namesio/")
-    assert "https://github.com/webminas/names.io" in agente
+    assert agente.startswith("namescommons/")
+    assert "https://github.com/OpenSoftwareAlliance/names-commons-dataset" in agente
 
 
 def test_arquivo_no_cache_nao_e_baixado_de_novo(servidor, tmp_path):

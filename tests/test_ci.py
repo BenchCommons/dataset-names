@@ -1,4 +1,4 @@
-"""Spec 002, R7: o workflow da CI roda uv sync, pytest e namesio run --offline sobre as fixtures."""
+"""Spec 002, R7: o workflow da CI roda uv sync, pytest e namescommons run --offline sobre as fixtures."""
 
 import os
 import shutil
@@ -31,7 +31,7 @@ def test_passos_da_ci():
     comandos = _comandos()
     assert comandos[0] == "uv sync"
     assert comandos[1] == "uv run pytest -q"
-    assert "namesio run --offline" in comandos[2]
+    assert "namescommons run --offline" in comandos[2]
 
 
 def test_cache_fica_fora_do_git():
@@ -40,7 +40,7 @@ def test_cache_fica_fora_do_git():
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_offline_da_ci_roda_localmente(tmp_path):
-    passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "namesio run" in p.get("run", ""))
+    passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "namescommons run" in p.get("run", ""))
     ambiente = {**os.environ, **passo["env"], "RUNNER_TEMP": str(tmp_path)}
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)

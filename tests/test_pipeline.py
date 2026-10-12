@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 
 import adaptadores.exemplo
-from namesio.adapters import RawRecord, Resource
-from namesio.pipeline import (
+from namescommons.adapters import RawRecord, Resource
+from namescommons.pipeline import (
     PipelineError, RecordError, fetch_sources, ingest_sources, select_sources, to_observations,
 )
-from namesio.sources import load_sources, parse_sources
+from namescommons.sources import load_sources, parse_sources
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

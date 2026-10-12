@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import load_adapter
-from namesio.pipeline import fetch_sources, ingest_sources
-from namesio.sources import load_sources
+from namescommons.adapters import load_adapter
+from namescommons.pipeline import fetch_sources, ingest_sources
+from namescommons.sources import load_sources
 
 RAIZ = Path(__file__).resolve().parent.parent
 FONTES = load_sources(RAIZ / "sources.yaml")

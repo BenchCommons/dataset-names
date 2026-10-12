@@ -15,7 +15,7 @@ from pathlib import Path
 from types import ModuleType
 from urllib.parse import urlsplit
 
-DEFAULT_PACKAGE = "namesio.adapters"
+DEFAULT_PACKAGE = "namescommons.adapters"
 
 
 class AdapterError(Exception):

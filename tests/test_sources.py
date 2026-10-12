@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from namesio.sources import SourceError, load_sources, parse_sources
+from namescommons.sources import SourceError, load_sources, parse_sources
 
 
 def fonte(**campos):

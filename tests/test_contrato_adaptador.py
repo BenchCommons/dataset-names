@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import (
+from namescommons.adapters import (
     AdapterError, FormatError, RawRecord, SourceFiles, load_adapter, parse_code, parse_count,
 )
-from namesio.pipeline import PipelineError, RecordError, ingest_sources, select_sources, to_observations
-from namesio.sources import load_sources, parse_sources
+from namescommons.pipeline import PipelineError, RecordError, ingest_sources, select_sources, to_observations
+from namescommons.sources import load_sources, parse_sources
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

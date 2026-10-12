@@ -2,7 +2,7 @@
 
 **Objetivo:** registrar e ingerir o primeiro lote de fontes oficiais (SSA, INSEE, CSO e Statistics Norway) e fechar no contrato do adaptador as regras levantadas na issue #8.
 
-**Arquitetura:** o contrato da spec 002 ganha, em `namesio.adapters`, os auxiliares `parse_count` e `parse_code`, a exceção `FormatError` e o dicionário `SourceFiles`, que explica a chave pedida fora de `RESOURCES`. `load_adapter` separa adaptador ausente de adaptador quebrado. `pipeline.to_observations` confere `kind`, `gender`, `country` e `count` em cada registro, na ordem do arquivo, antes de ordenar. Cada fonte é um módulo em `src/namesio/adapters/` que lê o arquivo baixado só com a biblioteca padrão (`zipfile`, `csv`, `json`); as duas tabelas do SSB dividem o leitor de JSON-stat num módulo privado `_ssb.py`. `cache.py` explica o 403. A CI ganha um passo que roda as fontes reais sobre as amostras.
+**Arquitetura:** o contrato da spec 002 ganha, em `namescommons.adapters`, os auxiliares `parse_count` e `parse_code`, a exceção `FormatError` e o dicionário `SourceFiles`, que explica a chave pedida fora de `RESOURCES`. `load_adapter` separa adaptador ausente de adaptador quebrado. `pipeline.to_observations` confere `kind`, `gender`, `country` e `count` em cada registro, na ordem do arquivo, antes de ordenar. Cada fonte é um módulo em `src/namescommons/adapters/` que lê o arquivo baixado só com a biblioteca padrão (`zipfile`, `csv`, `json`); as duas tabelas do SSB dividem o leitor de JSON-stat num módulo privado `_ssb.py`. `cache.py` explica o 403. A CI ganha um passo que roda as fontes reais sobre as amostras.
 
 **Stack:** a mesma da spec 002 (Python 3.12 via `uv`, `pyarrow`, `pyyaml`, `pycountry`, `pytest`), sem dependência nova. Formatos lidos: ZIP com TXT ou CSV, CSV com BOM e CRLF, JSON-stat 2.0.
 
@@ -33,7 +33,7 @@
 | INSEE: arquivo do cache com o nome da edição (`prenoms-2025-nat_csv.zip`) | Uma edição nova muda URL e nome do arquivo, e o cache não serve a edição antiga por engano |
 | CSO: filtro pelo código exato da estatística (`VSA50C01`, `VSA60C01`) e pela coluna do nome de cada tabela | O CSV traz contagem e rank misturados, ambos com unidade `Number` |
 | SSB: PxWebApi v2 por GET com colchetes codificados (`%5B`, `%5D`) e `outputFormat=json-stat2` | `Resource` só faz GET; o JSON-stat traz código e rótulo do nome e o status de cada célula, e o CSV perde o sexo |
-| SSB: leitor comum em `src/namesio/adapters/_ssb.py` | Duas fontes do mesmo instituto (R2.4); o `_` impede colisão com um `id` |
+| SSB: leitor comum em `src/namescommons/adapters/_ssb.py` | Duas fontes do mesmo instituto (R2.4); o `_` impede colisão com um `id` |
 | 403 explicado em `fetch_resource`, sem contornar o bloqueio | O site da SSA recusa robôs; a saída honesta é dizer onde gravar o arquivo baixado à mão |
 | `servir_fixtures` como fixture de `conftest.py`, e não como função do pacote | Só os testes precisam dela; o pacote publicado não carrega código de teste |
 | Passo novo na CI copia `tests/fixtures/` inteiro como cache | Os diretórios das amostras já têm os nomes de `RESOURCES`; o diretório `exemplo` e os arquivos soltos não atrapalham |
@@ -52,16 +52,16 @@ Casos que a spec implica e que um usuário vai encontrar. Cada um tem teste na t
 
 | Arquivo | Responsabilidade | Tarefa |
 |---|---|---|
-| `src/namesio/adapters/__init__.py` | `FormatError`, `SourceFiles`, `parse_count`, `parse_code`; `load_adapter` com ausente, quebrado e caminho esperado | 1 |
-| `src/namesio/pipeline.py` | Conferência por registro (R2.1, R2.3); `SourceFiles` no `ingest` | 1 |
+| `src/namescommons/adapters/__init__.py` | `FormatError`, `SourceFiles`, `parse_count`, `parse_code`; `load_adapter` com ausente, quebrado e caminho esperado | 1 |
+| `src/namescommons/pipeline.py` | Conferência por registro (R2.1, R2.3); `SourceFiles` no `ingest` | 1 |
 | `tests/conftest.py`, `tests/test_contrato_adaptador.py`, `tests/test_pipeline.py` | `servir_fixtures`, `servidor.recusados`; testes de R2; ajuste de um teste da 002 | 1 |
-| `src/namesio/cache.py` | Mensagem do 403 (R4) | 2 |
-| `src/namesio/adapters/us_ssa_births.py`, `tests/test_us_ssa_births.py`, `tests/fixtures/us-ssa-births/` | Fonte SSA (R1.1) | 2 |
+| `src/namescommons/cache.py` | Mensagem do 403 (R4) | 2 |
+| `src/namescommons/adapters/us_ssa_births.py`, `tests/test_us_ssa_births.py`, `tests/fixtures/us-ssa-births/` | Fonte SSA (R1.1) | 2 |
 | `sources.yaml`, `tests/fixtures/ATRIBUICAO.md`, `tests/test_fontes_oficiais.py` | Registro das fontes, atribuição das amostras, teste que percorre todas as fontes | 2, 3, 4, 5 |
-| `src/namesio/adapters/fr_insee_births.py`, `tests/test_fr_insee_births.py`, `tests/fixtures/fr-insee-births/` | Fonte INSEE (R1.2) | 3 |
-| `src/namesio/adapters/ie_cso_births.py`, `tests/test_ie_cso_births.py`, `tests/fixtures/ie-cso-births/` | Fonte CSO (R1.3) | 4 |
-| `src/namesio/sources.py` | País booleano no YAML (R2.7) | 5 |
-| `src/namesio/adapters/_ssb.py`, `no_ssb_fornavn.py`, `no_ssb_etternavn.py`, `tests/test_no_ssb.py`, `tests/fixtures/no-ssb-*/` | Fontes do SSB (R1.4, R1.5, R2.4) | 5 |
+| `src/namescommons/adapters/fr_insee_births.py`, `tests/test_fr_insee_births.py`, `tests/fixtures/fr-insee-births/` | Fonte INSEE (R1.2) | 3 |
+| `src/namescommons/adapters/ie_cso_births.py`, `tests/test_ie_cso_births.py`, `tests/fixtures/ie-cso-births/` | Fonte CSO (R1.3) | 4 |
+| `src/namescommons/sources.py` | País booleano no YAML (R2.7) | 5 |
+| `src/namescommons/adapters/_ssb.py`, `no_ssb_fornavn.py`, `no_ssb_etternavn.py`, `tests/test_no_ssb.py`, `tests/fixtures/no-ssb-*/` | Fontes do SSB (R1.4, R1.5, R2.4) | 5 |
 | `.github/workflows/ci.yml`, `tests/test_ci.py` | Passo da CI com as fontes oficiais (R5) | 6 |
 
 ## Cobertura da spec

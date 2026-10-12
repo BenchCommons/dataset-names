@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from namesio.adapters import AdapterError, RawRecord, Resource, check_adapter, load_adapter, module_name
+from namescommons.adapters import AdapterError, RawRecord, Resource, check_adapter, load_adapter, module_name
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -52,7 +52,7 @@ def test_adaptador_inexistente():
 
 
 def test_pacote_padrao_ainda_nao_tem_adaptadores():
-    with pytest.raises(AdapterError, match="namesio.adapters.us_ssa"):
+    with pytest.raises(AdapterError, match="namescommons.adapters.us_ssa"):
         load_adapter("us-ssa")
 
 

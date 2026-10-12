@@ -9,8 +9,8 @@ import pyarrow.parquet as pq
 import pytest
 
 import adaptadores.exemplo
-from namesio.adapters import Resource
-from namesio.cli import main
+from namescommons.adapters import Resource
+from namescommons.cli import main
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FONTES = str(FIXTURES / "sources.yaml")
@@ -143,7 +143,7 @@ def test_run_recusa_out_nao_vazio(cache_das_fixtures, tmp_path, capsys):
 
 
 def test_fetch_com_falha_nomeia_a_fonte(exemplo_no_servidor, tmp_path, capsys, monkeypatch):
-    monkeypatch.setattr("namesio.cache.ESPERA", 0)
+    monkeypatch.setattr("namescommons.cache.ESPERA", 0)
     del exemplo_no_servidor.arquivos["/exemplo/primeiros.csv"]
     assert main(["fetch", "--cache", str(tmp_path / "cache"), *ADAPTADORES]) == 1
     err = capsys.readouterr().err

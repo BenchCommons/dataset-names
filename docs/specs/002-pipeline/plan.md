@@ -2,7 +2,7 @@
 
 **Objetivo:** implementar o contrato do adaptador, o cache de downloads, os comandos `fetch`, `ingest` e `run`, a validação cruzada com `sources.yaml`, a CI e a medição de desempenho da spec 002, e fechar as pendências de robustez da issue #2.
 
-**Arquitetura:** três módulos novos no pacote `namesio`. `adapters/__init__.py` define `Resource`, `RawRecord` e a carga de um módulo de adaptador por `source_id`; `cache.py` baixa cada recurso para `cache/<source_id>/<filename>` com `urllib`, metadados e escrita atômica; `pipeline.py` transforma `RawRecord` em `Observation` (R1.1 a R1.5), valida cada fonte e encadeia cache e `parse`. A CLI ganha `fetch`, `ingest` e `run` e reaproveita o `build` da spec 001. O adaptador de exemplo do critério de aceite 1 vive em `tests/adaptadores/` e é carregado com `--adapters adaptadores`, sem entrar no pacote publicado.
+**Arquitetura:** três módulos novos no pacote `namescommons`. `adapters/__init__.py` define `Resource`, `RawRecord` e a carga de um módulo de adaptador por `source_id`; `cache.py` baixa cada recurso para `cache/<source_id>/<filename>` com `urllib`, metadados e escrita atômica; `pipeline.py` transforma `RawRecord` em `Observation` (R1.1 a R1.5), valida cada fonte e encadeia cache e `parse`. A CLI ganha `fetch`, `ingest` e `run` e reaproveita o `build` da spec 001. O adaptador de exemplo do critério de aceite 1 vive em `tests/adaptadores/` e é carregado com `--adapters adaptadores`, sem entrar no pacote publicado.
 
 **Stack:** a mesma da spec 001 (Python 3.12 via `uv`, `pyarrow`, `pyyaml`, `pycountry`, `pytest`). Downloads com `urllib.request` da biblioteca padrão; testes de download com `http.server` local numa thread; CI no GitHub Actions com `astral-sh/setup-uv`.
 
@@ -13,7 +13,7 @@
 - Nenhuma dependência nova de runtime ou de desenvolvimento.
 - Os testes nunca acessam a rede: downloads usam o servidor de `tests/conftest.py` em `127.0.0.1`.
 - Cache em `cache/<source_id>/<filename>` e `cache/<source_id>/<filename>.meta.json` (`url`, `downloaded_at` em ISO 8601 UTC, `sha256`, `size`); `/cache/` no `.gitignore`.
-- `User-Agent`: `namesio/<versão do pacote> (+https://github.com/webminas/names.io)`. Timeout de 60 s, 3 tentativas, espera de 2 s e 4 s entre elas.
+- `User-Agent`: `namescommons/<versão do pacote> (+https://github.com/OpenSoftwareAlliance/names-commons-dataset)`. Timeout de 60 s, 3 tentativas, espera de 2 s e 4 s entre elas.
 - Faixa de `year`: 1800 até o ano corrente mais um, calculado na hora da validação.
 - Mensagem de falha de fonte: `fonte '<id>': <causa>`, código de saída 1, sem traceback e sem saída parcial.
 - `SCHEMA_VERSION` continua `1.0.0`: nenhum campo de saída muda.
@@ -22,7 +22,7 @@
 
 | Decisão | Motivo |
 |---|---|
-| Adaptador de exemplo em `tests/adaptadores/exemplo.py`; a CLI aceita `--adapters PACOTE` (padrão `namesio.adapters`) | O critério 1 pede um adaptador "escrito só para teste"; fora de `src/` ele não vai para o pacote, e a CI o usa com `PYTHONPATH=tests` |
+| Adaptador de exemplo em `tests/adaptadores/exemplo.py`; a CLI aceita `--adapters PACOTE` (padrão `namescommons.adapters`) | O critério 1 pede um adaptador "escrito só para teste"; fora de `src/` ele não vai para o pacote, e a CI o usa com `PYTHONPATH=tests` |
 | O pipeline não preenche `country` com o país da fonte | R1.2 só tira `count_type` e `source_id` de `sources.yaml`; a recusa de R3 pega o adaptador que esquecer o país |
 | R1.1 também remove espaços em volta de `country` e `gender` preenchidos (`" PT "` vira `"PT"`) | Mesmo tratamento do vazio; o valor só com espaços já vira `None` |
 | Repetidos pela chave (R1.4) mantêm a forma de exibição do primeiro registro; repetidos com e sem `count` são erro | Resultado determinístico pela ordem do arquivo; somar contagem com ausência não tem significado |
@@ -51,14 +51,14 @@ Casos que a spec implica e que um usuário vai encontrar. Cada um tem teste na t
 
 | Arquivo | Responsabilidade | Tarefa |
 |---|---|---|
-| `src/namesio/sources.py` | `uniform_case`, `adapter`; recusa de `retrieved` com hora e `url` sem `http`/`https` | 1 |
-| `src/namesio/normalize.py`, `src/namesio/schema.py` | `normalize_name(..., uniform_case)`, `derive_name_fields`; validação cruzada com a fonte e faixa de `year`; `Observation` com `slots` | 2, 3, 10 |
-| `src/namesio/aggregate.py`, `src/namesio/io.py`, `src/namesio/manifest.py` | Robustez da issue #2; leitura e escrita colunares | 4, 10 |
-| `src/namesio/adapters/__init__.py` | `Resource`, `RawRecord`, `AdapterError`, `check_adapter`, `load_adapter` | 5 |
+| `src/namescommons/sources.py` | `uniform_case`, `adapter`; recusa de `retrieved` com hora e `url` sem `http`/`https` | 1 |
+| `src/namescommons/normalize.py`, `src/namescommons/schema.py` | `normalize_name(..., uniform_case)`, `derive_name_fields`; validação cruzada com a fonte e faixa de `year`; `Observation` com `slots` | 2, 3, 10 |
+| `src/namescommons/aggregate.py`, `src/namescommons/io.py`, `src/namescommons/manifest.py` | Robustez da issue #2; leitura e escrita colunares | 4, 10 |
+| `src/namescommons/adapters/__init__.py` | `Resource`, `RawRecord`, `AdapterError`, `check_adapter`, `load_adapter` | 5 |
 | `tests/adaptadores/`, `tests/fixtures/` | Adaptador de exemplo, amostra da fonte e `sources.yaml` de teste | 5 |
-| `src/namesio/cache.py`, `tests/conftest.py` | `fetch_resource`, `FetchError`; servidor HTTP local dos testes | 6 |
-| `src/namesio/pipeline.py` | `to_observations`, `select_sources`, `fetch_sources`, `ingest_sources`, `PipelineError` | 7 |
-| `src/namesio/cli.py` | `namesio fetch`, `ingest` e `run` | 8 |
+| `src/namescommons/cache.py`, `tests/conftest.py` | `fetch_resource`, `FetchError`; servidor HTTP local dos testes | 6 |
+| `src/namescommons/pipeline.py` | `to_observations`, `select_sources`, `fetch_sources`, `ingest_sources`, `PipelineError` | 7 |
+| `src/namescommons/cli.py` | `namescommons fetch`, `ingest` e `run` | 8 |
 | `.github/workflows/ci.yml`, `.gitignore` | CI em todo push e pull request; cache fora do git | 9 |
 | `tools/bench_pipeline.py` | Medição de R8 com 3 milhões de observações sintéticas | 10 |
 

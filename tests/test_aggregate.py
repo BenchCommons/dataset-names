@@ -5,9 +5,9 @@ from datetime import date
 
 import pytest
 
-from namesio.aggregate import AggregationError, CountryEntry, by_country, display_name, name_index
-from namesio.schema import make_observation
-from namesio.sources import parse_sources
+from namescommons.aggregate import AggregationError, CountryEntry, by_country, display_name, name_index
+from namescommons.schema import make_observation
+from namescommons.sources import parse_sources
 
 
 def _linha(rows, kind, chave):

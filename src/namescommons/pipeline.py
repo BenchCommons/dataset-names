@@ -4,12 +4,12 @@ from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
 
-from namesio.adapters import (
+from namescommons.adapters import (
     DEFAULT_PACKAGE, AdapterError, FormatError, RawRecord, SourceFiles, load_adapter,
 )
-from namesio.cache import FetchError, fetch_resource
-from namesio.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
-from namesio.sources import Source, is_country
+from namescommons.cache import FetchError, fetch_resource
+from namescommons.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
+from namescommons.sources import Source, is_country
 
 
 class PipelineError(Exception):

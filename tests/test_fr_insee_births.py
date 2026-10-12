@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from namesio.adapters import FormatError, RawRecord, load_adapter
-from namesio.pipeline import to_observations
-from namesio.sources import load_sources
+from namescommons.adapters import FormatError, RawRecord, load_adapter
+from namescommons.pipeline import to_observations
+from namescommons.sources import load_sources
 
 RAIZ = Path(__file__).resolve().parent.parent
 FIXTURE = RAIZ / "tests" / "fixtures" / "fr-insee-births" / "prenoms-2025-nat_csv.zip"

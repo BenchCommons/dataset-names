@@ -4,11 +4,11 @@ from datetime import date
 
 import pytest
 
-from namesio.aggregate import AggregationError, by_country, name_index
-from namesio.io import read_observations, write_by_country, write_index, write_observations
-from namesio.manifest import build_manifest
-from namesio.schema import make_observation
-from namesio.sources import parse_sources
+from namescommons.aggregate import AggregationError, by_country, name_index
+from namescommons.io import read_observations, write_by_country, write_index, write_observations
+from namescommons.manifest import build_manifest
+from namescommons.schema import make_observation
+from namescommons.sources import parse_sources
 
 
 def _fonte(id, country, count_type, primary=True):

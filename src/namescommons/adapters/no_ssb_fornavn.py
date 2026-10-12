@@ -7,8 +7,8 @@ Até 2020 o ano é o de nascimento; desde 2021, o de registro do nome.
 from collections.abc import Iterator
 from pathlib import Path
 
-from namesio.adapters import RawRecord, Resource, parse_code
-from namesio.adapters._ssb import API, cells
+from namescommons.adapters import RawRecord, Resource, parse_code
+from namescommons.adapters._ssb import API, cells
 
 SOURCE_ID = "no-ssb-fornavn"
 RESOURCES = [Resource(API.format(tabela="10467", dimensao="Fornavn"), "10467.json")]

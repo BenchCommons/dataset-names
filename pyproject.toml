@@ -1,5 +1,5 @@
 [project]
-name = "namesio"
+name = "names-commons-dataset"
 version = "0.1.0"
 description = "Dataset mundial de primeiros nomes e sobrenomes a partir de fontes oficiais e do Wikidata"
 requires-python = ">=3.12"
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-namesio = "namesio.cli:main"
+namescommons = "namescommons.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]
@@ -22,3 +22,6 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/namescommons"]
