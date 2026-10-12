@@ -80,7 +80,7 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 ### Fechamento
 
-- [ ] Medição de R9 com os arquivos reais: `run --offline` com o lote completo e com o sintético mais o Wikidata, na master e nesta branch, nas mesmas condições.
-- [ ] Números reais do agrupamento (R5.8) no pull request.
-- [ ] Issues para o que ficou fora: transliteração de grego, hangul, kana e demais escritas; `group_id` em `by_country`; cognatos pela P460.
+- [x] Medição de R9 com os arquivos reais: `run --offline` com o lote completo e com o sintético mais o Wikidata, na master e nesta branch, nas mesmas condições.
+- [x] Números reais do agrupamento (R5.8) no pull request.
+- [x] Issues para o que ficou fora: transliteração de grego, hangul, kana e demais escritas (#35); `group_id` em `by_country` e junções aplicadas (#36); cognatos pela P460 (#37).
 - [ ] Pull request com `Closes #4`.
