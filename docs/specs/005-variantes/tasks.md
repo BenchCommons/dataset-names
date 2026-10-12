@@ -51,8 +51,8 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Produz:** `group_ids(keys: list[str], ascii: list[str], unaccented: list[bool], links: Iterable[VariantLink] | None, kind: str) -> list[str]`, com `keys` ordenadas e sem repetição.
 
-- [ ] Testes que falham, com ligações escritas à mão: `test_nome_sozinho_e_seu_grupo`; `test_same_item_junta_e_e_nao_dirigido`; `test_other_gender_so_em_sobrenomes`; `test_transliteracao_inequivoca_junta`; `test_romanizacao_ambigua_nao_junta`; `test_sem_acento_junta_marie_eve`; `test_sem_acento_ambiguo_nao_junta`; `test_acentuados_nao_se_juntam_sem_fonte_sem_acento`; `test_different_from_separa`; `test_tipos_diferentes_nunca_juntam`; `test_p460_nao_junta`; `test_ligacao_sem_observacao_e_ignorada`; `test_juncao_pela_chave_e_nao_pelo_texto`; `test_resultado_nao_depende_da_ordem`; `test_group_id_e_a_menor_chave`.
-- [ ] Implementação e commit.
+- [x] Testes que falham, com ligações escritas à mão: `test_nome_sozinho_e_seu_grupo`; `test_same_item_junta_e_e_nao_dirigido`; `test_other_gender_so_em_sobrenomes`; `test_transliteracao_inequivoca_junta`; `test_romanizacao_ambigua_nao_junta`; `test_sem_acento_junta_marie_eve`; `test_sem_acento_ambiguo_nao_junta`; `test_acentuados_nao_se_juntam_sem_fonte_sem_acento`; `test_different_from_separa`; `test_tipos_diferentes_nunca_juntam`; `test_p460_nao_junta`; `test_ligacao_sem_observacao_e_ignorada`; `test_juncao_pela_chave_e_nao_pelo_texto`; `test_resultado_nao_depende_da_ordem`; `test_group_id_e_a_menor_chave`.
+- [x] Implementação e commit.
 
 ### Task 7: `group_id` no índice e manifesto (R5, R7.4)
 
