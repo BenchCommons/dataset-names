@@ -1,0 +1,23 @@
+sources:
+  - id: exemplo
+    name: Fonte de exemplo para testes
+    url: https://example.org/exemplo/
+    license: CC0-1.0
+    attribution: Exemplo
+    country: PT
+    count_type: births
+    primary: true
+    suppression: null
+    retrieved: 2026-10-01
+    uniform_case: true
+  - id: manual
+    name: Lista mantida à mão
+    url: https://example.org/manual/
+    license: CC0-1.0
+    attribution: Exemplo
+    country: null
+    count_type: attested
+    primary: false
+    suppression: null
+    retrieved: 2026-10-01
+    adapter: false
