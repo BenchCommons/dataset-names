@@ -193,3 +193,68 @@ def test_r1_6_cell_count_recusa(valor, trecho):
 def test_r1_6_cell_count_nomeia_o_campo():
     with pytest.raises(FormatError, match="Frecuencia 1.5 não é inteiro"):
         cell_count(1.5, field="Frecuencia")
+
+
+# R1.3 e R1.5: XLS pelo xlrd ----------------------------------------------------------------------
+
+TIPOS_XLS = FIXTURES / "planilhas" / "tipos.xls"
+INE = FIXTURES / "es-ine-residentes"
+
+
+def test_r1_3_tipos_de_celula_xls():
+    assert sheet_names(TIPOS_XLS) == ["Dados", "Erros"]
+    obtido = list(rows(TIPOS_XLS, "Dados"))
+    assert obtido == TIPOS_ESPERADO
+    assert [type(v) for v in obtido[1][1]] == [str, int, float]
+    assert [type(v) for v in obtido[3][1]] == [str, bool, type(None), bool]
+
+
+def test_r1_3_erro_de_formula_xls():
+    with pytest.raises(FormatError, match=r"tipos.xls, aba 'Erros', célula B2: erro de fórmula '#N/A'"):
+        list(rows(TIPOS_XLS, "Erros"))
+
+
+def test_r1_3_mesmos_valores_nos_dois_formatos(tmp_path):
+    xlsx = _xlsx(tmp_path / "tipos.xlsx", [("Dados", TIPOS_XML)], TIPOS_TEXTOS)
+    assert list(rows(xlsx, "Dados")) == list(rows(TIPOS_XLS, "Dados"))
+
+
+def test_r1_1_aba_ausente_xls():
+    with pytest.raises(FormatError, match=r"tipos.xls: aba 'Notas' não existe; abas: \['Dados', 'Erros'\]"):
+        list(rows(TIPOS_XLS, "Notas"))
+
+
+def test_r1_3_amostras_do_ine():
+    nomes = INE / "nombres_por_edad_media.xlsx"
+    assert sheet_names(nomes) == ["Hombres", "Mujeres"]
+    assert list(rows(nomes, "Hombres"))[:5] == [
+        (1, ["Frecuencias de nombres masculinos"]),
+        (2, ["Datos procedentes de Censos de población anuales a fecha 01/01/2025"]),
+        (4, ["Nombres masculinos con frecuencia mayor o igual a 20 a nivel nacional."]),
+        (5, ["(*) Edad media de las personas que tienen ese nombre a nivel nacional."]),
+        (7, ["Orden", "Nombre", "Frecuencia", "Edad Media (*)"]),
+    ]
+    assert list(rows(nomes, "Mujeres"))[-1] == (32328, [32321, "ZULMA PATRICIA", 20, 43])
+    apellidos = INE / "apellidos_frecuencia.xls"
+    assert sheet_names(apellidos) == ["Apellidos >=100", "Apellidos >=20 y <=99"]
+    obtido = list(rows(apellidos, "Apellidos >=100"))
+    assert obtido[2:6] == [
+        (3, ["Datos procedentes de Censos de población anuales a fecha 01/01/2025"]),
+        (4, [None, None, "Apellido 1º", "Apellido 2º", "Ambos apellidos"]),
+        (5, ["Orden", "Apellido", "Total", "Total", "Total"]),
+        (6, [1, "GARCIA", 1446937, 1468824, 74765, 74765, 1468824]),
+    ]
+    assert obtido[-2] == (16097, [16092, "LYU", 208, "..", "..", 9999999, 9999999])
+
+
+def test_r1_5_xls_corrompido(tmp_path):
+    arq = tmp_path / "quebrado.xls"
+    arq.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 600)
+    with pytest.raises(FormatError, match="quebrado.xls: XLS ilegível"):
+        sheet_names(arq)
+
+
+def test_r1_5_xlrd_fixado():
+    import tomllib
+    projeto = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "xlrd==2.0.2" in projeto["project"]["dependencies"]

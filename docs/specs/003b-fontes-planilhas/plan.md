@@ -29,7 +29,7 @@
 | `xlrd` com `on_demand=True` e `release_resources()` no fim | Carrega só a aba pedida e libera o arquivo |
 | INE como uma fonte com dois arquivos (`es-ine-residentes`) | Nomes e sobrenomes são `population`; duas fontes ES `population` exigiriam uma só `primary` (spec 001, R2), e a outra não contaria |
 | Sobrenome conta pelo `Apellido 1º` | Critério da lista, sem supressão, cada pessoa contada uma vez (spec, R2.5) |
-| Ano pela frase "a fecha DD/MM/AAAA" da linha 2 de cada aba | As URLs do INE não mudam entre edições; o ano no conteúdo evita trocar o código a cada maio |
+| Ano pela frase "a fecha DD/MM/AAAA" acima do cabeçalho de cada aba | As URLs do INE não mudam entre edições; o ano no conteúdo evita trocar o código a cada maio |
 | Abas de nomes por `parse_code({"Hombres": "M", "Mujeres": "F"})`; abas de sobrenomes validadas pelo cabeçalho | Uma aba nova ou renomeada falha alto em vez de virar outro sexo |
 | Amostra XLSX remontada com o XML do INE (mesmos números de linha, textos compartilhados só das linhas copiadas) | Linhas esparsas e tipos de célula reais entram no teste sem arquivo grande |
 | Amostra XLS gerada com `xlwt` a partir das linhas reais, preservando os números de linha e as colunas ocultas F e G | Não há como recortar um XLS sem regravar; `xlwt` grava BIFF8, o mesmo formato do INE |

@@ -11,6 +11,8 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
+import xlrd
+
 from namescommons.adapters import FormatError, parse_count
 
 _ZIP = b"PK\x03\x04"
@@ -212,9 +214,54 @@ def _xlsx_rows(caminho: Path, sheet: str) -> Iterator[tuple[int, list]]:
 
 # XLS ----------------------------------------------------------------------------------------------
 
+def _xls_abrir(caminho: Path):
+    try:
+        return xlrd.open_workbook(caminho, on_demand=True)
+    except Exception as e:  # xlrd levanta XLRDError, CompDocError, AssertionError e outras
+        raise FormatError(f"{caminho.name}: XLS ilegível: {type(e).__name__}: {e}") from None
+
+
 def _xls_sheet_names(caminho: Path) -> list[str]:
-    raise FormatError(f"{caminho.name}: XLS ainda não suportado")
+    livro = _xls_abrir(caminho)
+    try:
+        return livro.sheet_names()
+    finally:
+        livro.release_resources()
+
+
+def _xls_valor(celula, onde: str):
+    tipo = celula.ctype
+    if tipo in (xlrd.XL_CELL_EMPTY, xlrd.XL_CELL_BLANK):
+        return None
+    if tipo == xlrd.XL_CELL_TEXT:
+        return celula.value
+    if tipo in (xlrd.XL_CELL_NUMBER, xlrd.XL_CELL_DATE):
+        valor = float(celula.value)
+        return int(valor) if valor.is_integer() else valor
+    if tipo == xlrd.XL_CELL_BOOLEAN:
+        return bool(celula.value)
+    if tipo == xlrd.XL_CELL_ERROR:
+        texto = xlrd.error_text_from_code.get(celula.value, f"código {celula.value}")
+        raise FormatError(f"{onde}: erro de fórmula {texto!r}")
+    raise FormatError(f"{onde}: tipo de célula {tipo} desconhecido")
 
 
 def _xls_rows(caminho: Path, sheet: str) -> Iterator[tuple[int, list]]:
-    raise FormatError(f"{caminho.name}: XLS ainda não suportado")
+    livro = _xls_abrir(caminho)
+    try:
+        if sheet not in livro.sheet_names():
+            raise FormatError(f"{caminho.name}: aba {sheet!r} não existe; abas: {livro.sheet_names()}")
+        try:
+            aba = livro.sheet_by_name(sheet)
+        except Exception as e:
+            raise FormatError(f"{caminho.name}, aba {sheet!r}: XLS ilegível: {type(e).__name__}: {e}") from None
+        prefixo = f"{caminho.name}, aba {sheet!r}"
+        for i in range(aba.nrows):
+            valores = [
+                _xls_valor(celula, f"{prefixo}, célula {xlrd.cellname(i, j)}")
+                for j, celula in enumerate(aba.row(i))
+            ]
+            if _sem_none_final(valores):
+                yield i + 1, valores
+    finally:
+        livro.release_resources()

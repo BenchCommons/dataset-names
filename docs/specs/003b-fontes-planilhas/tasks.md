@@ -91,3 +91,119 @@ Amostra (spec, R3), gerada a partir dos arquivos reais baixados para fora do rep
 - [ ] Medição de R5: `namescommons run --offline` só com `es-ine-residentes` e os arquivos reais no cache, com `/usr/bin/time -l`; pico de memória da leitura do XLS.
 - [ ] Issues das fontes adiadas de R6 (DVV, Statbel).
 - [ ] Pull request com `Closes #13`.
+
+---
+
+### Apêndice: gerador das amostras
+
+Rodado fora do repositório, com os arquivos reais baixados em `<dir_reais>`: `uv run --with xlwt==1.3.0 --with xlrd==2.0.2 python -I gera_amostras.py <dir_reais> tests/fixtures`.
+
+```python
+"""Gera as amostras da spec 003b a partir dos arquivos reais do INE.
+
+Uso: uv run --with xlwt==1.3.0 --with xlrd==2.0.2 python -I gera_amostras.py <dir_reais> <dir_tests_fixtures>
+"""
+import re
+import sys
+import zipfile
+from pathlib import Path
+
+import xlrd
+import xlwt
+
+reais, fixtures = Path(sys.argv[1]), Path(sys.argv[2])
+
+# --- nombres_por_edad_media.xlsx: XML original, só as linhas escolhidas --------------------------
+LINHAS = {"sheet1.xml": [1, 2, 3, 4, 5, 6, 7, 8, 152, 618, 707, 4812, 31126],
+          "sheet2.xml": [1, 2, 3, 4, 5, 6, 7, 8, 47, 129, 3024, 30276, 32328]}
+orig = zipfile.ZipFile(reais / "nombres_por_edad_media.xlsx")
+sst = orig.read("xl/sharedStrings.xml").decode("utf-8")
+cab_sst, corpo = sst.split("<si>", 1)
+sis = re.findall(r"<si>.*?</si>", "<si>" + corpo.rsplit("</sst>", 1)[0], flags=re.S)
+novos, mapa = [], {}
+
+def remapeia(linha: str) -> str:
+    def troca(m):
+        antigo = int(m.group(2))
+        if antigo not in mapa:
+            mapa[antigo] = len(novos)
+            novos.append(sis[antigo])
+        return f'{m.group(1)}<v>{mapa[antigo]}</v>'
+    return re.sub(r'(<c [^>]*t="s"[^>]*>)<v>(\d+)</v>', troca, linha)
+
+abas = {}
+for membro, quais in LINHAS.items():
+    xml = orig.read(f"xl/worksheets/{membro}").decode("utf-8")
+    inicio, resto = xml.split("<sheetData>", 1)
+    linhas = re.findall(r'<row r="(\d+)"[^>]*?(?:/>|>.*?</row>)', resto.split("</sheetData>", 1)[0], flags=re.S)
+    blocos = re.findall(r'<row r="\d+"[^>]*?(?:/>|>.*?</row>)', resto.split("</sheetData>", 1)[0], flags=re.S)
+    escolhidas = [remapeia(b) for n, b in zip(linhas, blocos) if int(n) in quais]
+    assert len(escolhidas) == len(quais), membro
+    inicio = re.sub(r'<dimension ref="[^"]*"/>', f'<dimension ref="A1:F{quais[-1]}"/>', inicio)
+    abas[membro] = inicio + "<sheetData>" + "".join(escolhidas) + '</sheetData><mergeCells count="1"><mergeCell ref="A1:D1"/></mergeCells></worksheet>'
+
+CT = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      '<Default Extension="xml" ContentType="application/xml"/>'
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+      '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+      '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
+      '</Types>')
+RELS_PKG = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            '</Relationships>')
+rels_livro = re.sub(r'<Relationship Id="rId3"[^>]*/>', "", orig.read("xl/_rels/workbook.xml.rels").decode("utf-8"))
+livro = orig.read("xl/workbook.xml").decode("utf-8")
+livro = re.sub(r"<mc:AlternateContent.*?</mc:AlternateContent>", "", livro, flags=re.S)
+livro = re.sub(r"<definedNames>.*?</definedNames>", "", livro, flags=re.S)
+livro = re.sub(r"<extLst>.*?</extLst>", "", livro, flags=re.S)
+novo_sst = (cab_sst.replace('count="63456" uniqueCount="62458"', f'count="{len(novos)}" uniqueCount="{len(novos)}"')
+            + "".join(novos) + "</sst>")
+destino = fixtures / "es-ine-residentes"
+destino.mkdir(parents=True, exist_ok=True)
+with zipfile.ZipFile(destino / "nombres_por_edad_media.xlsx", "w", zipfile.ZIP_DEFLATED) as z:
+    z.writestr("[Content_Types].xml", CT)
+    z.writestr("_rels/.rels", RELS_PKG)
+    z.writestr("xl/workbook.xml", livro)
+    z.writestr("xl/_rels/workbook.xml.rels", rels_livro)
+    for membro, xml in abas.items():
+        z.writestr(f"xl/worksheets/{membro}", xml)
+    z.writestr("xl/styles.xml", orig.read("xl/styles.xml"))
+    z.writestr("xl/sharedStrings.xml", novo_sst)
+
+# --- apellidos_frecuencia.xls: mesmas linhas e colunas A a G, regravadas em BIFF8 -----------------
+LINHAS_XLS = {"Apellidos >=100": [1, 2, 3, 4, 5, 6, 21, 1705, 7173, 16097, 27666],
+              "Apellidos >=20 y <=99": [1, 2, 3, 4, 5, 6, 43286, 58856]}
+livro_xls = xlrd.open_workbook(reais / "apellidos_frecuencia.xls")
+saida = xlwt.Workbook(encoding="utf-8")
+for nome, quais in LINHAS_XLS.items():
+    origem, aba = livro_xls.sheet_by_name(nome), saida.add_sheet(nome)
+    for n in quais:
+        for c, celula in enumerate(origem.row(n - 1)):
+            if celula.ctype == xlrd.XL_CELL_EMPTY or (celula.ctype == xlrd.XL_CELL_TEXT and celula.value == ""):
+                continue
+            aba.write(n - 1, c, celula.value)
+saida.save(str(destino / "apellidos_frecuencia.xls"))
+
+# --- planilhas/tipos.xls: as mesmas células de TIPOS_ESPERADO em tests/test_spreadsheet.py --------
+tipos = xlwt.Workbook(encoding="utf-8")
+d = tipos.add_sheet("Dados")
+for c, v in enumerate(["Orden", "Nombre", "Frecuencia"]):
+    d.write(0, c, v)
+for c, v in enumerate(["ANTONIO", 590938, 58.7]):
+    d.write(1, c, v)
+d.write(2, 0, "IÑIGO"); d.write(2, 1, 1000.0)
+d.write(4, 0, "JOANA D'ARC"); d.write(4, 1, True); d.write(4, 2); d.write(4, 3, False); d.write(4, 4)
+d.write(6, 2, "..")
+e = tipos.add_sheet("Erros")
+e.write(0, 0, 1)
+e.row(1).set_cell_error(1, 0x2A)  # #N/A
+(fixtures / "planilhas").mkdir(exist_ok=True)
+tipos.save(str(fixtures / "planilhas" / "tipos.xls"))
+for p in sorted((fixtures / "es-ine-residentes").iterdir()) + [fixtures / "planilhas" / "tipos.xls"]:
+    print(p.name, p.stat().st_size)
+```
