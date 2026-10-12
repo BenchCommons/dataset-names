@@ -1,1 +1,12 @@
-sources: []
+# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1.
+sources:
+  - id: us-ssa-births
+    name: Social Security Administration, Popular Baby Names (national data)
+    url: https://www.ssa.gov/oact/babynames/limits.html
+    license: public-domain
+    attribution: "Social Security Administration (EUA), Baby Names from Social Security Card Applications, National Data"
+    country: US
+    count_type: births
+    primary: true
+    suppression: 5
+    retrieved: 2026-10-12
