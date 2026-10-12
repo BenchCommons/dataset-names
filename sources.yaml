@@ -1,4 +1,4 @@
-# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, na spec 003d (ADR 0004) e na spec 003b, R2.
+# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, na spec 003d (ADR 0004), na spec 003b, R2, e na spec 004, R1.
 sources:
   - id: us-ssa-births
     name: Social Security Administration, Popular Baby Names (national data)
@@ -82,4 +82,14 @@ sources:
     count_type: births
     primary: true
     suppression: 10
+    retrieved: 2026-10-12
+  - id: wikidata
+    name: Wikidata, itens de prenome (Q202444) e de sobrenome (Q101352) com rótulo nativo
+    url: https://www.wikidata.org/wiki/Wikidata:Licensing
+    license: CC0-1.0
+    attribution: "Wikidata, dados estruturados sob CC0 1.0, consultados no QLever"
+    country: null
+    count_type: attested
+    primary: false
+    suppression: null
     retrieved: 2026-10-12

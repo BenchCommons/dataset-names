@@ -51,7 +51,7 @@ def test_manifest(observacoes, fontes, tmp_path):
     write_by_country(by_country(observacoes, fontes), tmp_path / "by_country")
     write_observations(observacoes, tmp_path / "observations.parquet")
     m = build_manifest("2026.10", tmp_path, fontes, {o.source_id for o in observacoes})
-    assert m["schema_version"] == "1.0.0"
+    assert m["schema_version"] == "1.1.0"
     assert [s["id"] for s in m["sources"]] == ["br-ibge-censo", "us-births-b", "us-ssa", "wikidata"]
     assert m["files"]["observations.parquet"]["rows"] == len(observacoes)
     assert m["files"]["by_country/US.csv"]["rows"] == 4

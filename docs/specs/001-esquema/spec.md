@@ -41,6 +41,8 @@ Regras:
 
 Cada fonte tem: `id`, `name`, `url`, `license`, `attribution` (texto exigido pela licença), `country`, `count_type`, `primary` (booleano, ver R3.3), `suppression` (limite abaixo do qual a fonte omite nomes, ex.: `5` na SSA; vazio se não houver) e `retrieved` (data da coleta). Fonte sem licença compatível com o ADR 0001 não pode ser registrada. Quando houver mais de uma fonte para o mesmo par (`country`, `count_type`), exatamente uma delas tem `primary: true`.
 
+Nota (spec 004, R5): a exigência de exatamente uma `primary` vale só para `births` e `population`. Em `attested`, `primary` não tem efeito e não é conferido (issue #3).
+
 ### R3. Saídas agregadas
 
 **R3.1 `observations.parquet`.** A tabela de R1 completa. Somente Parquet.

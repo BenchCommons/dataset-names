@@ -10,6 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from namescommons.aggregate import CountryRow, IndexRow
+from namescommons.links import VariantLink
 from namescommons.schema import Observation
 
 OBSERVATION_SCHEMA = pa.schema([
@@ -21,6 +22,9 @@ OBSERVATION_SCHEMA = pa.schema([
 
 # read_observations constrói Observation por posição (R8): a ordem precisa coincidir.
 assert [f.name for f in fields(Observation)] == OBSERVATION_SCHEMA.names, "OBSERVATION_SCHEMA fora de ordem"
+
+# Spec 004, R4.2: tabela variant_links, na ordem dos campos de VariantLink.
+LINK_SCHEMA = pa.schema([(f.name, pa.string()) for f in fields(VariantLink)])
 
 INDEX_SCHEMA = pa.schema([
     ("name", pa.string()), ("name_key", pa.string()), ("ascii", pa.string()),
@@ -109,3 +113,15 @@ def write_by_country(rows_by_country: dict[str, list[CountryRow]], directory: Pa
             w.writerow(COUNTRY_CSV_COLUMNS)
             for r in rows:
                 w.writerow([_celula(getattr(r, c)) for c in COUNTRY_CSV_COLUMNS])
+
+
+def write_links(links: list[VariantLink], path: Path) -> None:
+    colunas = {campo: [getattr(v, campo) for v in links] for campo in LINK_SCHEMA.names}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pydict(colunas, schema=LINK_SCHEMA), path)
+
+
+def read_links(path: Path) -> list[VariantLink]:
+    tabela = pq.read_table(path).select(LINK_SCHEMA.names).cast(LINK_SCHEMA)
+    colunas = [_valores(tabela.column(campo)) for campo in LINK_SCHEMA.names]
+    return [VariantLink(*valores) for valores in zip(*colunas)]

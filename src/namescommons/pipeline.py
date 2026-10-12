@@ -5,9 +5,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from namescommons.adapters import (
-    DEFAULT_PACKAGE, AdapterError, FormatError, RawRecord, SourceFiles, load_adapter,
+    DEFAULT_PACKAGE, AdapterError, FormatError, RawLink, RawRecord, SourceFiles, load_adapter,
 )
 from namescommons.cache import FetchError, fetch_resource
+from namescommons.links import VariantLink, link_problems, validate_links
 from namescommons.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
 from namescommons.sources import Source, is_country
 
@@ -147,6 +148,40 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
     return sorted(unicas.values(), key=_ordem)
 
 
+_CAMPOS_DA_LIGACAO = ("relation", "qid", "name", "kind", "target_qid", "target_name", "target_kind")
+
+
+def to_links(records: Iterable[RawLink], source: Source) -> list[VariantLink]:
+    """Spec 004, R4.2 e R4.4: normaliza os nomes, descarta auto-ligações e repetidas e ordena."""
+    derivados: dict[str, tuple[str, str, str, str]] = {}
+    unicas: set[VariantLink] = set()
+    for posicao, r in enumerate(records, start=1):
+        for campo in _CAMPOS_DA_LIGACAO:
+            v = getattr(r, campo)
+            if not isinstance(v, str):
+                raise RecordError(f"ligação {posicao}: '{campo}' deve ser texto, recebeu {type(v).__name__} {v!r}")
+        problemas = link_problems(r)
+        if problemas:
+            raise RecordError(f"ligação {posicao}: {problemas[0]}")
+        nomes = []
+        for campo in ("name", "target_name"):
+            bruto = getattr(r, campo)
+            campos = derivados.get(bruto)
+            if campos is None:
+                campos = derivados[bruto] = derive_name_fields(bruto, source.uniform_case)
+            if not campos[0]:
+                raise RecordError(f"ligação {posicao}: {campo} vazio")
+            nomes.append(campos)
+        (nome, chave, *_), (alvo, chave_alvo, *_) = nomes
+        if (chave, r.kind) == (chave_alvo, r.target_kind):
+            continue
+        unicas.add(VariantLink(
+            source_id=source.id, relation=r.relation, qid=r.qid, name=nome, name_key=chave, kind=r.kind,
+            target_qid=r.target_qid, target_name=alvo, target_name_key=chave_alvo, target_kind=r.target_kind,
+        ))
+    return sorted(unicas, key=VariantLink.ordem)
+
+
 def select_sources(sources: dict[str, Source], ids: list[str]) -> list[Source]:
     """Fontes indicadas, ou todas com adaptador se nenhuma for indicada."""
     if not ids:
@@ -208,3 +243,31 @@ def ingest_sources(
             raise _falha(fonte, e) from e
         observacoes.extend(obs)
     return observacoes
+
+
+def ingest_links(
+    selected: list[Source],
+    sources: dict[str, Source],
+    cache_dir: Path,
+    *,
+    offline: bool = False,
+    adapters: str = DEFAULT_PACKAGE,
+    **opcoes,
+) -> list[VariantLink] | None:
+    """Roda links sobre o cache das fontes que o implementam (spec 004, R4); None se nenhuma implementa."""
+    ligacoes: list[VariantLink] | None = None
+    for fonte in selected:
+        try:
+            mod = load_adapter(fonte.id, adapters)
+            if getattr(mod, "links", None) is None:
+                continue
+            arquivos = SourceFiles(
+                (r.filename, fetch_resource(cache_dir, fonte.id, r, offline=offline, **opcoes))
+                for r in mod.RESOURCES
+            )
+            daqui = to_links(mod.links(arquivos), fonte)
+            validate_links(daqui, sources)
+        except Exception as e:
+            raise _falha(fonte, e) from e
+        ligacoes = (ligacoes or []) + daqui
+    return ligacoes

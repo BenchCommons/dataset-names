@@ -123,8 +123,12 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
         opcionais = {c: e.get(c, padrao) for c, padrao in OPCIONAIS.items()}
         fontes[e["id"]] = Source(**{c: e[c] for c in CAMPOS}, **opcionais)
 
+    # Exatamente uma primary por (country, count_type) com contagem; em attested, primary não
+    # tem efeito e não é conferido (spec 004, R5; issue #3).
     grupos: dict[tuple, list[Source]] = {}
     for f in fontes.values():
+        if f.count_type == "attested":
+            continue
         grupos.setdefault((f.country, f.count_type), []).append(f)
     for (pais, tipo), fs in sorted(grupos.items(), key=lambda kv: (str(kv[0][0]), kv[0][1])):
         if len(fs) > 1 and sum(f.primary is True for f in fs) != 1:

@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
-FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "nz-dia-births", "us-ssa-births")
+FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "nz-dia-births", "us-ssa-births", "wikidata")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
@@ -152,7 +152,7 @@ given,Björn,björn,bjorn,Latn,10,births,13,0.000000,10,2025,2025
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
-    """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
+    """Spec 003, R5, e spec 004, R7: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
     passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
     ambiente = {**os.environ, **passo.get("env", {}), "RUNNER_TEMP": str(tmp_path)}
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
@@ -169,6 +169,9 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     # Spec 003e, R6: a Nova Zelândia entra no passo, sem os nomes corrompidos na fonte.
     assert (tmp_path / "dist-oficiais" / "by_country" / "NZ.csv").read_text(encoding="utf-8") == NZ_CSV
     assert "nz-dia-births: 3 linha(s) com nome corrompido" in r.stderr
+    # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
+    assert "variant_links.parquet" in passo["run"]
+    assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
 
 
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():

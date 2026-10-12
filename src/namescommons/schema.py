@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from namescommons.normalize import ascii_form, detect_script, name_key, normalize_name
 from namescommons.sources import COUNT_TYPES, Source, is_country
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # 1.1.0: variant_links.parquet na release (spec 004, R4.7)
 KINDS = ("given", "family")
 GENDERS = ("F", "M")
 ANO_MINIMO = 1800
