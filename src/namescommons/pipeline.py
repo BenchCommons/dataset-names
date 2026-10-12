@@ -1,18 +1,37 @@
 """Pipeline de ingestão (spec 002, R1 e R5): fontes -> cache -> parse -> observações."""
 
-from collections.abc import Iterable
-from dataclasses import replace
+import logging
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from datasettool.sources.cache import FetchError, fetch_resource
 
 from namescommons import USER_AGENT
 from namescommons.adapters import (
-    DEFAULT_PACKAGE, AdapterError, FormatError, RawLink, RawRecord, Resource, SourceFiles, load_adapter,
+    DEFAULT_PACKAGE, AdapterError, FormatError, RawDrop, RawLink, RawRecord, Resource, SourceFiles, load_adapter,
 )
 from namescommons.links import VariantLink, link_problems, validate_links
 from namescommons.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
 from namescommons.sources import Source, is_country
+
+
+_log = logging.getLogger(__name__)
+
+# Formas listadas no aviso de descarte; as demais só entram na contagem.
+_FORMAS_NO_AVISO = 20
+
+
+@dataclass
+class Drops:
+    """Descartes de uma fonte (spec 006, R1.2): linhas, registros somados e formas distintas."""
+
+    lines: int = 0
+    records: int = 0
+    forms: set[str] = field(default_factory=set)
+
+    def as_dict(self) -> dict[str, int]:
+        return {"lines": self.lines, "records": self.records}
 
 
 class PipelineError(Exception):
@@ -184,6 +203,34 @@ def to_links(records: Iterable[RawLink], source: Source) -> list[VariantLink]:
     return sorted(unicas, key=VariantLink.ordem)
 
 
+def _separar_descartes(itens: Iterable, descartes: Drops) -> Iterator:
+    """Spec 006, R1.2: conta os RawDrop e repassa o resto; a posição dos registros não inclui descartes."""
+    posicao = 0
+    for item in itens:
+        if not isinstance(item, RawDrop):
+            yield item
+            continue
+        posicao += 1
+        if not isinstance(item.name, str):
+            raise RecordError(f"descarte {posicao}: 'name' deve ser texto, recebeu {type(item.name).__name__} {item.name!r}")
+        if item.count is not None and (type(item.count) is not int or item.count < 0):
+            raise RecordError(f"descarte {posicao}: 'count' deve ser inteiro não negativo, recebeu {item.count!r}")
+        descartes.lines += 1
+        descartes.records += item.count or 0
+        descartes.forms.add(item.name)
+
+
+def _avisar_descartes(fonte: Source, d: Drops) -> None:
+    if not d.lines:
+        return
+    formas = sorted(d.forms)
+    lista = ", ".join(repr(f) for f in formas[:_FORMAS_NO_AVISO]) + (", ..." if len(formas) > _FORMAS_NO_AVISO else "")
+    _log.warning(
+        "%s: %d linha(s) descartada(s) pelo adaptador, %d registro(s), %d forma(s): %s",
+        fonte.id, d.lines, d.records, len(formas), lista,
+    )
+
+
 def _baixar(cache_dir: Path, fonte: Source, recurso: Resource, **opcoes) -> Path:
     """fetch_resource do kit com o User-Agent deste projeto (spec 007, R3.3)."""
     return fetch_resource(cache_dir, fonte.id, recurso, user_agent=USER_AGENT, **opcoes)
@@ -231,23 +278,31 @@ def ingest_sources(
     *,
     offline: bool = False,
     adapters: str = DEFAULT_PACKAGE,
+    drops: dict[str, Drops] | None = None,
     **opcoes,
 ) -> list[Observation]:
-    """Roda parse sobre o cache, aplica R1 e valida cada fonte (spec 001 e R3)."""
+    """Roda parse sobre o cache, aplica R1 e valida cada fonte (spec 001 e R3).
+
+    Se drops for dado, recebe os descartes de cada fonte ingerida, inclusive zero (spec 006, R1).
+    """
     observacoes: list[Observation] = []
     for fonte in selected:
+        descartes = Drops()
         try:
             mod = load_adapter(fonte.id, adapters)
             arquivos = SourceFiles(
                 (r.filename, _baixar(cache_dir, fonte, r, offline=offline, **opcoes))
                 for r in mod.RESOURCES
             )
-            obs = to_observations(mod.parse(arquivos), fonte)
+            obs = to_observations(_separar_descartes(mod.parse(arquivos), descartes), fonte)
             if not obs:
                 raise RecordError("nenhum registro produzido por parse")
             validate(obs, sources)
         except Exception as e:
             raise _falha(fonte, e) from e
+        _avisar_descartes(fonte, descartes)
+        if drops is not None:
+            drops[fonte.id] = descartes
         observacoes.extend(obs)
     return observacoes
 

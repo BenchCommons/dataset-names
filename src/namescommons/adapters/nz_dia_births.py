@@ -5,8 +5,8 @@ menos de 10 registros no ano; não há marcador de supressão no arquivo.
 
 Codificação (spec 003e, R2, e ADR 0007): se o arquivo inteiro for UTF-8 válido, é lido como UTF-8.
 Senão, os bytes acima de 0x7F passam pela tabela _LEGADO, medida no arquivo real de 2026-10-12;
-qualquer outro byte vira U+FFFD. Nome com '?' ou U+FFFD é descartado, e os descartes são avisados
-no logger deste módulo ao fim do arquivo. Um byte só entra em _LEGADO com evidência registrada na spec.
+qualquer outro byte vira U+FFFD. Nome com '?' ou U+FFFD é descartado e sai como RawDrop, que o
+pipeline conta e avisa (spec 006, R1). Um byte só entra em _LEGADO com evidência registrada na spec.
 
 Download: o catálogo (Imperva) devolve uma página HTML de desafio a clientes que não são navegador,
 e o fetch falha (spec 003e, R4). Abra https://catalogue.data.govt.nz/dataset/baby-name-popularity-over-time
@@ -16,11 +16,10 @@ com --offline.
 
 import csv
 import io
-import logging
 from collections.abc import Iterator
 from pathlib import Path
 
-from namescommons.adapters import FormatError, RawRecord, Resource, parse_code, parse_count
+from namescommons.adapters import FormatError, RawDrop, RawRecord, Resource, parse_code, parse_count
 
 SOURCE_ID = "nz-dia-births"
 _ARQUIVO = "baby-names-1900-to-2025.csv"
@@ -41,8 +40,6 @@ _LEGADO = {0x82: "é", 0xE9: "é", 0xF6: "ö"}
 _TABELA = {b: _LEGADO.get(b, "\ufffd") for b in range(0x80, 0x100)}  # para str.translate sobre Latin-1
 _CORROMPIDO = ("?", "\ufffd")
 
-_log = logging.getLogger(__name__)
-
 
 def _decodificar(dados: bytes) -> str:
     try:
@@ -51,7 +48,7 @@ def _decodificar(dados: bytes) -> str:
         return dados.decode("latin-1").translate(_TABELA)
 
 
-def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
+def parse(files: dict[str, Path]) -> Iterator[RawRecord | RawDrop]:
     caminho = files[_ARQUIVO]
     dados = caminho.read_bytes()
     if dados.lstrip().startswith(b"<"):
@@ -65,7 +62,6 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
         raise FormatError(f"{caminho.name}: arquivo vazio")
     if cabecalho != _CABECALHO:
         raise FormatError(f"{caminho.name}: cabeçalho {cabecalho}, esperado {_CABECALHO}")
-    descartadas, registros, formas = 0, 0, {}
     for linha, campos in enumerate(leitor, start=2):
         if len(campos) != len(_CABECALHO):
             raise FormatError(f"{caminho.name}, linha {linha}: esperava 4 campos, veio {len(campos)}: {campos!r}")
@@ -78,13 +74,6 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
         except FormatError as e:
             raise FormatError(f"{caminho.name}, linha {linha}: {e}") from e
         if any(c in nome for c in _CORROMPIDO):
-            descartadas += 1
-            registros += registro.count
-            formas[nome] = None
+            yield RawDrop(nome, registro.count)
             continue
         yield registro
-    if descartadas:
-        _log.warning(
-            "%s: %d linha(s) com nome corrompido na fonte descartada(s), %d registro(s): %s",
-            SOURCE_ID, descartadas, registros, ", ".join(repr(f) for f in sorted(formas)),
-        )

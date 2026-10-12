@@ -13,11 +13,11 @@ from pyarrow import ArrowException
 from namescommons.adapters import DEFAULT_PACKAGE
 from namescommons.aggregate import AggregationError, by_country, name_index
 from namescommons.io import (
-    read_links, read_observations, write_by_country, write_index, write_links, write_observations,
+    read_dropped, read_links, read_observations, write_by_country, write_index, write_links, write_observations,
 )
 from namescommons.links import VariantLink, validate_links
 from namescommons.manifest import RELEASE, build_manifest
-from namescommons.pipeline import PipelineError, fetch_sources, ingest_links, ingest_sources, select_sources
+from namescommons.pipeline import Drops, PipelineError, fetch_sources, ingest_links, ingest_sources, select_sources
 from namescommons.schema import Observation, ValidationError, validate
 from namescommons.sources import Source, SourceError, load_sources
 
@@ -102,6 +102,7 @@ def _saida_invalida(release: str, out: Path) -> str | None:
 def _build(
     obs: list[Observation], fontes: dict[str, Source], out: Path, release: str,
     links: list[VariantLink] | None = None,
+    dropped: dict[str, dict[str, int]] | None = None,
 ) -> int:
     """Grava as saídas da spec 001 (e variant_links da spec 004, se houver) em out, tudo ou nada;
     devolve o número de países.
@@ -116,7 +117,7 @@ def _build(
         umask = os.umask(0)
         os.umask(umask)
         temporario.chmod(0o777 & ~umask)
-        write_observations(obs, temporario / "observations.parquet")
+        write_observations(obs, temporario / "observations.parquet", dropped)
         for kind, base in (("given", "given_names"), ("family", "family_names")):
             write_index(name_index(obs, paises, kind, fontes, links), temporario / f"{base}.csv", temporario / f"{base}.parquet")
         write_by_country(paises, temporario / "by_country")
@@ -154,14 +155,18 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "fetch":
                 print(f"OK: {_n(len(selecionadas), 'fonte', 'fontes')} em {args.cache}.")
                 return 0
-            obs = ingest_sources(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
+            descartes: dict[str, Drops] = {}
+            obs = ingest_sources(
+                selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters, drops=descartes,
+            )
+            dropped = {i: d.as_dict() for i, d in descartes.items()}
             links = None
             if args.cmd == "run" or args.links is not None:
                 links = ingest_links(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
             if args.cmd == "ingest":
                 if args.out.exists():
                     print(f"aviso: {args.out} já existe e será substituído", file=sys.stderr)
-                write_observations(obs, args.out)
+                write_observations(obs, args.out, dropped)
                 mensagem = f"OK: {_n(len(obs), 'observação', 'observações')} de {_n(len(selecionadas), 'fonte', 'fontes')} em {args.out}"
                 if args.links is not None:
                     write_links(links or [], args.links)
@@ -176,6 +181,7 @@ def main(argv: list[str] | None = None) -> int:
             except (OSError, ArrowException, TypeError, KeyError) as e:
                 return _erro(f"não foi possível ler {args.observations}: {e}")
             validate(obs, fontes)
+            dropped = read_dropped(args.observations)
             links = None
             if getattr(args, "links", None) is not None:
                 if not args.links.exists():
@@ -188,7 +194,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "validate":
                 print(f"OK: {_n(len(obs), 'observação válida', 'observações válidas')}.")
                 return 0
-        paises = _build(obs, fontes, args.out, args.release, links)
+        paises = _build(obs, fontes, args.out, args.release, links, dropped)
     except (
         PipelineError, SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException,
     ) as e:

@@ -1,16 +1,14 @@
 """Spec 003e: adaptador do DIA (Nova Zelândia) sobre a amostra real em tests/fixtures/nz-dia-births/."""
 
-import logging
 from pathlib import Path
 
 import pytest
 
-from namescommons.adapters import FormatError, RawRecord, load_adapter
+from namescommons.adapters import FormatError, RawDrop, RawRecord, load_adapter
 
 ARQUIVO = "baby-names-1900-to-2025.csv"
 AMOSTRA = Path(__file__).parent / "fixtures" / "nz-dia-births" / ARQUIVO
 CABECALHO = b"Year,Sex,Name,Count\r\n"
-LOGGER = "namescommons.adapters.nz_dia_births"
 
 
 @pytest.fixture
@@ -27,8 +25,12 @@ def _r(nome, sexo, ano, contagem):
     return RawRecord(nome, "given", "NZ", sexo, ano, contagem)
 
 
+def _registros(dia, arquivos):
+    return [r for r in dia.parse(arquivos) if isinstance(r, RawRecord)]
+
+
 def test_parse_da_amostra_real(dia):
-    assert list(dia.parse({ARQUIVO: AMOSTRA})) == [
+    assert _registros(dia, {ARQUIVO: AMOSTRA}) == [
         _r("Aadhya", "F", 2022, 13),
         _r("André", "M", 2003, 20),       # 0x82, CP437
         _r("Anne-Marie", "F", 1967, 24),
@@ -47,38 +49,40 @@ def test_parse_da_amostra_real(dia):
     ]
 
 
-def test_nomes_corrompidos_sao_descartados_e_avisados(dia, caplog):
-    with caplog.at_level(logging.WARNING, logger=LOGGER):
-        nomes = [r.name for r in dia.parse({ARQUIVO: AMOSTRA})]
-    assert not any("?" in n or "\ufffd" in n for n in nomes)
-    avisos = [r for r in caplog.records if r.name == LOGGER]
-    assert len(avisos) == 1 and avisos[0].levelno == logging.WARNING
-    assert avisos[0].getMessage() == (
-        "nz-dia-births: 3 linha(s) com nome corrompido na fonte descartada(s), 49 registro(s): "
-        "'K\ufffdwhai', 'M?ia', 'N\ufffdkau'"
-    )
+def test_nz_emite_raw_drop_para_nomes_corrompidos(dia):
+    """Spec 006, R1: os descartes do ADR 0007 saem como RawDrop, com a contagem publicada."""
+    itens = list(dia.parse({ARQUIVO: AMOSTRA}))
+    descartes = [i for i in itens if isinstance(i, RawDrop)]
+    assert sorted(descartes, key=lambda d: d.name) == [
+        RawDrop("K\ufffdwhai", 11), RawDrop("M?ia", 25), RawDrop("N\ufffdkau", 13),
+    ]
+    assert sum(d.count for d in descartes) == 49
+    assert not any("?" in r.name or "\ufffd" in r.name for r in itens if isinstance(r, RawRecord))
 
 
-def test_sem_descarte_nao_avisa(dia, tmp_path, caplog):
-    with caplog.at_level(logging.WARNING, logger=LOGGER):
-        assert list(dia.parse(_arquivos(tmp_path, CABECALHO + b"2025,F,Zo\xe9,10\r\n"))) == [_r("Zoé", "F", 2025, 10)]
-    assert not [r for r in caplog.records if r.name == LOGGER]
+def test_nz_nao_usa_logging():
+    fonte = Path(__file__).resolve().parent.parent / "src" / "namescommons" / "adapters" / "nz_dia_births.py"
+    assert "logging" not in fonte.read_text(encoding="utf-8")
+
+
+def test_sem_descarte_nao_emite_raw_drop(dia, tmp_path):
+    assert list(dia.parse(_arquivos(tmp_path, CABECALHO + b"2025,F,Zo\xe9,10\r\n"))) == [_r("Zoé", "F", 2025, 10)]
 
 
 def test_arquivo_utf8_valido_e_lido_como_utf8(dia, tmp_path):
     conteudo = CABECALHO + "2025,F,Māia,25\r\n2025,F,Zoé,10\r\n".encode("utf-8")
-    assert [r.name for r in dia.parse(_arquivos(tmp_path, conteudo))] == ["Māia", "Zoé"]
+    assert [r.name for r in _registros(dia, _arquivos(tmp_path, conteudo))] == ["Māia", "Zoé"]
 
 
 def test_utf8_com_caractere_de_substituicao_tambem_e_descartado(dia, tmp_path):
     conteudo = CABECALHO + "2025,F,Am\ufffdlie,10\r\n2025,F,Ana,10\r\n".encode("utf-8")
-    assert [r.name for r in dia.parse(_arquivos(tmp_path, conteudo))] == ["Ana"]
+    assert [r.name for r in _registros(dia, _arquivos(tmp_path, conteudo))] == ["Ana"]
 
 
 @pytest.mark.parametrize("byte", [b"\xe1", b"\x8d", b"\xff"])
 def test_byte_fora_da_tabela_descarta_o_nome(dia, tmp_path, byte):
     conteudo = CABECALHO + b"2025,F,M" + byte + b"ia,25\r\n2025,F,Mia,125\r\n"
-    assert [r.name for r in dia.parse(_arquivos(tmp_path, conteudo))] == ["Mia"]
+    assert [r.name for r in _registros(dia, _arquivos(tmp_path, conteudo))] == ["Mia"]
 
 
 @pytest.mark.parametrize("conteudo, trecho", [

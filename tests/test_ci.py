@@ -169,7 +169,7 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
     # Spec 003e, R6: a Nova Zelândia entra no passo, sem os nomes corrompidos na fonte.
     assert (tmp_path / "dist-oficiais" / "by_country" / "NZ.csv").read_text(encoding="utf-8") == NZ_CSV
-    assert "nz-dia-births: 3 linha(s) com nome corrompido" in r.stderr
+    assert "nz-dia-births: 3 linha(s) descartada(s) pelo adaptador, 49 registro(s)" in r.stderr  # spec 006, R1.3
     # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
     assert "variant_links.parquet" in passo["run"]
     assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0

@@ -1,10 +1,11 @@
 """Adaptadores de fonte do dataset de nomes (spec 002, R1; spec 003, R2; spec 007, R3.1).
 
 Cada fonte com adaptador tem um módulo <pacote>.<id_com_underscore> que expõe
-SOURCE_ID, RESOURCES (lista de Resource) e parse(files) -> Iterator[RawRecord],
+SOURCE_ID, RESOURCES (lista de Resource) e parse(files) -> Iterator[RawRecord | RawDrop],
 e opcionalmente links(files) -> Iterator[RawLink] (spec 004, R4.1).
 O adaptador converte os valores da fonte: year e count como int, gender como F ou M,
 country em ISO 3166-1 alfa-2, kind como given ou family. Valores suprimidos são omitidos.
+Registro publicado e descartado por regra documentada (ADR 0007) sai como RawDrop (spec 006, R1).
 
 O contrato genérico (Resource, SourceFiles, erros, parse_count, parse_code, check_adapter,
 load_adapter) é o do kit de fontes do tools-dataset (spec 004 de lá, R4), reexportado aqui
@@ -21,7 +22,7 @@ from datasettool.sources.adapters import (
 )
 
 __all__ = [
-    "DEFAULT_PACKAGE", "OPTIONAL", "AdapterError", "FormatError", "RawLink", "RawRecord", "Resource",
+    "DEFAULT_PACKAGE", "OPTIONAL", "AdapterError", "FormatError", "RawDrop", "RawLink", "RawRecord", "Resource",
     "SourceFiles", "check_adapter", "load_adapter", "module_name", "parse_code", "parse_count",
 ]
 
@@ -38,6 +39,17 @@ class RawRecord:
     country: str | None = None
     gender: str | None = None
     year: int | None = None
+    count: int | None = None
+
+
+@dataclass(frozen=True)
+class RawDrop:
+    """Registro publicado pela fonte e descartado pelo adaptador (spec 006, R1.1).
+
+    count é a contagem publicada da linha descartada, ou None se a fonte não traz contagem.
+    """
+
+    name: str
     count: int | None = None
 
 
