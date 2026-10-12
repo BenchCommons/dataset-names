@@ -12,8 +12,9 @@ Cada spec abaixo passa pelo próprio ciclo spec → plano → implementação �
 | 3b | `003b-fontes-planilhas` | 003 | Leitor de XLS e XLSX e institutos que publicam em planilha (INE e outros) | Planejada |
 | 3c | `003c-fontes-subnacionais` | 003b | Regra para fontes que cobrem parte de um país e seus adaptadores (ONS, Retraite Québec e outros) | Planejada |
 | 3d | `003d-statistics-canada` | 003 | Decisão sobre a Statistics Canada Open Licence e o adaptador da tabela 17-10-0147-01 | Planejada |
+| 3e | [`003e-nova-zelandia`](003e-nova-zelandia/spec.md) | 003 | Nomes de bebês do Department of Internal Affairs da Nova Zelândia e regra para nomes corrompidos na fonte | Em PR |
 | 4 | `004-wikidata` | 002 | Adaptador do Wikidata: nomes, gênero, escrita e ligações entre variantes | Planejada |
 | 5 | `005-variantes` | 003, 004 | Transliteração para ASCII, agrupamento de variantes (`group_id`), deduplicação | Planejada |
 | 6 | `006-publicacao` | 005 | Releases, manifesto, README, cartão do dataset, retirada do legado | Planejada |
 
-Decisões transversais ficam em [`docs/adr/`](../adr/): [0001 licença dos dados](../adr/0001-licenca-dos-dados.md), [0002 valores suprimidos](../adr/0002-valores-suprimidos.md), [0003 nome do projeto e do pacote](../adr/0003-nome-do-projeto-e-do-pacote.md).
+Decisões transversais ficam em [`docs/adr/`](../adr/): [0001 licença dos dados](../adr/0001-licenca-dos-dados.md), [0002 valores suprimidos](../adr/0002-valores-suprimidos.md), [0003 nome do projeto e do pacote](../adr/0003-nome-do-projeto-e-do-pacote.md), [0006 nomes corrompidos na fonte](../adr/0006-nomes-corrompidos-na-fonte.md).
