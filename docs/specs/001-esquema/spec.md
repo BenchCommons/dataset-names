@@ -60,7 +60,7 @@ Nota (spec 004, R5): a exigência de exatamente uma `primary` vale só para `bir
 | `group_id` | Grupo de variantes, preenchido pela spec 005. Vazio até lá |
 | `sources` | Lista ordenada de `source_id` que atestam o nome |
 
-Nota (spec 005): `group_id` é preenchido pela [spec 005](../005-variantes/spec.md) (R5), a forma de exibição (`name`) segue a spec 005 (R4) e `ascii` segue o [ADR 0012](../../adr/0012-transliteracao-ascii.md).
+Nota (spec 005): `group_id` é preenchido pela [spec 005](../005-variantes/spec.md) (R5), a forma de exibição (`name`) segue a spec 005 (R4) e `ascii` segue o [ADR 0012](../../adr/0012-transliteracao-ascii.md). `group_id` é o menor `name_key` do grupo e identifica o grupo dentro de uma release: ele pode mudar entre releases quando entra no grupo um nome com chave menor ou quando as ligações mudam.
 
 **R3.3 `by_country/<CC>.csv`.** Uma linha por (`name_key`, `kind`) do país, com `name`, `ascii`, `script`, `count`, `count_type`, `rank`, `female_share`, `gender_basis`, `first_year`, `last_year`. Agregação:
 

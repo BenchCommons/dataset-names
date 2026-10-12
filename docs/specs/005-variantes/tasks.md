@@ -78,6 +78,14 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 - [x] `write_observations` com `pq.ParquetWriter` e `LOTE_DE_ESCRITA = 250_000`; `--wikidata` no bench.
 - [x] `uv run pytest -q` e commit.
 
+### Task 10: correções da revisão do PR #38
+
+**Arquivos:** `src/namescommons/variants.py`, `src/namescommons/aggregate.py`, `src/namescommons/normalize.py`, `src/namescommons/schema.py`, `tests/test_variants.py`, `tests/test_normalize.py`, spec, ADR 0010, spec 001 e roadmap.
+
+- [x] Testes que falham: `장` de `张` e `蒋` não faz ponte; rótulo de dois itens do mesmo grupo junta; `見` -> `현` não entra no grupo de `玄`, nem quando `현` fica sozinho; `Герман` -> `Herman` junta com `Hermanová`; nome sem acento já em outro grupo não junta; ordem embaralhada com transliteração e sem acento; `™`, `ℳ`, `℡` e `𝓜` sem maiúscula em `ascii`; `ｰ`, `〆` e `Hrkt`; partícula na última palavra.
+- [x] Fase 1 por itens (R5.3), concorrência na fase 2 (R5.4), `casefold` depois da NFKD (R2.1), `Hrkt` (R1.3), partícula só com palavra seguinte (R3).
+- [x] Medição do agrupamento no lote real (R5.8) e `uv run pytest -q`.
+
 ### Fechamento
 
 - [x] Medição de R9 com os arquivos reais: `run --offline` com o lote completo e com o sintético mais o Wikidata, na master e nesta branch, nas mesmas condições.

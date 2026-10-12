@@ -12,8 +12,8 @@ Cada spec abaixo passa pelo próprio ciclo spec → plano → implementação �
 | 3b | [`003b-fontes-planilhas`](003b-fontes-planilhas/spec.md) | 003 | Leitor de XLS e XLSX e institutos que publicam em planilha (INE e outros) | Mesclada |
 | 3c | `003c-fontes-subnacionais` | 003b | Regra para fontes que cobrem parte de um país e seus adaptadores (ONS, Retraite Québec e outros) | Planejada |
 | 3d | [`003d-statistics-canada`](003d-statistics-canada/spec.md) | 003 | Decisão sobre a Statistics Canada Open Licence e o adaptador da tabela 17-10-0147-01 | Mesclada |
-| 3e | [`003e-nova-zelandia`](003e-nova-zelandia/spec.md) | 003 | Nomes de bebês do Department of Internal Affairs da Nova Zelândia e regra para nomes corrompidos na fonte | Em PR |
-| 4 | [`004-wikidata`](004-wikidata/spec.md) | 002 | Adaptador do Wikidata: nomes, gênero, escrita, ligações entre variantes (`variant_links`) e regra de `primary` em `attested` (issue #3) | Em PR |
+| 3e | [`003e-nova-zelandia`](003e-nova-zelandia/spec.md) | 003 | Nomes de bebês do Department of Internal Affairs da Nova Zelândia e regra para nomes corrompidos na fonte | Mesclada |
+| 4 | [`004-wikidata`](004-wikidata/spec.md) | 002 | Adaptador do Wikidata: nomes, gênero, escrita, ligações entre variantes (`variant_links`) e regra de `primary` em `attested` (issue #3) | Mesclada |
 | 5 | [`005-variantes`](005-variantes/spec.md) | 003, 004 | Escrita, transliteração para ASCII, capitalização, forma de exibição, agrupamento de variantes (`group_id`) e deduplicação (issue #4), PR #38 | Em PR |
 | 6 | `006-publicacao` | 005 | Releases, manifesto, README, cartão do dataset, retirada do legado | Planejada |
 
