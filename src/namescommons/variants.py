@@ -12,6 +12,9 @@ from collections.abc import Iterable
 
 from namescommons.links import VariantLink
 
+# R5.4: escritas cuja romanização não se anexa a nome de outro item (leituras homófonas).
+CJK = frozenset({"Hani", "Hira", "Kana", "Hrkt", "Hang", "Jpan", "Kore"})
+
 # R5.3: relação entre itens que os junta na fase 1, por kind.
 ITENS_JUNTADOS_POR = {"given": frozenset(), "family": frozenset({"other_gender"})}
 
@@ -99,6 +102,10 @@ def group_ids(
                 itens_do_no[a].add(item(v.qid))
             if b is not None:
                 itens_do_no[b].add(item(v.target_qid))
+        elif v.relation == "transliteration" and a is not None:
+            # A origem de uma transliteração é rótulo do item: um rótulo de itens diferentes
+            # (Герман de dois itens) é homógrafo, como em same_item.
+            itens_do_no[a].add(item(v.qid))
         if v.relation in ITENS_JUNTADOS_POR[kind]:
             juncoes_itens.add(_par(item(v.qid), item(v.target_qid)))
         if a is None or b is None or a == b:
@@ -145,26 +152,43 @@ def group_ids(
 
     # R5.4: anexações calculadas sobre os grupos da fase 1, aplicadas depois em ordem fixa.
     juncoes_2: set[tuple[int, int]] = set()
-    for destino, fontes in origens.items():
+    candidatas: list[tuple[int, int, int, int | None]] = []  # (destino, origem, grupo da origem, grupo rival)
+    for destino, fontes in sorted(origens.items()):
         raizes = {grupos.raiz(x) for x in fontes}
-        if len(raizes) != 1 or destino in ambiguos:
+        if len(raizes) != 1 or destino in ambiguos or fontes & ambiguos:
             contar("transliteracao_ambigua")
             continue
         (da_origem,) = raizes
+        do_destino = grupos.raiz(destino)
+        outro_grupo = do_destino != da_origem and tamanho[do_destino] > 1
+        outros_itens = [grupos.raiz(x) for x in itens_do_no.get(destino, ()) if grupos.raiz(x) != da_origem]
+        escritas_origem = {escrita(x) for x in fontes}
         # O destino concorre se já é nome de outro grupo ou rótulo de outro item que tem um nome
         # na escrita da origem (현, rótulo de 玄, não é romanização de 見; Herman, só latino, é de Герман).
-        rivais: set[str] = set()
-        do_destino = grupos.raiz(destino)
-        if do_destino != da_origem and tamanho[do_destino] > 1:
-            rivais |= escritas_do_grupo[do_destino]
-        for x in itens_do_no.get(destino, ()):
-            if grupos.raiz(x) != da_origem:
-                rivais |= escritas_do_item[grupos.raiz(x)]
-        if rivais & {escrita(x) for x in fontes}:
+        rivais: set[str] = set(escritas_do_grupo[do_destino]) if outro_grupo else set()
+        for r in outros_itens:
+            rivais |= escritas_do_item[r]
+        if rivais & escritas_origem:
             contar("transliteracao_de_outro_nome")
             continue
+        # Romanização de han, kana ou hangul é leitura homófona: não se anexa a nome de outro item
+        # (suk/suková não são romanização de 术).
+        if escritas_origem & CJK and (outro_grupo or outros_itens):
+            contar("transliteracao_cjk_de_outro_item")
+            continue
+        candidatas.append((destino, min(fontes), da_origem, do_destino if outro_grupo else None))
+    # Leque: as transliterações de um grupo que chegam a dois ou mais grupos de outros nomes
+    # (кінаш -> kinach e kinasz) não se anexam a nenhum deles.
+    rivais_por_origem: dict[int, set[int]] = defaultdict(set)
+    for _, _, da_origem, rival in candidatas:
+        if rival is not None:
+            rivais_por_origem[da_origem].add(rival)
+    for destino, origem, da_origem, rival in candidatas:
+        if rival is not None and len(rivais_por_origem[da_origem]) > 1:
+            contar("transliteracao_em_leque")
+            continue
         contar("transliteracao")
-        juncoes_2.add(_par(destino, min(fontes)))
+        juncoes_2.add(_par(destino, origem))
     sem_acento = {ascii[i] for i, marca in enumerate(unaccented) if marca and ascii[i]}
     if sem_acento:
         por_ascii: dict[str, list[int]] = defaultdict(list)

@@ -2,6 +2,8 @@
 
 import random
 
+import pytest
+
 from namescommons.links import VariantLink
 from namescommons.normalize import ascii_form, detect_script, name_key
 from namescommons.variants import group_ids
@@ -237,3 +239,55 @@ def test_transliteracao_para_rotulo_de_outro_item_com_rotulo_ambiguo_nao_junta()
                 _l("transliteration", "見", "현", kind="family", qid="Q2")]
     g = _grupos(["玄", "見", "현", "Hyeon"], ligacoes, kind="family")
     assert g["見"] != g["현"]
+
+
+# Segunda revisão do PR #38: homógrafos escondidos, leque e romanização de CJK.
+def test_origem_de_transliteracao_em_dois_itens_e_homografa():
+    """Герман é rótulo de Q1 (-> German) e de Q2 (-> Herman): German, Germán e Herman não se juntam."""
+    ligacoes = [_l("transliteration", "Герман", "German", qid="Q1"),
+                _l("transliteration", "Герман", "Herman", qid="Q2"),
+                _l("same_item", "German", "Germán", qid="Q3")]
+    g = _grupos(["Герман", "German", "Germán", "Herman"], ligacoes)
+    assert g["German"] == g["Germán"]
+    assert len({g["Герман"], g["German"], g["Herman"]}) == 3
+
+
+def test_transliteracao_em_leque_nao_junta():
+    """кінаш -> kinach e kinasz, sobrenomes poloneses de itens diferentes: nenhum se junta."""
+    ligacoes = [_l("transliteration", "Кінаш", "Kinach", kind="family", qid="Q1"),
+                _l("transliteration", "Кінаш", "Kinasz", kind="family", qid="Q1"),
+                _l("same_item", "Kinach", "Kinachowa", kind="family", qid="Q2"),
+                _l("same_item", "Kinasz", "Kinaszowa", kind="family", qid="Q3")]
+    g = _grupos(["Кінаш", "Kinach", "Kinachowa", "Kinasz", "Kinaszowa"], ligacoes, kind="family")
+    assert len({g["Кінаш"], g["Kinach"], g["Kinasz"]}) == 3
+
+
+def test_cirilico_para_grupo_latino_de_outro_item_junta():
+    """Омельчук -> Omelczuk, que já está com Omelczukowa: cirílico para latino continua juntando."""
+    ligacoes = [_l("transliteration", "Омельчук", "Omelczuk", kind="family", qid="Q1"),
+                _l("same_item", "Omelczuk", "Omelczukowa", kind="family", qid="Q2")]
+    g = _grupos(["Омельчук", "Omelczuk", "Omelczukowa"], ligacoes, kind="family")
+    assert len(set(g.values())) == 1
+
+
+@pytest.mark.parametrize("origem, latinos", [
+    ("术", ("Suk", "Suková")),
+    ("黑", ("Hak", "Haková")),
+    ("炳", ("Bing", "Bingová")),
+    ("辉", ("Fai", "Faiová")),
+    ("福", ("Fuk", "Fukowa")),
+    ("郦", ("Lik", "Likowa")),
+])
+def test_romanizacao_de_han_nao_entra_em_sobrenome_latino_de_outro_item(origem, latinos):
+    a, b = latinos
+    ligacoes = [_l("transliteration", origem, a, kind="family", qid="Q1"),
+                _l("other_gender", a, b, kind="family", qid="Q2", target_qid="Q3")]
+    g = _grupos([origem, a, b], ligacoes, kind="family")
+    assert g[a] == g[b] != g[origem]
+
+
+def test_romanizacao_de_han_sem_outro_item_junta():
+    ligacoes = [_l("same_item", "陳", "陈", kind="family", qid="Q1"),
+                _l("transliteration", "陈", "Chen", kind="family", qid="Q1")]
+    g = _grupos(["陳", "陈", "Chen"], ligacoes, kind="family")
+    assert len(set(g.values())) == 1
