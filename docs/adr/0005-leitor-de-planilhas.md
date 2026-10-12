@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-10-12)
+Aceito (2026-10-12). Substituído em parte pelo [ADR 0013](0013-dependencia-do-tools-dataset.md) (spec 007): a decisão continua valendo, mas o leitor e a versão fixada do `xlrd` passaram para o pacote `benchcommons-tools-dataset` ([ADR 0005 do tools-dataset](https://github.com/BenchCommons/tools-dataset/blob/v0.1.0/docs/adr/0005-source-toolkit-runtime-dependencies.md)); onde este ADR diz `namescommons.spreadsheet`, leia `datasettool.sources.spreadsheet`.
 
 ## Contexto
 
