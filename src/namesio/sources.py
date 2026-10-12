@@ -103,7 +103,9 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
             erros.append(f"{rotulo}: 'url' deve usar o esquema http ou https")
         if not isinstance(e["license"], str) or e["license"] not in LICENCAS_COMPATIVEIS:
             erros.append(f"{rotulo}: licença '{e['license']}' incompatível com o ADR 0001")
-        if e["country"] is not None and not is_country(e["country"]):
+        if isinstance(e["country"], bool):
+            erros.append(f"{rotulo}: país lido como booleano {e['country']}; escreva o código entre aspas, ex.: \"NO\"")
+        elif e["country"] is not None and not is_country(e["country"]):
             erros.append(f"{rotulo}: país '{e['country']}' fora da ISO 3166-1 alfa-2")
         if e["count_type"] not in COUNT_TYPES:
             erros.append(f"{rotulo}: count_type '{e['count_type']}' inválido")

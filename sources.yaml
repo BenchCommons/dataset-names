@@ -31,3 +31,23 @@ sources:
     primary: true
     suppression: 3
     retrieved: 2026-10-12
+  - id: no-ssb-fornavn
+    name: Statistics Norway, nascidos por primeiro nome (tabela 10467)
+    url: https://www.ssb.no/en/statbank/table/10467
+    license: CC-BY-4.0
+    attribution: "Statistics Norway (SSB), tabela 10467, CC BY 4.0"
+    country: "NO"
+    count_type: births
+    primary: true
+    suppression: 4
+    retrieved: 2026-10-12
+  - id: no-ssb-etternavn
+    name: Statistics Norway, sobrenomes usados por 200 pessoas ou mais (tabela 12891)
+    url: https://www.ssb.no/en/statbank/table/12891
+    license: CC-BY-4.0
+    attribution: "Statistics Norway (SSB), tabela 12891, CC BY 4.0"
+    country: "NO"
+    count_type: population
+    primary: true
+    suppression: 200
+    retrieved: 2026-10-12
