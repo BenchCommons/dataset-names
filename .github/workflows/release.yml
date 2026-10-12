@@ -1,0 +1,72 @@
+name: Release
+
+# Spec 006, R7, e ADR 0014. Na tag CalVer, monta a release a partir do cache anexado ao rascunho
+# e envia os assets ao rascunho. Nunca publica a release nem cria tag; o disparo manual é ensaio.
+on:
+  push:
+    tags:
+      - "[0-9][0-9][0-9][0-9].[0-9][0-9]"
+      - "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9]*"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Nome da release do ensaio (AAAA.MM[.N]); o ensaio usa as amostras de tests/fixtures e não envia nada"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ensaio:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE: ${{ inputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Instalar dependências
+        run: uv sync --locked
+      - name: Conferir o nome da release
+        run: tools/release.sh check "$RELEASE"
+      - name: Cache de ensaio com as amostras
+        run: tools/release.sh fixture-cache "$RUNNER_TEMP/cache"
+      - name: Build offline e verificação
+        run: tools/release.sh build "$RELEASE" "$RUNNER_TEMP/cache" "$RUNNER_TEMP/dist/$RELEASE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ensaio-release
+          path: ${{ runner.temp }}/dist/
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Instalar dependências
+        run: uv sync --locked
+      - name: Conferir o nome da release
+        run: tools/release.sh check "$RELEASE"
+      - name: Cache das fontes anexado ao rascunho
+        run: tools/release.sh fetch-cache "$RELEASE" "$RUNNER_TEMP/cache"
+      - name: Build offline e verificação
+        run: tools/release.sh build "$RELEASE" "$RUNNER_TEMP/cache" "$RUNNER_TEMP/dist/$RELEASE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: ${{ runner.temp }}/dist/
+      - name: Enviar os assets ao rascunho
+        run: tools/release.sh upload "$RELEASE" "$RUNNER_TEMP/dist/$RELEASE"

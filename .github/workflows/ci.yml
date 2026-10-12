@@ -40,3 +40,7 @@ jobs:
           for indice in given_names family_names; do
             uv run python -c 'import csv, sys; linhas = list(csv.DictReader(open(sys.argv[1], encoding="utf-8"))); sys.exit(not linhas or not all(l["group_id"] for l in linhas))' "$RUNNER_TEMP/dist-oficiais/$indice.csv"
           done
+      - name: Ensaio da release (spec 006, R7.5)
+        run: |
+          tools/release.sh fixture-cache "$RUNNER_TEMP/cache-release"
+          tools/release.sh build "$(date -u +%Y.%m)" "$RUNNER_TEMP/cache-release" "$RUNNER_TEMP/release"
