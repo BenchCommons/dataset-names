@@ -4,11 +4,13 @@ O formato é reconhecido pelos primeiros bytes. XLSX é lido em fluxo com a bibl
 XLS, com xlrd. Os dois devolvem valores do mesmo tipo: str, int, float, bool ou None.
 """
 
+import codecs
 import io
 import posixpath
 import re
 import zipfile
 import xml.etree.ElementTree as ET
+import xml.parsers.expat as expat
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 
@@ -35,6 +37,10 @@ _INTEIRO = re.compile(r"-?[0-9]+")
 # Defesa em profundidade (ADR 0005): membro XML com DTD é recusado antes de ir ao parser.
 _MAX_PROLOGO = 1 << 16
 _ESPACO = re.compile(r"[\s\ufeff]*")
+_DECLARACAO = re.compile(r"<\?xml(?=\s)(.*?)\?>", re.DOTALL)
+_ENCODING = re.compile(r"""\sencoding\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+_ENCODING_OK = re.compile(r"utf-?(?:8|16)", re.IGNORECASE)
+_TAMANHO_BLOCO = 1 << 16
 
 
 def _formato(caminho: Path) -> str:
@@ -135,7 +141,11 @@ class _SemDtd(io.RawIOBase):
         while True:
             parte = fh.read(4096)
             prefixo += parte
-            decisao = _prologo(prefixo)
+            try:
+                decisao = _prologo(prefixo, f"{caminho.name}: membro {nome}")
+            except FormatError:
+                fh.close()
+                raise
             if decisao == "dtd":
                 fh.close()
                 raise FormatError(f"{caminho.name}: membro {nome} tem DTD (DOCTYPE ou ENTITY); recusado")
@@ -162,15 +172,47 @@ class _SemDtd(io.RawIOBase):
         super().close()
 
 
-def _prologo(dados: bytes) -> str:
-    """'dtd' se há DOCTYPE/ENTITY antes do elemento raiz, 'raiz' se a raiz já começou, senão 'mais'."""
+def _texto_do_prefixo(dados: bytes, onde: str) -> str:
+    """Decodifica o prefixo como UTF-8 ou UTF-16 (por BOM ou NUL); outra coisa é FormatError.
+
+    O expat aceita qualquer codificação declarada (EBCDIC, UTF-32, ISO-8859-x...) e um DOCTYPE
+    escrito assim passaria despercebido por uma leitura só em UTF-8; por isso o resto é recusado.
+    """
+    if dados[:4] in (b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff") or dados[:4] in (b"<\x00\x00\x00", b"\x00\x00\x00<"):
+        raise FormatError(f"{onde} está em UTF-32; só UTF-8 e UTF-16 são aceitos")
     if dados[:2] in (b"\xff\xfe", b"\xfe\xff"):
-        texto = dados.decode("utf-16", errors="replace")
+        codec = "utf-16"
+    elif dados[:4] == b"<\x00?\x00":
+        codec = "utf-16-le"
+    elif dados[:4] == b"\x00<\x00?":
+        codec = "utf-16-be"
     elif b"\x00" in dados[:4]:
-        texto = dados.decode("utf-16-le" if dados[1:2] == b"\x00" else "utf-16-be", errors="replace")
+        raise FormatError(f"{onde} começa com bytes nulos que não são UTF-16; só UTF-8 e UTF-16 são aceitos")
     else:
-        # UTF-8 (BOM opcional). UTF-32 e EBCDIC não são inspecionados e falham no expat.
-        texto = dados.removeprefix(b"\xef\xbb\xbf").decode("utf-8", errors="replace")
+        codec = "utf-8-sig"
+    try:
+        # final=False: o prefixo pode terminar no meio de um caractere de vários bytes.
+        return codecs.getincrementaldecoder(codec)("strict").decode(dados, final=False)
+    except UnicodeDecodeError:
+        raise FormatError(f"{onde} não é UTF-8 nem UTF-16 válido; só essas codificações são aceitas") from None
+
+
+def _confere_declaracao(texto: str, onde: str) -> None:
+    """A declaração `<?xml ... encoding=...?>` só pode dizer UTF-8 ou UTF-16 (ou não dizer nada)."""
+    m = _DECLARACAO.match(texto)
+    if m and (e := _ENCODING.search(m.group(0))):
+        nome = e.group(1) if e.group(1) is not None else e.group(2)
+        if not _ENCODING_OK.fullmatch(nome):
+            raise FormatError(f"{onde} declara a codificação {nome!r}; só UTF-8 e UTF-16 são aceitos")
+
+
+def _prologo(dados: bytes, onde: str = "membro XML") -> str:
+    """'dtd' se há DOCTYPE/ENTITY antes do elemento raiz, 'raiz' se a raiz já começou, senão 'mais'.
+
+    FormatError se o prefixo não é UTF-8 nem UTF-16 ou se a declaração XML pede outra codificação.
+    """
+    texto = _texto_do_prefixo(dados, onde)
+    _confere_declaracao(texto.lstrip("\ufeff"), onde)
     i = 0
     while True:
         i = _ESPACO.match(texto, i).end()
@@ -191,13 +233,70 @@ def _prologo(dados: bytes) -> str:
         i = fim + salto
 
 
+def _eventos(fh, nome: str, caminho: Path, events=("end",)) -> Iterator[tuple[str, ET.Element]]:
+    """Eventos ("start"/"end", elemento) do XML de um membro, em fluxo, num expat que recusa DTD.
+
+    Defesa em profundidade, independente da pré-checagem do prólogo (ADR 0005): o próprio expat
+    levanta FormatError ao ver DOCTYPE ou ENTITY, em qualquer codificação que ele aceite. O
+    `ET.XMLParser` em C não expõe o expat; por isso o expat é usado direto, com `ET.TreeBuilder`.
+    Erro de sintaxe vira `ET.ParseError`, como no `iterparse`.
+    """
+    def recusa(*_args):
+        raise FormatError(f"{caminho.name}: membro {nome} tem DTD (DOCTYPE ou ENTITY); recusado")
+
+    construtor = ET.TreeBuilder()
+    pendentes: list[tuple[str, ET.Element]] = []
+    quer_start, quer_end = "start" in events, "end" in events
+
+    def inicio(tag, atributos):
+        el = construtor.start(tag, atributos)
+        if quer_start:
+            pendentes.append(("start", el))
+
+    def fim(tag):
+        el = construtor.end(tag)
+        if quer_end:
+            pendentes.append(("end", el))
+
+    parser = expat.ParserCreate(namespace_separator="}")
+    parser.buffer_text = True
+    parser.StartDoctypeDeclHandler = recusa
+    parser.EntityDeclHandler = recusa
+    parser.StartElementHandler = lambda tag, atr: inicio(_tag(tag), {_tag(k): v for k, v in atr.items()})
+    parser.EndElementHandler = lambda tag: fim(_tag(tag))
+    parser.CharacterDataHandler = construtor.data
+    try:
+        while True:
+            bloco = fh.read(_TAMANHO_BLOCO)
+            parser.Parse(bloco, not bloco)
+            yield from pendentes
+            pendentes.clear()
+            if not bloco:
+                break
+    except expat.ExpatError as e:
+        raise ET.ParseError(str(e)) from None
+
+
+def _tag(nome: str) -> str:
+    """'uri}local' do expat vira '{uri}local' (nome qualificado do ElementTree)."""
+    return "{" + nome if "}" in nome else nome
+
+
+def _raiz(fh, nome: str, caminho: Path) -> ET.Element:
+    """Elemento raiz do XML de um membro (o `ET.parse(...).getroot()` com DTD recusado)."""
+    raiz = None
+    for _, el in _eventos(fh, nome, caminho):
+        raiz = el
+    return raiz
+
+
 def _xlsx_abas(z: zipfile.ZipFile, caminho: Path) -> list[tuple[str, str]]:
     """(nome, membro do ZIP) de cada aba, na ordem de xl/workbook.xml."""
     try:
         with _membro(z, "xl/workbook.xml", caminho) as fh:
-            livro = ET.parse(fh).getroot()
+            livro = _raiz(fh, "xl/workbook.xml", caminho)
         with _membro(z, "xl/_rels/workbook.xml.rels", caminho) as fh:
-            rels = ET.parse(fh).getroot()
+            rels = _raiz(fh, "xl/_rels/workbook.xml.rels", caminho)
     except ET.ParseError as e:
         raise FormatError(f"{caminho.name}: workbook do XLSX ilegível: {e}") from None
     alvos = {r.get("Id"): r.get("Target", "") for r in rels.iter(_REL_PKG + "Relationship")}
@@ -228,7 +327,7 @@ def _textos_compartilhados(z: zipfile.ZipFile, caminho: Path) -> list[str]:
     textos = []
     with _membro(z, "xl/sharedStrings.xml", caminho) as fh:
         try:
-            for _, el in ET.iterparse(fh):
+            for _, el in _eventos(fh, "xl/sharedStrings.xml", caminho):
                 if el.tag == _SI:
                     textos.append(_texto(el))
                     el.clear()
@@ -301,7 +400,7 @@ def _xlsx_rows(caminho: Path, sheet: str) -> Iterator[tuple[int, list]]:
         with _membro(z, membro, caminho) as fh:
             numero, pai = 0, None
             try:
-                for evento, el in ET.iterparse(fh, events=("start", "end")):
+                for evento, el in _eventos(fh, membro, caminho, ("start", "end")):
                     if evento == "start":
                         if el.tag == _SHEET_DATA:
                             pai = el
