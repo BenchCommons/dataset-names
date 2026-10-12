@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from namescommons.publication import AVISOS, LICENCAS, attribution_text, dataset_attribution
+from namescommons.aggregate import by_country
+from namescommons.publication import AVISOS, LICENCAS, attribution_text, dataset_attribution, dataset_card
 from namescommons.sources import LICENCAS_COMPATIVEIS, load_sources
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -86,3 +87,94 @@ def test_sem_simbolos_da_statcan():
         assert not any(p in imagem.name.lower() for p in proibidos), imagem.name
     readme = (RAIZ / "README.md").read_text(encoding="utf-8").lower()
     assert "<img" not in readme or all(p not in readme.split("<img", 1)[1].split(">", 1)[0] for p in proibidos)
+
+
+# R6 ----------------------------------------------------------------------------------------------
+
+SECOES = ["## Summary", "## Files", "## Fields", "## Sources", "## Coverage", "## Suppression",
+          "## Known limitations", "## Licence", "## How to cite"]
+
+
+def _manifesto(fontes, usadas, dropped=None, links=None):
+    arquivos = {
+        "by_country/BR.csv": {"sha256": "0" * 64, "rows": 3},
+        "by_country/US.csv": {"sha256": "0" * 64, "rows": 4},
+        "family_names.csv": {"sha256": "0" * 64, "rows": 2},
+        "family_names.parquet": {"sha256": "0" * 64, "rows": 2},
+        "given_names.csv": {"sha256": "0" * 64, "rows": 5},
+        "given_names.parquet": {"sha256": "0" * 64, "rows": 5},
+        "observations.parquet": {"sha256": "0" * 64, "rows": 16},
+    }
+    if links is not None:
+        arquivos["variant_links.parquet"] = {"sha256": "0" * 64, "rows": links}
+    return {
+        "release": "2026.10", "schema_version": "1.3.0", "data_license": "CC-BY-4.0",
+        "sources": [
+            {"id": i, "name": fontes[i].name, "license": fontes[i].license,
+             "retrieved": fontes[i].retrieved.isoformat(), "observations": 4,
+             "dropped": (dropped or {}).get(i)}
+            for i in sorted(usadas)
+        ],
+        "files": arquivos,
+    }
+
+
+@pytest.fixture
+def cartao(observacoes, fontes):
+    paises = by_country(observacoes, fontes)
+    usadas = {o.source_id for o in observacoes}
+    m = _manifesto(fontes, usadas, dropped={"us-ssa": {"lines": 3, "records": 49}, "br-ibge-censo": {"lines": 0, "records": 0}}, links=47)
+    return dataset_card(m, fontes, paises)
+
+
+def test_cartao_tem_as_secoes(cartao):
+    assert cartao.startswith("# Names Commons Dataset, release 2026.10\n")
+    posicoes = [cartao.index(f"\n{s}\n") for s in SECOES]
+    assert posicoes == sorted(posicoes)
+    assert "\r" not in cartao and "—" not in cartao
+
+
+def test_cartao_usa_os_numeros_do_manifesto(cartao):
+    for trecho in ("Schema version: 1.3.0", "Observations: 16", "Given names: 5", "Family names: 2",
+                   "Countries: 2", "Variant links: 47",
+                   "| `given_names.csv` | 5 |", "| `by_country.zip` | 7 |", "| `variant_links.parquet` | 47 |"):
+        assert trecho in cartao, trecho
+    # BR usa só a edição mais recente (population); US tem Ana Clara só atestada (fonte não primary).
+    assert "| BR | 2 (population) | 1 (population) | 2022 to 2022 |" in cartao
+    assert "| US | 4 (attested, births) |  | 2020 to 2021 |" in cartao
+
+
+def test_cartao_lista_fontes_sem_acento_e_descartes(observacoes, fontes):
+    fontes = {**fontes, "us-ssa": replace(fontes["us-ssa"], strips_accents=True),
+              "br-ibge-censo": replace(fontes["br-ibge-censo"], uniform_case=True)}
+    usadas = {o.source_id for o in observacoes}
+    m = _manifesto(fontes, usadas, dropped={"us-ssa": {"lines": 3, "records": 49}})
+    texto = dataset_card(m, fontes, by_country(observacoes, fontes))
+    limitacoes = texto.split("## Known limitations", 1)[1].split("\n## ", 1)[0]
+    assert "Sources that publish names without accents: SSA." in limitacoes
+    assert "Sources that publish names in a single case, recapitalised by the pipeline: IBGE Censo." in limitacoes
+    assert "3 lines (49 records) were dropped" in limitacoes
+    assert "Drop counts are unknown for: IBGE Censo" in limitacoes
+    assert "`group_id`" in limitacoes and "within one release" in limitacoes
+    assert "`female_share`" in limitacoes
+    fontes_tabela = texto.split("## Sources", 1)[1].split("\n## ", 1)[0]
+    assert "| SSA | `us-ssa` | US | births | public-domain | below 5 | 2026-10-01 | 4 | 3 lines, 49 records |" in fontes_tabela
+    assert "| IBGE Censo | `br-ibge-censo` | BR | population | CC-BY-4.0 | none | 2026-10-01 | 4 | unknown |" in fontes_tabela
+
+
+def test_cartao_data_do_wikidata(cartao):
+    assert "QLever" in cartao and "2026-10-01" in cartao.split("QLever", 1)[1].split("\n", 1)[0]
+
+
+def test_cartao_sem_statcan_nao_traz_avisos(cartao):
+    assert "Statistics Canada" not in cartao
+    assert dataset_attribution("2026.10") in cartao.split("## How to cite", 1)[1]
+    assert "https://github.com/BenchCommons/dataset-names/releases/tag/2026.10" in cartao
+
+
+def test_cartao_traz_os_avisos_da_statcan(reais):
+    m = _manifesto(reais, {STATCAN, "wikidata"})
+    texto = dataset_card(m, reais, {})
+    licenca = texto.split("## Licence", 1)[1].split("\n## ", 1)[0]
+    assert reais[STATCAN].attribution in licenca
+    assert AVISOS["statcan-open-licence"] in licenca

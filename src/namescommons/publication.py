@@ -89,3 +89,215 @@ def attribution_text(release: str, sources: Mapping[str, Source], used: Iterable
     if not avisos:
         linhas += ["", "No additional notices."]
     return "\n".join(linhas) + "\n"
+
+
+# Cartão do dataset (spec 006, R6) ------------------------------------------------------------------
+
+_DESCRICOES = {
+    "observations.parquet": "Canonical observation table: one row per source, name, kind, country, gender and year.",
+    "given_names.csv": "One row per given name across all countries.",
+    "given_names.parquet": "Same as `given_names.csv`, with typed nested columns.",
+    "family_names.csv": "One row per family name across all countries.",
+    "family_names.parquet": "Same as `family_names.csv`, with typed nested columns.",
+    "variant_links.parquet": "Links between name variants published by Wikidata.",
+    "by_country.zip": "`by_country/<CC>.csv`, one file per country (ISO 3166-1 alpha-2).",
+    "manifest.json": "Release, schema version, sources, drop counts, and row count and SHA-256 of each table.",
+    "DATA_LICENSE": "CC BY 4.0 licence text and the dataset's attribution line.",
+    "ATTRIBUTION.txt": "Attribution text and licence of every upstream source, and required notices.",
+    "DATASET_CARD.md": "This card.",
+    "SHA256SUMS": "SHA-256 of every release asset, for `sha256sum -c SHA256SUMS`.",
+}
+
+_CAMPOS = """### `given_names` and `family_names`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `name` | string | Display form: the most frequent published form, in Unicode NFC |
+| `name_key` | string | `casefold()` of `name`; the identity of the name, accents preserved |
+| `ascii` | string | Lowercase ASCII transliteration (ICAO Doc 9303 tables); may be empty for scripts without a table |
+| `script` | string | Predominant ISO 15924 script of the letters (`Latn`, `Cyrl`, `Hani`, `Jpan` ...) |
+| `country_count` | integer | Number of countries that attest the name |
+| `countries` | list | One `{country, count, count_type, rank}` per country; JSON in the CSV |
+| `female_share` | decimal | F / (F + M) over the counts with gender; empty without a basis |
+| `gender_basis` | integer | F + M used for `female_share` |
+| `group_id` | string | Variant group: the smallest `name_key` in the group |
+| `sources` | list | Sorted ids of the sources that attest the name; JSON in the CSV |
+
+### `by_country/<CC>.csv`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `kind` | string | `given` or `family` |
+| `name`, `name_key`, `ascii`, `script` | string | As above |
+| `count` | integer | Births summed over all years, or population in the latest edition; empty when only attested |
+| `count_type` | string | `births`, `population` or `attested`; counts of different types are never added |
+| `rank` | integer | Dense rank by `kind` and `count_type`, highest count first |
+| `female_share`, `gender_basis` | decimal, integer | As above, for this country |
+| `first_year`, `last_year` | integer | Years covered by the count |
+
+### `observations.parquet`
+
+`name`, `name_key`, `ascii`, `script`, `kind`, `country`, `gender` (`F`, `M` or empty, never inferred), `year`, `count`, `count_type` and `source_id`: what one source publishes for one name, kind, country, gender and year.
+
+### `variant_links.parquet`
+
+`source_id`, `relation`, `qid`, `name`, `name_key`, `kind`, `target_qid`, `target_name`, `target_name_key` and `target_kind`: one link between two Wikidata name items.
+
+The schema is defined in [spec 001](https://github.com/BenchCommons/dataset-names/blob/master/docs/specs/001-esquema/spec.md), with the links of spec 004 and the variant rules of spec 005."""
+
+
+def _n(valor: int) -> str:
+    return f"{valor:,}"
+
+
+def _arquivos(files: Mapping[str, dict]) -> list[tuple[str, int | None]]:
+    por_pais = sum(v["rows"] for k, v in files.items() if k.startswith("by_country/"))
+    linhas = [(k, v["rows"]) for k, v in files.items() if not k.startswith("by_country/")]
+    linhas.append(("by_country.zip", por_pais))
+    linhas += [(nome, None) for nome in ("manifest.json", "DATA_LICENSE", "ATTRIBUTION.txt", "DATASET_CARD.md", "SHA256SUMS")]
+    return linhas
+
+
+def _descarte(d: Mapping[str, int] | None) -> str:
+    if d is None:
+        return "unknown"
+    if not d["lines"]:
+        return "0"
+    return f"{_n(d['lines'])} lines, {_n(d['records'])} records"
+
+
+def _cobertura(linhas: list) -> list[str]:
+    saida = []
+    for kind in ("given", "family"):
+        daqui = [r for r in linhas if r.kind == kind]
+        tipos = ", ".join(sorted({r.count_type for r in daqui}))
+        saida.append(f"{_n(len(daqui))} ({tipos})" if daqui else "")
+    anos = [a for r in linhas for a in (r.first_year, r.last_year) if a is not None]
+    saida.append(f"{min(anos)} to {max(anos)}" if anos else "")
+    return saida
+
+
+def _lista(fontes: list[Source]) -> str:
+    return ", ".join(f.name for f in fontes)
+
+
+def _limitacoes(manifest: Mapping, usadas: list[Source]) -> list[str]:
+    itens = []
+    sem_acento = [f for f in usadas if f.strips_accents]
+    if sem_acento:
+        itens.append(
+            f"Sources that publish names without accents: {_lista(sem_acento)}. Their names are grouped with "
+            "accented forms only when the match is unambiguous (ADR 0011), and their own rows keep the "
+            "unaccented form."
+        )
+    caixa = [f for f in usadas if f.uniform_case]
+    if caixa:
+        itens.append(
+            f"Sources that publish names in a single case, recapitalised by the pipeline: {_lista(caixa)}. "
+            "The display name prefers forms from sources that publish mixed case."
+        )
+    por_id = {s["id"]: s for s in manifest["sources"]}
+    com_descarte = [f for f in usadas if (por_id[f.id].get("dropped") or {}).get("lines")]
+    if com_descarte:
+        linhas = sum(por_id[f.id]["dropped"]["lines"] for f in com_descarte)
+        registros = sum(por_id[f.id]["dropped"]["records"] for f in com_descarte)
+        itens.append(
+            f"{_n(linhas)} lines ({_n(registros)} records) were dropped because the source published corrupted "
+            f"names, such as lost diacritics or macrons (ADR 0007): {_lista(com_descarte)}. Country totals "
+            "exclude them."
+        )
+    desconhecidos = [f for f in usadas if por_id[f.id].get("dropped") is None]
+    if desconhecidos:
+        itens.append(f"Drop counts are unknown for: {_lista(desconhecidos)}.")
+    itens.append(
+        "`group_id` identifies a variant group only within one release: it can change between releases when a "
+        "name with a smaller key joins the group or the links change."
+    )
+    for f in usadas:
+        if f.id == "wikidata":
+            itens.append(
+                f"Wikidata names and links are a snapshot of the QLever Wikidata endpoint taken on "
+                f"{f.retrieved.isoformat()}, not on the release date."
+            )
+    itens.append(
+        "`female_share` is a weighted estimate that combines countries and count types; it is never a count, "
+        "and gender is never inferred from the name."
+    )
+    return itens
+
+
+def dataset_card(manifest: Mapping, sources: Mapping[str, Source], countries: Mapping[str, list]) -> str:
+    """DATASET_CARD.md a partir do manifesto, de sources.yaml e das linhas por país (spec 006, R6)."""
+    release = manifest["release"]
+    files = manifest["files"]
+    usadas = _usadas(sources, (s["id"] for s in manifest["sources"]))
+    por_id = {s["id"]: s for s in manifest["sources"]}
+
+    def linhas(nome: str) -> int:
+        return files.get(nome, {}).get("rows", 0)
+
+    out = [
+        f"# {NOME_DO_DATASET}, release {release}",
+        "",
+        "Given names and family names from around the world, with the country that attests each name, its "
+        "frequency, its gender (only when the source publishes it) and its writing script. Built only from "
+        "official statistics and Wikidata.",
+        "",
+        "## Summary",
+        "",
+        f"- Release: {release}",
+        f"- Schema version: {manifest['schema_version']}",
+        f"- Observations: {_n(linhas('observations.parquet'))}",
+        f"- Given names: {_n(linhas('given_names.csv'))}",
+        f"- Family names: {_n(linhas('family_names.csv'))}",
+        f"- Countries: {_n(len(countries))}",
+        f"- Variant links: {_n(linhas('variant_links.parquet'))}",
+        f"- Sources: {_n(len(usadas))}",
+        "",
+        "## Files",
+        "",
+        "| File | Rows | Description |",
+        "|---|---|---|",
+    ]
+    for nome, n in _arquivos(files):
+        out.append(f"| `{nome}` | {'' if n is None else _n(n)} | {_DESCRICOES.get(nome, '')} |")
+    out += ["", "## Fields", "", _CAMPOS, "", "## Sources", "",
+            "| Source | Id | Country | Count type | Licence | Suppression | Retrieved | Observations | Dropped |",
+            "|---|---|---|---|---|---|---|---|---|"]
+    for f in usadas:
+        s = por_id[f.id]
+        supressao = f"below {_n(f.suppression)}" if f.suppression else "none"
+        out.append(
+            f"| {f.name} | `{f.id}` | {f.country or 'all'} | {f.count_type} | {f.license} | {supressao} | "
+            f"{f.retrieved.isoformat()} | {_n(s.get('observations', 0))} | {_descarte(s.get('dropped'))} |"
+        )
+    out += ["", "## Coverage", "", "| Country | Given names | Family names | Years |", "|---|---|---|---|"]
+    for pais in sorted(countries):
+        out.append("| " + " | ".join([pais, *_cobertura(countries[pais])]) + " |")
+    out += [
+        "", "## Suppression", "",
+        "National statistics offices hide small counts to protect privacy. Suppressed values are omitted, never "
+        "replaced by zero or an estimate (ADR 0002): a name that a source only publishes as suppressed is not "
+        "attested by that source. The threshold of each source is in the Suppression column above. Sums over "
+        "years of births treat suppressed years as zero, so they underestimate rare names.",
+        "", "## Known limitations", "",
+    ]
+    out += [f"- {item}" for item in _limitacoes(manifest, usadas)]
+    out += [
+        "", "## Licence", "",
+        "The data is licensed under CC BY 4.0 (`DATA_LICENSE`). Attribute it as:", "",
+        f"> {dataset_attribution(release)}", "",
+        "`ATTRIBUTION.txt` reproduces the attribution text and licence of every upstream source; keep it when "
+        "you redistribute the data.",
+    ]
+    for f in usadas:
+        if f.license in AVISOS:
+            out += ["", f"> {f.attribution}"]
+    for aviso in notices(sources, [f.id for f in usadas]):
+        out += ["", f"> {aviso}"]
+    out += [
+        "", "## How to cite", "",
+        f"> {dataset_attribution(release)}", "",
+        f"Release page: {REPOSITORIO}/releases/tag/{release}",
+    ]
+    return "\n".join(out) + "\n"
