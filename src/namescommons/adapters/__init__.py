@@ -1,7 +1,8 @@
 """Contrato do adaptador de fonte (spec 002, R1, com as regras da spec 003, R2).
 
 Cada fonte com adaptador tem um módulo <pacote>.<id_com_underscore> que expõe
-SOURCE_ID, RESOURCES (lista de Resource) e parse(files) -> Iterator[RawRecord].
+SOURCE_ID, RESOURCES (lista de Resource) e parse(files) -> Iterator[RawRecord],
+e opcionalmente links(files) -> Iterator[RawLink] (spec 004, R4.1).
 O adaptador converte os valores da fonte: year e count como int, gender como F ou M,
 country em ISO 3166-1 alfa-2, kind como given ou family. Valores suprimidos são omitidos.
 """
@@ -42,6 +43,19 @@ class RawRecord:
     gender: str | None = None
     year: int | None = None
     count: int | None = None
+
+
+@dataclass(frozen=True)
+class RawLink:
+    """Ligação entre dois nomes como a fonte publica (spec 004, R4.1); o pipeline a transforma em VariantLink."""
+
+    relation: str
+    qid: str
+    name: str
+    kind: str
+    target_qid: str
+    target_name: str
+    target_kind: str
 
 
 def module_name(source_id: str) -> str:
@@ -90,6 +104,8 @@ def check_adapter(mod: object, source_id: str) -> None:
         vistos.add(r.filename)
     if not callable(mod.parse):
         raise AdapterError(f"'{source_id}': parse deve ser uma função")
+    if hasattr(mod, "links") and not callable(mod.links):
+        raise AdapterError(f"'{source_id}': links deve ser uma função")
 
 
 def _caminho_esperado(package: str, modulo: str) -> str:
