@@ -61,6 +61,18 @@ given,Åse,åse,ase,Latn,93,births,4,1.000000,93,1990,2025
 """
 
 
+# Spec 003d: Noah 36 F de 2301 (0,015645); Riley 35 + 261 F de 762 (0,388451).
+CA_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+given,Noah,noah,noah,Latn,2301,births,1,0.015645,2301,1991,2025
+given,Olivia,olivia,olivia,Latn,2019,births,2,1.000000,2019,1991,2025
+given,Riley,riley,riley,Latn,762,births,3,0.388451,762,1991,2025
+given,Marie-Eve,marie-eve,marie-eve,Latn,664,births,4,1.000000,664,1991,1991
+given,Jean-Philippe,jean-philippe,jean-philippe,Latn,447,births,5,0.000000,447,1991,1991
+given,D'Arcy,d'arcy,d'arcy,Latn,13,births,6,0.000000,13,1991,1991
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
@@ -71,3 +83,10 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert r.returncode == 0, r.stderr
     assert "OK: 51 observações, 5 países" in r.stdout
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
+    assert (tmp_path / "dist-oficiais" / "by_country" / "CA.csv").read_text(encoding="utf-8") == CA_CSV
+
+
+def test_passo_das_fontes_oficiais_confere_todos_os_paises():
+    """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA."""
+    passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
+    assert "for pais in CA FR IE NO US;" in passo["run"]
