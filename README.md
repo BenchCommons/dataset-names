@@ -17,6 +17,7 @@ Originally forked from [Debdut/names.io](https://github.com/Debdut/names.io).
 | [CSO, Irish Babies' Names](https://data.gov.ie/dataset/vsa50-boys-names-in-ireland-with-3-or-more-occurrences) | IE | given | births | CC BY 4.0 |
 | [Statistics Norway, table 10467](https://www.ssb.no/en/statbank/table/10467) | NO | given | births | CC BY 4.0 |
 | [Statistics Norway, table 12891](https://www.ssb.no/en/statbank/table/12891) | NO | family | population | CC BY 4.0 |
+| [Statistics Canada, table 17-10-0147-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014701) | CA | given | births | [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence) |
 
 Attribution text for each source is in `sources.yaml`.
 
@@ -54,7 +55,7 @@ The SSA server refuses automated downloads (HTTP 403). Download the national dat
 ## Licences
 
 - Code: Apache-2.0, see [`LICENSE`](LICENSE).
-- Data: CC BY 4.0, see [`DATA_LICENSE`](DATA_LICENSE). Only sources whose licence allows redistribution under CC BY 4.0 are accepted ([ADR 0001](docs/adr/0001-licenca-dos-dados.md)).
+- Data: CC BY 4.0, see [`DATA_LICENSE`](DATA_LICENSE). Only sources whose licence allows redistribution under CC BY 4.0 are accepted ([ADR 0001](docs/adr/0001-licenca-dos-dados.md), extended by [ADR 0004](docs/adr/0004-licenca-statistics-canada.md)). Data adapted from Statistics Canada carries the notice required by its licence, kept verbatim in `sources.yaml`.
 - [`legacy/`](legacy/README.md) holds the original flat lists and scripts. It is not part of the dataset and is not covered by these licences.
 
 ## Contributing
