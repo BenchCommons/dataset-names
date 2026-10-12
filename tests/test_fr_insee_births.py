@@ -76,3 +76,15 @@ def test_formato_inesperado_falha(insee, tmp_path, texto, trecho):
 def test_zip_sem_um_unico_csv_falha(insee, tmp_path):
     with pytest.raises(FormatError, match="esperava um CSV no ZIP"):
         list(insee.parse(_zip(tmp_path, "x", membro="leia.txt")))
+
+
+def test_nome_com_sublinhado_que_nao_e_o_agregado_conhecido_falha(insee, tmp_path):
+    texto = "sexe;prenom;periode;valeur;rang\r\n1;_PRENOMS_NOVOS;2020;9000;\r\n"
+    with pytest.raises(FormatError, match="prenom '_PRENOMS_NOVOS' começa com _ e não é o agregado conhecido"):
+        list(insee.parse(_zip(tmp_path, texto)))
+
+
+def test_valeur_vazio_falha(insee, tmp_path):
+    texto = "sexe;prenom;periode;valeur;rang\r\n2;ANA;2020;;5\r\n"
+    with pytest.raises(FormatError, match="contagem ''"):
+        list(insee.parse(_zip(tmp_path, texto)))

@@ -20,6 +20,7 @@ RESOURCES = [
 
 _SEXO = {"1": "M", "2": "F"}
 _COLUNAS = {"sexe", "prenom", "periode", "valeur"}
+_PRENOMS_RARES = "_PRENOMS_RARES"
 
 
 def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
@@ -35,8 +36,13 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
             for linha in leitor:
                 prenom, periode = linha["prenom"], linha["periode"]
                 # Edições anteriores agregavam nomes raros em _PRENOMS_RARES e anos ignorados em XXXX.
-                if prenom.startswith("_") or periode == "XXXX":
+                if prenom == _PRENOMS_RARES or periode == "XXXX":
                     continue
+                if prenom.startswith("_"):
+                    raise FormatError(
+                        f"{membros[0]}, linha {leitor.line_num}: prenom {prenom!r} começa com _ "
+                        f"e não é o agregado conhecido {_PRENOMS_RARES!r}"
+                    )
                 yield RawRecord(
                     name=prenom, kind="given", country="FR",
                     gender=parse_code(linha["sexe"], _SEXO, "sexe"),

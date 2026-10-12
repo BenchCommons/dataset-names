@@ -80,3 +80,22 @@ def test_byte_nao_ascii_vira_format_error_com_membro_e_linha(ssa, tmp_path):
     arquivos = _zip(tmp_path, {"yob2000.txt": b"Mary,F,10\nJos\xc3\xa9,M,5\n"})
     with pytest.raises(FormatError, match="yob2000.txt, linha 2: byte fora de ASCII"):
         list(ssa.parse(arquivos))
+
+
+@pytest.mark.parametrize("fim", [b"\r", b"\n", b"\r\n"])
+def test_aceita_qualquer_fim_de_linha_inclusive_so_cr(ssa, tmp_path, fim):
+    conteudo = fim.join([b"Ana,F,9", b"Bia,F,7", b"Rui,M,5"]) + fim
+    arquivos = _zip(tmp_path, {"yob2000.txt": conteudo})
+    assert [(r.name, r.count) for r in ssa.parse(arquivos)] == [("Ana", 9), ("Bia", 7), ("Rui", 5)]
+
+
+def test_linha_em_branco_no_meio_continua_sendo_erro_com_a_linha_certa(ssa, tmp_path):
+    arquivos = _zip(tmp_path, {"yob2000.txt": b"Ana,F,9\r\n\r\nBia,F,7\r\n"})
+    with pytest.raises(FormatError, match="yob2000.txt, linha 2: esperava nome,sexo,contagem"):
+        list(ssa.parse(arquivos))
+
+
+def test_byte_nao_ascii_com_cr_so_aponta_a_linha(ssa, tmp_path):
+    arquivos = _zip(tmp_path, {"yob2000.txt": b"Mary,F,10\rJos\xc3\xa9,M,5\r"})
+    with pytest.raises(FormatError, match="yob2000.txt, linha 2: byte fora de ASCII"):
+        list(ssa.parse(arquivos))

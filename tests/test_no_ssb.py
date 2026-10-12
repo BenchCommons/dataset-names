@@ -86,3 +86,34 @@ def test_prefixo_de_sexo_desconhecido_falha(tmp_path):
     mod = load_adapter("no-ssb-fornavn")
     with pytest.raises(FormatError, match="prefixo de sexo '9' desconhecido"):
         list(mod.parse({"10467.json": tmp_path / "10467.json"}))
+
+
+@pytest.mark.parametrize("valor", [True, False])
+def test_valor_booleano_falha(tmp_path, valor):
+    # bool é subclasse de int em Python; JSON true/false não é contagem.
+    valores = json.loads(FORNAVN.read_text(encoding="utf-8"))["value"]
+    valores[1] = valor
+    mod = load_adapter("no-ssb-fornavn")
+    with pytest.raises(FormatError, match=f"célula 1 com valor {valor}, esperava inteiro"):
+        list(mod.parse(_alterado(tmp_path, value=valores)))
+
+
+def test_marcador_desconhecido_falha_alto(tmp_path):
+    mod = load_adapter("no-ssb-fornavn")
+    status = {"0": ":", "3": "..", "6": "..", "8": ".", "9": "..", "11": ".", "12": ".."}
+    with pytest.raises(FormatError, match="célula 0 vazia sem marcador conhecido"):
+        list(mod.parse(_alterado(tmp_path, status=status)))
+
+
+def test_status_em_lista_e_aceito(tmp_path):
+    mod = load_adapter("no-ssb-fornavn")
+    status = [".." if k in (0, 3, 6, 9, 12) else "." if k in (8, 11) else None for k in range(15)]
+    registros = list(mod.parse(_alterado(tmp_path, status=status)))
+    assert len(registros) == 8
+
+
+def test_celulas_suprimidas_de_1944_sao_descartadas():
+    # Em 1944 todos os nomes da amostra estão suprimidos; nenhum registro de 1944 sai do adaptador.
+    mod = load_adapter("no-ssb-fornavn")
+    anos = {r.year for r in mod.parse({"10467.json": FORNAVN})}
+    assert anos == {1990, 2025}
