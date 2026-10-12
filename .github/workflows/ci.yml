@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Instalar dependências
+        run: uv sync
+      - name: Testes
+        run: uv run pytest -q
+      - name: namesio run --offline sobre o cache montado a partir das fixtures
+        env:
+          PYTHONPATH: tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/cache"
+          cp -R tests/fixtures/exemplo "$RUNNER_TEMP/cache/exemplo"
+          uv run namesio run --offline --sources tests/fixtures/sources.yaml --adapters adaptadores \
+            --cache "$RUNNER_TEMP/cache" --out "$RUNNER_TEMP/dist" --release 2026.10
+          test -s "$RUNNER_TEMP/dist/by_country/PT.csv"
