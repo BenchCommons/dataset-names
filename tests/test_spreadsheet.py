@@ -23,7 +23,7 @@ def _xlsx(caminho: Path, abas: list[tuple[str, str]], textos: list[str] = (), al
     rels = "".join(f'<Relationship Id="rId{n}" Type="{REL}/worksheet" Target="{alvo.format(n=n)}"/>'
                    for n in ordem)
     rels += f'<Relationship Id="rId99" Type="{REL}/sharedStrings" Target="sharedStrings.xml"/>'
-    with zipfile.ZipFile(caminho, "w") as z:
+    with zipfile.ZipFile(caminho, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", "<Types/>")
         z.writestr("xl/workbook.xml", f'<?xml version="1.0"?><workbook {NS} {NS_R}><sheets>{folhas}</sheets></workbook>')
         z.writestr("xl/_rels/workbook.xml.rels",
@@ -258,3 +258,73 @@ def test_r1_5_xlrd_fixado():
     import tomllib
     projeto = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8"))
     assert "xlrd==2.0.2" in projeto["project"]["dependencies"]
+
+
+# Revisão do PR #27: entradas malformadas e ZIP desproporcional viram FormatError ------------------
+
+def test_membro_da_aba_ausente_no_zip(tmp_path):
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", "")], alvo="worksheets/nao_existe{n}.xml")
+    with pytest.raises(FormatError, match=r"a.xlsx: aba 'X' aponta para xl/worksheets/nao_existe1.xml, ausente do ZIP"):
+        list(rows(arq, "X"))
+
+
+def test_indice_de_texto_compartilhado_nao_inteiro(tmp_path):
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", '<row r="1"><c r="A1" t="s"><v>abc</v></c></row>')], ["<t>a</t>"])
+    with pytest.raises(FormatError, match="célula A1: índice de texto compartilhado 'abc' não é inteiro"):
+        list(rows(arq, "X"))
+
+
+@pytest.mark.parametrize("ref, trecho", [
+    ("XFE1", "célula XFE1: coluna além de XFD"),
+    ("1A", "referência de célula '1A' inválida"),
+    ("a1", "referência de célula 'a1' inválida"),
+])
+def test_referencia_de_celula_invalida(tmp_path, ref, trecho):
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", f'<row r="1"><c r="{ref}"><v>1</v></c></row>')])
+    with pytest.raises(FormatError, match=trecho):
+        list(rows(arq, "X"))
+
+
+def test_numero_de_linha_invalido(tmp_path):
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", '<row r="x"><c r="A1"><v>1</v></c></row>')])
+    with pytest.raises(FormatError, match="linha 'x' inválida"):
+        list(rows(arq, "X"))
+
+
+def test_zip_com_taxa_de_compressao_desproporcional(tmp_path):
+    enchimento = " " * 3_000_000
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", f'<row r="1"><c r="A1"><v>1</v></c></row>{enchimento}')])
+    with pytest.raises(FormatError, match=r"a.xlsx: membro xl/worksheets/sheet1.xml descompacta 3\d{6} bytes, .*taxa"):
+        list(rows(arq, "X"))
+
+
+def test_zip_com_membro_grande_demais(tmp_path, monkeypatch):
+    import namescommons.spreadsheet as planilha
+    monkeypatch.setattr(planilha, "_MAX_MEMBRO", 100)
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    with pytest.raises(FormatError, match=r"a.xlsx: membro xl/workbook.xml descompacta \d+ bytes, acima do limite de 100"):
+        sheet_names(arq)
+
+
+def test_linhas_lidas_saem_da_arvore(tmp_path):
+    """Memória plana: a aba de 63 mil linhas do INE não acumula elementos <row> já lidos."""
+    import namescommons.spreadsheet as planilha
+    dados = "".join(f'<row r="{i}"><c r="A{i}"><v>{i}</v></c></row>' for i in range(1, 2001))
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", dados)])
+    vistos = []
+    original = planilha.ET.iterparse
+
+    def espia(*args, **kwargs):
+        it = original(*args, **kwargs)
+        for evento, el in it:
+            yield evento, el
+            if evento == "end" and el.tag.endswith("sheetData"):
+                vistos.append(len(el))
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(planilha.ET, "iterparse", espia)
+    try:
+        assert sum(1 for _ in rows(arq, "X")) == 2000
+    finally:
+        monkeypatch.undo()
+    assert vistos == [0]

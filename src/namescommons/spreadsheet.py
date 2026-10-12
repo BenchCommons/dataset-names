@@ -21,10 +21,15 @@ _OLE2 = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 _MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 _REL_DOC = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 _REL_PKG = "{http://schemas.openxmlformats.org/package/2006/relationships}"
-_ROW, _C, _V, _IS, _T, _R, _SI, _SHEET = (
-    _MAIN + n for n in ("row", "c", "v", "is", "t", "r", "si", "sheet")
+_ROW, _C, _V, _IS, _T, _R, _SI, _SHEET, _SHEET_DATA = (
+    _MAIN + n for n in ("row", "c", "v", "is", "t", "r", "si", "sheet", "sheetData")
 )
-_REF = re.compile(r"([A-Z]+)([0-9]+)")
+_REF = re.compile(r"([A-Z]{1,3})([0-9]+)")
+_MAX_COLUNAS = 16384  # XFD, a última coluna do Excel
+# Proteção contra ZIP desproporcional: membro acima de 1 GiB, ou acima de 1 MiB com taxa maior que 100:1.
+_MAX_MEMBRO = 1 << 30
+_MAX_TAXA = 100
+_MIN_BYTES_TAXA = 1 << 20
 _INTEIRO = re.compile(r"-?[0-9]+")
 
 
@@ -97,12 +102,29 @@ def _abrir_zip(caminho: Path) -> zipfile.ZipFile:
     return z
 
 
+def _membro(z: zipfile.ZipFile, nome: str, caminho: Path):
+    """Abre um membro do ZIP depois de conferir o tamanho descompactado declarado."""
+    try:
+        info = z.getinfo(nome)
+    except KeyError:
+        raise FormatError(f"{caminho.name}: membro {nome} ausente do ZIP") from None
+    tamanho, compactado = info.file_size, max(info.compress_size, 1)
+    if tamanho > _MAX_MEMBRO:
+        raise FormatError(f"{caminho.name}: membro {nome} descompacta {tamanho} bytes, acima do limite de {_MAX_MEMBRO}")
+    if tamanho > _MIN_BYTES_TAXA and tamanho / compactado > _MAX_TAXA:
+        raise FormatError(f"{caminho.name}: membro {nome} descompacta {tamanho} bytes, "
+                          f"taxa de compressão {tamanho // compactado}:1 acima de {_MAX_TAXA}:1")
+    return z.open(info)
+
+
 def _xlsx_abas(z: zipfile.ZipFile, caminho: Path) -> list[tuple[str, str]]:
     """(nome, membro do ZIP) de cada aba, na ordem de xl/workbook.xml."""
     try:
-        livro = ET.fromstring(z.read("xl/workbook.xml"))
-        rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
-    except (KeyError, ET.ParseError) as e:
+        with _membro(z, "xl/workbook.xml", caminho) as fh:
+            livro = ET.parse(fh).getroot()
+        with _membro(z, "xl/_rels/workbook.xml.rels", caminho) as fh:
+            rels = ET.parse(fh).getroot()
+    except ET.ParseError as e:
         raise FormatError(f"{caminho.name}: workbook do XLSX ilegível: {e}") from None
     alvos = {r.get("Id"): r.get("Target", "") for r in rels.iter(_REL_PKG + "Relationship")}
     abas = []
@@ -130,7 +152,7 @@ def _textos_compartilhados(z: zipfile.ZipFile, caminho: Path) -> list[str]:
     if "xl/sharedStrings.xml" not in z.namelist():
         return []
     textos = []
-    with z.open("xl/sharedStrings.xml") as fh:
+    with _membro(z, "xl/sharedStrings.xml", caminho) as fh:
         try:
             for _, el in ET.iterparse(fh):
                 if el.tag == _SI:
@@ -141,10 +163,16 @@ def _textos_compartilhados(z: zipfile.ZipFile, caminho: Path) -> list[str]:
     return textos
 
 
-def _coluna(letras: str) -> int:
+def _coluna(ref: str, onde: str) -> int:
+    """Índice da coluna (A = 0) de uma referência como 'C7'."""
+    m = _REF.fullmatch(ref)
+    if not m:
+        raise FormatError(f"{onde}: referência de célula {ref!r} inválida")
     n = 0
-    for letra in letras:
+    for letra in m.group(1):
         n = n * 26 + ord(letra) - ord("A") + 1
+    if n > _MAX_COLUNAS:
+        raise FormatError(f"{onde}, célula {ref}: coluna além de XFD")
     return n - 1
 
 
@@ -168,7 +196,10 @@ def _valor(c: ET.Element, textos: list[str], onde: str):
     if v is None or v.text is None:
         return "" if tipo == "str" and v is not None else None
     if tipo == "s":
-        indice = int(v.text)
+        try:
+            indice = int(v.text)
+        except ValueError:
+            raise FormatError(f"{onde}: índice de texto compartilhado {v.text!r} não é inteiro") from None
         if not 0 <= indice < len(textos):
             raise FormatError(f"{onde}: texto compartilhado {indice} fora da tabela de {len(textos)}")
         return textos[indice]
@@ -191,21 +222,35 @@ def _xlsx_rows(caminho: Path, sheet: str) -> Iterator[tuple[int, list]]:
             raise FormatError(f"{caminho.name}: aba {sheet!r} não existe; abas: {[n for n, _ in abas]}")
         textos = _textos_compartilhados(z, caminho)
         prefixo = f"{caminho.name}, aba {sheet!r}"
-        with z.open(membro) as fh:
-            numero = 0
+        if membro not in z.namelist():
+            raise FormatError(f"{caminho.name}: aba {sheet!r} aponta para {membro}, ausente do ZIP")
+        with _membro(z, membro, caminho) as fh:
+            numero, pai = 0, None
             try:
-                for _, el in ET.iterparse(fh):
+                for evento, el in ET.iterparse(fh, events=("start", "end")):
+                    if evento == "start":
+                        if el.tag == _SHEET_DATA:
+                            pai = el
+                        continue
                     if el.tag != _ROW:
                         continue
-                    numero = int(el.get("r", numero + 1))
+                    r = el.get("r")
+                    if r is None:
+                        numero += 1
+                    elif r.isdigit():
+                        numero = int(r)
+                    else:
+                        raise FormatError(f"{prefixo}: linha {r!r} inválida")
                     valores: list = []
                     for c in el.iter(_C):
                         ref = c.get("r")
-                        m = _REF.fullmatch(ref or "")
-                        posicao = _coluna(m.group(1)) if m else len(valores)
+                        posicao = len(valores) if ref is None else _coluna(ref, prefixo)
                         valores.extend([None] * (posicao - len(valores) + 1))
                         valores[posicao] = _valor(c, textos, f"{prefixo}, célula {ref or posicao}")
+                    # Tira a linha lida da árvore: a memória fica plana na aba inteira.
                     el.clear()
+                    if pai is not None:
+                        pai.remove(el)
                     if _sem_none_final(valores):
                         yield numero, valores
             except ET.ParseError as e:
