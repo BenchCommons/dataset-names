@@ -84,7 +84,7 @@ def test_prefixo_de_sexo_desconhecido_falha(tmp_path):
     categoria["label"] = {("9" + c[1:] if c == "1NORA" else c): v for c, v in categoria["label"].items()}
     (tmp_path / "10467.json").write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
     mod = load_adapter("no-ssb-fornavn")
-    with pytest.raises(FormatError, match="prefixo de sexo '9' desconhecido"):
+    with pytest.raises(FormatError, match="prefixo de sexo '9' unknown"):
         list(mod.parse({"10467.json": tmp_path / "10467.json"}))
 
 

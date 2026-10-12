@@ -84,8 +84,8 @@ def test_byte_fora_da_tabela_descarta_o_nome(dia, tmp_path, byte):
 @pytest.mark.parametrize("conteudo, trecho", [
     (b"Ano,Sexo,Nome,Total\r\n2025,F,Mia,1\r\n", r"cabeçalho \['Ano', 'Sexo', 'Nome', 'Total'\]"),
     (b"", "arquivo vazio"),
-    (CABECALHO + b"2025,U,Mia,12\r\n", "linha 2: sexo 'U' desconhecido"),
-    (CABECALHO + b"2025,F,Mia,<10\r\n", "linha 2: contagem '<10'"),
+    (CABECALHO + b"2025,U,Mia,12\r\n", "linha 2: sexo 'U' unknown"),
+    (CABECALHO + b"2025,F,Mia,<10\r\n", "linha 2: count '<10'"),
     (CABECALHO + b"2025,F,Mia,12\r\n20x5,F,Mia,12\r\n", "linha 3: ano '20x5'"),
     (CABECALHO + b"2025,F,Mia\r\n", "linha 2: esperava 4 campos, veio 3"),
     (CABECALHO + b"2025,F,Mia,Rose,12\r\n", "linha 2: esperava 4 campos, veio 5"),

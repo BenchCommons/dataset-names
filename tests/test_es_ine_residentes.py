@@ -109,7 +109,7 @@ def test_r2_3_sem_a_frase_da_data_falha(mod, tmp_path):
 
 def test_r2_4_aba_desconhecida_falha(mod, tmp_path):
     arquivos = _xlsx_alterado(tmp_path, {'name="Mujeres"': 'name="Total"'}, membro="xl/workbook.xml")
-    with pytest.raises(FormatError, match=r"aba de nomes 'Total' desconhecido; esperado um de \['Hombres', 'Mujeres'\]"):
+    with pytest.raises(FormatError, match=r"aba de nomes 'Total' unknown; expected one of \['Hombres', 'Mujeres'\]"):
         list(mod.parse(arquivos))
 
 
@@ -157,7 +157,7 @@ def test_r2_7_marcador_na_coluna_lida_e_omitido(mod, monkeypatch):
 
 def test_r2_7_marcador_desconhecido_falha(mod, monkeypatch):
     _linhas_xls(mod, monkeypatch, lambda aba, n, v: [v[0], v[1], "<20"] + v[3:] if n == 21 else v)
-    with pytest.raises(FormatError, match=r"aba 'Apellidos >=100', linha 21: Apellido 1º '<20' não é inteiro"):
+    with pytest.raises(FormatError, match=r"aba 'Apellidos >=100', linha 21: Apellido 1º '<20' is neither an integer"):
         list(mod.parse(ARQUIVOS))
 
 

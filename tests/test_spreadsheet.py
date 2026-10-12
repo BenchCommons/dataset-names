@@ -182,7 +182,7 @@ def test_r1_6_cell_count(valor, esperado):
     (20.5, "contagem 20.5 não é inteiro"),
     (-1, "contagem -1 negativa"),
     (True, "contagem True não é número"),
-    ("<20", r"contagem '<20' não é inteiro nem marcador conhecido \['..'\]"),
+    ("<20", r"contagem '<20' is neither an integer nor a known marker \['..'\]"),
     (None, "contagem vazia"),
 ])
 def test_r1_6_cell_count_recusa(valor, trecho):

@@ -64,8 +64,8 @@ def test_aceita_bom(insee, tmp_path):
 
 @pytest.mark.parametrize("texto, trecho", [
     ("sexe;preusuel;annais;nombre\r\n1;ANA;2020;10\r\n", "colunas ausentes \\['periode', 'prenom', 'valeur'\\]"),
-    ("sexe;prenom;periode;valeur;rang\r\nF;ANA;2020;10;5\r\n", "sexe 'F' desconhecido"),
-    ("sexe;prenom;periode;valeur;rang\r\n2;ANA;2020;n.d.;5\r\n", "contagem 'n.d.'"),
+    ("sexe;prenom;periode;valeur;rang\r\nF;ANA;2020;10;5\r\n", "sexe 'F' unknown"),
+    ("sexe;prenom;periode;valeur;rang\r\n2;ANA;2020;n.d.;5\r\n", "count 'n.d.'"),
     ("sexe;prenom;periode;valeur;rang\r\n2;ANA;19xx;10;5\r\n", "periode '19xx'"),
 ])
 def test_formato_inesperado_falha(insee, tmp_path, texto, trecho):
@@ -86,5 +86,5 @@ def test_nome_com_sublinhado_que_nao_e_o_agregado_conhecido_falha(insee, tmp_pat
 
 def test_valeur_vazio_falha(insee, tmp_path):
     texto = "sexe;prenom;periode;valeur;rang\r\n2;ANA;2020;;5\r\n"
-    with pytest.raises(FormatError, match="contagem ''"):
+    with pytest.raises(FormatError, match="count ''"):
         list(insee.parse(_zip(tmp_path, texto)))

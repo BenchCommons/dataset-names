@@ -8,7 +8,7 @@ from pathlib import Path
 import pycountry
 import yaml
 
-from namescommons.adapters import url_http
+from datasettool.sources.adapters import is_http_url as url_http
 
 LICENCAS_COMPATIVEIS = frozenset({
     "public-domain", "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0",
