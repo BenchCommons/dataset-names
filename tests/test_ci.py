@@ -61,6 +61,24 @@ given,Åse,åse,ase,Latn,93,births,4,1.000000,93,1990,2025
 """
 
 
+NZ_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+given,John,john,john,Latn,636,births,1,0.000000,636,1900,1900
+given,Mary,mary,mary,Latn,410,births,2,1.000000,410,1900,1900
+given,Esmé,esmé,esme,Latn,45,births,3,1.000000,45,2022,2025
+given,Nikau,nikau,nikau,Latn,36,births,4,0.000000,36,2025,2025
+given,Te Ariki,te ariki,te ariki,Latn,34,births,5,0.000000,34,2025,2025
+given,Te Ao,te ao,te ao,Latn,27,births,6,0.555556,27,2024,2024
+given,Zoé,zoé,zoe,Latn,26,births,7,1.000000,26,2007,2007
+given,Anne-Marie,anne-marie,anne-marie,Latn,24,births,8,1.000000,24,1967,1967
+given,Aroha,aroha,aroha,Latn,22,births,9,1.000000,22,2025,2025
+given,André,andré,andre,Latn,20,births,10,0.000000,20,2003,2003
+given,Aadhya,aadhya,aadhya,Latn,13,births,11,1.000000,13,2022,2022
+given,Zoya,zoya,zoya,Latn,11,births,12,1.000000,11,2015,2015
+given,Björn,björn,bjorn,Latn,10,births,13,0.000000,10,2025,2025
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
@@ -71,3 +89,7 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert r.returncode == 0, r.stderr
     assert "OK: 54 observações, 5 países" in r.stdout
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
+    # Spec 003e, R6: a Nova Zelândia entra no passo, sem os nomes corrompidos na fonte.
+    assert "for pais in FR IE NO NZ US;" in passo["run"]
+    assert (tmp_path / "dist-oficiais" / "by_country" / "NZ.csv").read_text(encoding="utf-8") == NZ_CSV
+    assert "nz-dia-births: 3 linha(s) com nome corrompido" in r.stderr

@@ -51,9 +51,9 @@ Cada tarefa segue TDD: escrever os testes, ver que falham pelo motivo certo, esc
 **Arquivos:**
 - Modificar: `.github/workflows/ci.yml`, `tests/test_ci.py`
 
-- [ ] **Passo 1: teste que falha.** `test_passo_das_fontes_oficiais_roda_localmente` espera `5 países` e o total de observações com a amostra nova, e confere `by_country/NZ.csv` escrito à mão.
-- [ ] **Passo 2:** acrescentar `NZ` ao laço `for pais in ...` do passo das fontes oficiais.
-- [ ] **Passo 3:** `uv run pytest -q` verde; commit.
+- [x] **Passo 1: teste que falha.** `test_passo_das_fontes_oficiais_roda_localmente` confere que o laço do passo inclui `NZ`, que o `stderr` traz o aviso de descarte e `by_country/NZ.csv` escrito à mão.
+- [x] **Passo 2:** acrescentar `NZ` ao laço `for pais in ...` do passo das fontes oficiais.
+- [x] **Passo 3:** `uv run pytest -q` verde; commit.
 
 ### Fechamento
 
