@@ -61,6 +61,31 @@ given,Åse,åse,ase,Latn,93,births,4,1.000000,93,1990,2025
 """
 
 
+ES_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+family,Garcia,garcia,garcia,Latn,1446937,population,1,,0,2025,2025
+family,Muñoz,muñoz,munoz,Latn,284951,population,2,,0,2025,2025
+family,Gonçalves,gonçalves,goncalves,Latn,3020,population,3,,0,2025,2025
+family,O'Brien,o'brien,o'brien,Latn,573,population,4,,0,2025,2025
+family,Lyu,lyu,lyu,Latn,208,population,5,,0,2025,2025
+family,Tudorica,tudorica,tudorica,Latn,100,population,6,,0,2025,2025
+family,Anchustegui,anchustegui,anchustegui,Latn,99,population,7,,0,2025,2025
+family,Nel·lo,nel·lo,nello,Latn,26,population,8,,0,2025,2025
+family,Zrhaida,zrhaida,zrhaida,Latn,20,population,9,,0,2025,2025
+given,Maria Carmen,maria carmen,maria carmen,Latn,618622,population,1,1.000000,618622,2025,2025
+given,Antonio,antonio,antonio,Latn,590938,population,2,0.000000,590938,2025,2025
+given,Andrea,andrea,andrea,Latn,113054,population,3,0.973084,113054,2025,2025
+given,Begoña,begoña,begona,Latn,36293,population,4,1.000000,36293,2025,2025
+given,Iñigo,iñigo,inigo,Latn,22083,population,5,0.000000,22083,2025,2025
+given,Llorenç,llorenç,llorenc,Latn,2513,population,6,0.000000,2513,2025,2025
+given,Françoise,françoise,francoise,Latn,338,population,7,1.000000,338,2025,2025
+given,Francesc D'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
+given,Joana D'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
+given,Zulma Patricia,zulma patricia,zulma patricia,Latn,20,population,10,1.000000,20,2025,2025
+given,Zunair,zunair,zunair,Latn,20,population,10,0.000000,20,2025,2025
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
@@ -71,3 +96,6 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert r.returncode == 0, r.stderr
     assert "OK: 60 observações, 5 países" in r.stdout
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
+    # Spec 003b, R4: Espanha com nomes e sobrenomes population de 2025; ANDREA dos dois sexos
+    assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
+    assert "for pais in ES FR IE NO US" in passo["run"]

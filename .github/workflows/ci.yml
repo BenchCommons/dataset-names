@@ -29,4 +29,4 @@ jobs:
           cp -R tests/fixtures/. "$RUNNER_TEMP/cache-oficiais/"
           uv run namescommons run --offline --cache "$RUNNER_TEMP/cache-oficiais" \
             --out "$RUNNER_TEMP/dist-oficiais" --release 2026.10
-          for pais in FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
+          for pais in ES FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
