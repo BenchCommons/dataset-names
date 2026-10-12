@@ -31,11 +31,33 @@ _JAPONES = frozenset({"Hani", "Hira", "Kana"})
 # Separadores que iniciam uma nova palavra na capitalização.
 _SEPARADORES = re.compile(r"([ \-'’])")
 
-# Letras latinas que não se decompõem em base + diacrítico.
-_LATINAS_ESPECIAIS = str.maketrans({
-    "ß": "ss", "ø": "o", "æ": "ae", "œ": "oe", "đ": "d", "ð": "d",
-    "ł": "l", "þ": "th", "ı": "i", "ħ": "h",
-})
+# Spec 005, R2 (ADR 0012): transliteração para ASCII pelo ICAO Doc 9303, parte 3, seção 6
+# (8.ª edição, 2021). Tabelas em minúsculas; o nome passa por casefold antes.
+# Latim (tabela A): letras sem decomposição NFKD. Onde o ICAO dá alternativa ("AE or A"),
+# fica a letra só; ə, ɛ, ɔ, ɣ e ʙ, ausentes do ICAO, usam a letra latina de mesma base.
+_LATIM = {
+    "ß": "ss", "ø": "o", "æ": "ae", "œ": "oe", "đ": "d", "ð": "d", "ł": "l",
+    "þ": "th", "ı": "i", "ħ": "h", "ŧ": "t", "ŋ": "n", "ĳ": "ij",
+    "ə": "e", "ɛ": "e", "ɔ": "o", "ɣ": "g", "ʙ": "b",
+}
+# Cirílico (tabela B), na forma padrão de cada letra, sem as exceções por língua.
+# ь não tem transliteração no ICAO e é omitido; ћ, ausente da tabela, segue o ć sérvio.
+_CIRILICO = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e", "ж": "zh",
+    "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+    "п": "p", "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts",
+    "ч": "ch", "ш": "sh", "щ": "shch", "ъ": "ie", "ы": "y", "ь": "", "э": "e", "ю": "iu",
+    "я": "ia", "ђ": "d", "є": "ie", "ѕ": "dz", "і": "i", "ї": "i", "ј": "j", "љ": "lj",
+    "њ": "nj", "ќ": "k", "ў": "u", "џ": "dz", "ѫ": "u", "ѵ": "y", "ґ": "g", "ғ": "g",
+    "һ": "c", "ћ": "c",
+}
+# R2.3: pontuação do nome.
+_APOSTROFOS = frozenset("'’‘ʼʻʹʾʿ`´′")
+_HIFENS = frozenset("-‐‑‒–")
+_OMITIDOS = frozenset("·")
+_TRANSLITERACAO = {**_LATIM, **_CIRILICO}
+# Aplicada antes da NFKD, que decomporia ´ em espaço e acento.
+_PONTUACAO = str.maketrans({**{c: "'" for c in _APOSTROFOS}, **{c: "-" for c in _HIFENS}})
 
 
 def normalize_name(raw: str, uniform_case: bool | None = None) -> str:
@@ -90,10 +112,24 @@ def detect_script(name: str) -> str:
     return max(sorted(contagem), key=lambda codigo: contagem[codigo])
 
 
-def ascii_form(name: str, script: str) -> str:
-    """Forma ASCII em minúsculas para escrita latina; vazia para as demais (spec 005 define o resto)."""
-    if script != "Latn":
+def _ascii_do_caractere(c: str) -> str | None:
+    """Transliteração de um caractere já em casefold e NFKD; None se não houver (R2.4)."""
+    if c.isascii():
+        return c
+    if c in _OMITIDOS or unicodedata.category(c) in ("Mn", "Mc", "Me", "Cf"):
         return ""
-    base = name.casefold().translate(_LATINAS_ESPECIAIS)
-    base = unicodedata.normalize("NFD", base)
-    return "".join(c for c in base if not unicodedata.combining(c) and c.isascii())
+    return _TRANSLITERACAO.get(c)
+
+
+def ascii_form(name: str, script: str | None = None) -> str:
+    """Forma ASCII em minúsculas (spec 005, R2; ADR 0012); vazia se algum caractere não tem transliteração.
+
+    `script` não decide mais nada; fica na assinatura por compatibilidade.
+    """
+    partes = []
+    for c in unicodedata.normalize("NFKD", name.casefold().translate(_PONTUACAO)):
+        t = _ascii_do_caractere(c)
+        if t is None:
+            return ""
+        partes.append(t)
+    return "".join(partes)

@@ -86,8 +86,8 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
             erros.append(f"{r}: 'name_key' {o.name_key!r} diverge de name_key(name) (R1)")
         if o.script != detect_script(o.name):
             erros.append(f"{r}: 'script' {o.script!r} diverge da escrita detectada em name (R1)")
-        if o.script == "Latn" and not o.ascii:
-            erros.append(f"{r}: 'ascii' vazio em escrita latina")
+        if o.ascii and (not o.ascii.isascii() or o.ascii != o.ascii.lower()):
+            erros.append(f"{r}: 'ascii' {o.ascii!r} com maiúscula ou caractere fora do ASCII (spec 005, R2.5)")
         if o.kind and o.kind not in KINDS:
             erros.append(f"{r}: kind '{o.kind}' inválido")
         fonte = sources.get(o.source_id)

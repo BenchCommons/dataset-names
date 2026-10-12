@@ -56,9 +56,9 @@ def test_forma_ascii_latina():
     assert ascii_form("Maria Da Silva", "Latn") == "maria da silva"
 
 
-def test_forma_ascii_vazia_fora_da_escrita_latina():
-    assert ascii_form("Мария", "Cyrl") == ""
+def test_forma_ascii_vazia_fora_das_escritas_transliteradas():
     assert ascii_form("李", "Hani") == ""
+    assert ascii_form("Μαρία", "Grek") == ""
 
 
 def test_georgiano_nao_recebe_capital_errada():
@@ -95,3 +95,49 @@ def test_escrita_fora_da_tabela_continua_zzzz():
 def test_empate_de_escrita_resolvido_pela_ordem_do_codigo():
     assert detect_script("Aб") == "Cyrl"
     assert detect_script("ーー") == "Zyyy"
+
+
+# Spec 005, R2 (issue #4; ADR 0012): forma ASCII.
+@pytest.mark.parametrize("nome, esperado", [
+    ("Ǆenana", "dzenana"),      # dígrafo de compatibilidade (NFKD)
+    ("ﬁona", "fiona"),          # ligadura
+    ("Ａｎｎａ", "anna"),        # largura total
+    ("O’Brien", "o'brien"),     # apóstrofo curvo vira reto
+    ("Hawaiʻi", "hawai'i"),     # ʻokina
+    ("Jo–Anne", "jo-anne"),     # meia-risca vira hífen
+    ("Əliyev", "eliyev"),
+    ("Ŋgozi", "ngozi"),
+    ("Kɔfi", "kofi"),
+    ("Ɛsi", "esi"),
+    ("Llorenç", "llorenc"),
+    ("Nel·lo", "nello"),
+    ("Pel·leja", "pelleja"),
+    ("Strauß", "strauss"),
+    ("Søren", "soren"),
+    ("Æsa", "aesa"),
+    ("Łukasz", "lukasz"),
+    ("Þóra", "thora"),
+    ("Ðorđe", "dorde"),
+    ("İrem", "irem"),
+    ("Mi\u200dna", "mina"),    # ZWJ omitido
+    ("Иванов", "ivanov"),
+    ("Мария", "mariia"),
+    ("Щукин", "shchukin"),
+    ("Пьер", "per"),            # ь omitido
+    ("Ђоковић", "dokovic"),
+    ("Їжак", "izhak"),
+    ("Ґанна", "ganna"),
+    ("Љиљана", "ljiljana"),
+])
+def test_forma_ascii_r2(nome, esperado):
+    assert ascii_form(nome, detect_script(nome)) == esperado
+
+
+@pytest.mark.parametrize("nome", ["Μαρία", "李", "ଦାସ", "Aʃa", "Maria李", "민준"])
+def test_forma_ascii_vazia_quando_algum_caractere_nao_tem_transliteracao(nome):
+    assert ascii_form(nome, detect_script(nome)) == ""
+
+
+def test_acento_agudo_isolado_vira_apostrofo():
+    assert ascii_form("D´Arcy", "Latn") == "d'arcy"
+    assert ascii_form("D`Arcy", "Latn") == "d'arcy"

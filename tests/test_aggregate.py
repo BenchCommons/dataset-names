@@ -117,7 +117,8 @@ def test_indice_given(observacoes, fontes):
 
 def test_indice_nome_so_atestado(observacoes, fontes):
     maria_cirilico = name_index(observacoes, by_country(observacoes, fontes), "given")[4]
-    assert (maria_cirilico.name, maria_cirilico.script, maria_cirilico.ascii) == ("Мария", "Cyrl", "")
+    # Spec 005, R2.2: cirílico transliterado pelo ICAO Doc 9303.
+    assert (maria_cirilico.name, maria_cirilico.script, maria_cirilico.ascii) == ("Мария", "Cyrl", "mariia")
     assert (maria_cirilico.country_count, maria_cirilico.countries) == (0, ())
     assert (maria_cirilico.female_share, maria_cirilico.gender_basis) == (None, 0)
 

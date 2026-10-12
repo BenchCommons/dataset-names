@@ -16,9 +16,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/normalize.py`, `src/namescommons/schema.py`, `tests/test_normalize.py`, `tests/test_schema.py`.
 
-- [ ] Testes que falham: os exemplos do critério de aceite 2; `ß`, `ø`, `æ`, `ł`, `þ` como antes; `Llorenç` vira `llorenc`; `Nel·lo` vira `nello`; `Jo–Anne` vira `jo-anne`; ZWJ omitido; `Μαρία`, `李`, `ଦାସ` e `Aʃa` vazios; `validate` aceita nome latino com `ascii` vazio e recusa `ascii` com maiúscula ou caractere fora do ASCII.
-- [ ] `ascii_form(name, script)`: `script` deixa de decidir (mantido na assinatura por compatibilidade); transliteração caractere a caractere pelas tabelas do ADR 0012, vazio se algum caractere ficar sem transliteração.
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: os exemplos do critério de aceite 2; `ß`, `ø`, `æ`, `ł`, `þ` como antes; `Llorenç` vira `llorenc`; `Nel·lo` vira `nello`; `Jo–Anne` vira `jo-anne`; ZWJ omitido; `Μαρία`, `李`, `ଦାସ` e `Aʃa` vazios; `validate` aceita nome latino com `ascii` vazio e recusa `ascii` com maiúscula ou caractere fora do ASCII.
+- [x] `ascii_form(name, script)`: `script` deixa de decidir (mantido na assinatura por compatibilidade); transliteração caractere a caractere pelas tabelas do ADR 0012, vazio se algum caractere ficar sem transliteração.
+- [x] `uv run pytest -q` e commit.
 
 ### Task 3: capitalização com partículas (R3)
 
