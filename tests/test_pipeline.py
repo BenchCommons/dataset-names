@@ -156,7 +156,7 @@ def test_ingest_offline_sobre_o_cache(fontes_exemplo, tmp_path):
 
 
 def test_ingest_offline_sem_cache_nomeia_a_fonte(fontes_exemplo, tmp_path):
-    with pytest.raises(PipelineError, match="fonte 'exemplo': .*primeiros.csv ausente do cache"):
+    with pytest.raises(PipelineError, match="fonte 'exemplo': .*primeiros.csv missing from the cache"):
         ingest_sources(select_sources(fontes_exemplo, []), fontes_exemplo, tmp_path,
                        offline=True, adapters="adaptadores")
 
@@ -216,8 +216,8 @@ def test_fetch_baixa_todos_os_recursos(fontes_exemplo, exemplo_no_servidor, tmp_
 
 def test_fetch_com_falha_nomeia_a_fonte(fontes_exemplo, exemplo_no_servidor, tmp_path):
     del exemplo_no_servidor.arquivos["/exemplo/sobrenomes.csv"]
-    with pytest.raises(PipelineError, match="fonte 'exemplo': falha ao baixar .*sobrenomes.csv.*404"):
-        fetch_sources(select_sources(fontes_exemplo, []), tmp_path, adapters="adaptadores", espera=0)
+    with pytest.raises(PipelineError, match="fonte 'exemplo': failed to download .*sobrenomes.csv.*404"):
+        fetch_sources(select_sources(fontes_exemplo, []), tmp_path, adapters="adaptadores", backoff=0)
 
 
 def test_ingest_sem_offline_baixa_o_que_falta(fontes_exemplo, exemplo_no_servidor, tmp_path):

@@ -130,7 +130,7 @@ def _modulo(**extra):
 
 
 def test_check_adapter_recusa_links_que_nao_e_funcao():
-    with pytest.raises(AdapterError, match="'wd': links deve ser uma função"):
+    with pytest.raises(AdapterError, match="'wd': links must be a function"):
         check_adapter(_modulo(links=[]), "wd")
     check_adapter(_modulo(links=lambda files: iter(())), "wd")
 

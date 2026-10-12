@@ -109,7 +109,7 @@ def test_r2_3_sem_a_frase_da_data_falha(mod, tmp_path):
 
 def test_r2_4_aba_desconhecida_falha(mod, tmp_path):
     arquivos = _xlsx_alterado(tmp_path, {'name="Mujeres"': 'name="Total"'}, membro="xl/workbook.xml")
-    with pytest.raises(FormatError, match=r"aba de nomes 'Total' desconhecido; esperado um de \['Hombres', 'Mujeres'\]"):
+    with pytest.raises(FormatError, match=r"aba de nomes 'Total' unknown; expected one of \['Hombres', 'Mujeres'\]"):
         list(mod.parse(arquivos))
 
 
@@ -157,16 +157,16 @@ def test_r2_7_marcador_na_coluna_lida_e_omitido(mod, monkeypatch):
 
 def test_r2_7_marcador_desconhecido_falha(mod, monkeypatch):
     _linhas_xls(mod, monkeypatch, lambda aba, n, v: [v[0], v[1], "<20"] + v[3:] if n == 21 else v)
-    with pytest.raises(FormatError, match=r"aba 'Apellidos >=100', linha 21: Apellido 1º '<20' não é inteiro"):
+    with pytest.raises(FormatError, match=r"aba 'Apellidos >=100', linha 21: Apellido 1º '<20' is neither an integer"):
         list(mod.parse(ARQUIVOS))
 
 
 @pytest.mark.parametrize("altera, trecho", [
-    (lambda v: [v[0], v[1], 20.5] + v[3:], "linha 21: Apellido 1º 20.5 não é inteiro"),
+    (lambda v: [v[0], v[1], 20.5] + v[3:], "linha 21: Apellido 1º 20.5 is not an integer"),
     (lambda v: [v[0], "", v[2]], "linha 21: nome vazio"),
     (lambda v: [v[0], None, v[2]], "linha 21: nome vazio"),
     (lambda v: ["Total", v[1], v[2]], "linha 21: ordem 'Total' não é inteiro"),
-    (lambda v: v[:2], "linha 21: Apellido 1º vazia"),
+    (lambda v: v[:2], "linha 21: Apellido 1º empty"),
 ])
 def test_formato_inesperado_falha(mod, monkeypatch, altera, trecho):
     _linhas_xls(mod, monkeypatch, lambda aba, n, v: altera(v) if n == 21 else v)
@@ -178,3 +178,37 @@ def test_aba_sem_linhas_de_dados_falha(mod, monkeypatch):
     _linhas_xls(mod, monkeypatch, lambda aba, n, v: v if n <= 5 or aba != "Apellidos >=20 y <=99" else None)
     with pytest.raises(FormatError, match=r"aba 'Apellidos >=20 y <=99': nenhuma linha de dados"):
         list(mod.parse(ARQUIVOS))
+
+
+def test_leitor_do_kit_le_as_amostras_do_ine():
+    """Spec 003b, R1.3, sobre as amostras reais; o resto do leitor é testado no tools-dataset (spec 007, R2.2)."""
+    from datasettool.sources.spreadsheet import rows, sheet_names
+
+    nomes = AMOSTRA / NOMES
+    assert sheet_names(nomes) == ["Hombres", "Mujeres"]
+    assert list(rows(nomes, "Hombres"))[:5] == [
+        (1, ["Frecuencias de nombres masculinos"]),
+        (2, ["Datos procedentes de Censos de población anuales a fecha 01/01/2025"]),
+        (4, ["Nombres masculinos con frecuencia mayor o igual a 20 a nivel nacional."]),
+        (5, ["(*) Edad media de las personas que tienen ese nombre a nivel nacional."]),
+        (7, ["Orden", "Nombre", "Frecuencia", "Edad Media (*)"]),
+    ]
+    assert list(rows(nomes, "Mujeres"))[-1] == (32328, [32321, "ZULMA PATRICIA", 20, 43])
+    apellidos = AMOSTRA / APELLIDOS
+    assert sheet_names(apellidos) == ["Apellidos >=100", "Apellidos >=20 y <=99"]
+    obtido = list(rows(apellidos, "Apellidos >=100"))
+    assert obtido[2:6] == [
+        (3, ["Datos procedentes de Censos de población anuales a fecha 01/01/2025"]),
+        (4, [None, None, "Apellido 1º", "Apellido 2º", "Ambos apellidos"]),
+        (5, ["Orden", "Apellido", "Total", "Total", "Total"]),
+        (6, [1, "GARCIA", 1446937, 1468824, 74765, 74765, 1468824]),
+    ]
+    assert obtido[-2] == (16097, [16092, "LYU", 208, "..", "..", 9999999, 9999999])
+
+
+def test_adaptador_le_planilhas_pelo_kit():
+    """Spec 007, R2.2: o adaptador usa o leitor do kit, e o FormatError dele é o mesmo do contrato."""
+    import datasettool.sources.spreadsheet as kit
+
+    ine = load_adapter("es-ine-residentes")
+    assert (ine.rows, ine.sheet_names, ine.cell_count) == (kit.rows, kit.sheet_names, kit.cell_count)

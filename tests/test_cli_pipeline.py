@@ -82,7 +82,7 @@ def test_criterio_3_offline_sem_cache_falha_com_mensagem(tmp_path, capsys):
     args = ["run", "--offline", "--out", str(out), "--release", "2026.10", "--cache", str(tmp_path / "vazio")]
     assert main([*args, *ADAPTADORES]) == 1
     err = capsys.readouterr().err
-    assert "fonte 'exemplo'" in err and "ausente do cache" in err
+    assert "fonte 'exemplo'" in err and "missing from the cache" in err
     assert "Traceback" not in err
     assert not out.exists()
 
@@ -143,7 +143,7 @@ def test_run_recusa_out_nao_vazio(cache_das_fixtures, tmp_path, capsys):
 
 
 def test_fetch_com_falha_nomeia_a_fonte(exemplo_no_servidor, tmp_path, capsys, monkeypatch):
-    monkeypatch.setattr("namescommons.cache.ESPERA", 0)
+    monkeypatch.setattr("datasettool.sources.cache.BACKOFF", 0)
     del exemplo_no_servidor.arquivos["/exemplo/primeiros.csv"]
     assert main(["fetch", "--cache", str(tmp_path / "cache"), *ADAPTADORES]) == 1
     err = capsys.readouterr().err

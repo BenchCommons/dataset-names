@@ -4,9 +4,9 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from datasettool.sources.cache import FetchError, fetch_resource
 
 from namescommons.adapters import FormatError, RawRecord, Resource, load_adapter
-from namescommons.cache import FetchError, fetch_resource
 
 FIXTURES = Path(__file__).parent / "fixtures" / "us-ssa-births"
 
@@ -51,8 +51,8 @@ def test_anos_em_ordem_numerica(ssa, tmp_path):
 
 
 @pytest.mark.parametrize("linha, trecho", [
-    (b"Ana,X,9\r\n", "sexo 'X' desconhecido"),
-    (b"Ana,F,<5\r\n", "contagem '<5'"),
+    (b"Ana,X,9\r\n", "sexo 'X' unknown"),
+    (b"Ana,F,<5\r\n", "count '<5'"),
     (b"Ana,F\r\n", "yob2000.txt, linha 1: esperava nome,sexo,contagem"),
 ])
 def test_formato_inesperado_falha(ssa, tmp_path, linha, trecho):
@@ -69,10 +69,10 @@ def test_403_explica_como_colocar_o_arquivo_no_cache(servidor, tmp_path):
     servidor.recusados.add("/oact/babynames/names.zip")
     recurso = Resource(servidor.url("/oact/babynames/names.zip"), "names.zip")
     with pytest.raises(FetchError) as e:
-        fetch_resource(tmp_path, "us-ssa-births", recurso, espera=0)
+        fetch_resource(tmp_path, "us-ssa-births", recurso, backoff=0)
     mensagem = str(e.value)
     assert "HTTP Error 403" in mensagem
-    assert f"grave-o em {tmp_path / 'us-ssa-births' / 'names.zip'} e rode com --offline" in mensagem
+    assert f"save it at {tmp_path / 'us-ssa-births' / 'names.zip'} and rerun with --offline" in mensagem
     assert len(servidor.requisicoes) == 1  # 4xx não se resolve tentando de novo
 
 

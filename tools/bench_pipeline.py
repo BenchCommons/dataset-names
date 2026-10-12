@@ -14,8 +14,10 @@ Uso: uv run python tools/bench_pipeline.py [--observacoes 3000000] [--dir DIR] [
 import argparse
 import csv
 import json
+import os
 import platform
 import resource
+import shutil
 import sys
 import tempfile
 import time
@@ -80,11 +82,22 @@ WIKIDATA_ADAPTADOR = "from namescommons.adapters.wikidata import SOURCE_ID, RESO
 
 
 def _incluir_wikidata(base: Path, origem: Path) -> None:
-    """Fonte, adaptador e cache do Wikidata no diretório da medição (o cache é um link para origem)."""
+    """Fonte, adaptador e cache do Wikidata no diretório da medição.
+
+    Os arquivos de origem entram no cache por link físico (ou cópia, se o link não for possível):
+    o cache do tools-dataset recusa caminho que resolve fora do diretório do cache, como um link simbólico.
+    """
     with open(base / "sources.yaml", "a", encoding="utf-8") as fh:
         fh.write(WIKIDATA_YAML)
     (base / "bench_adaptadores" / "wikidata.py").write_text(WIKIDATA_ADAPTADOR, encoding="utf-8")
-    (base / "cache" / "wikidata").symlink_to(origem.resolve(), target_is_directory=True)
+    destino = base / "cache" / "wikidata"
+    destino.mkdir(parents=True)
+    for arquivo in sorted(origem.resolve().iterdir()):
+        if arquivo.is_file():
+            try:
+                os.link(arquivo, destino / arquivo.name)
+            except OSError:
+                shutil.copy2(arquivo, destino / arquivo.name)
 
 
 def total_de_observacoes(pedidas: int) -> int:

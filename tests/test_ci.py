@@ -52,7 +52,7 @@ def _indice(comandos, trecho):
 def test_passos_da_ci():
     """Confere os passos pelo conteúdo e pela ordem, não pela posição na lista."""
     comandos = _comandos()
-    assert comandos[_indice(comandos, "uv sync")].strip() == "uv sync"
+    assert comandos[_indice(comandos, "uv sync")].strip() == "uv sync --locked"  # spec 007, critério 1
     assert comandos[_indice(comandos, "uv run pytest")].strip() == "uv run pytest -q"
     assert _indice(comandos, "uv sync") < _indice(comandos, "uv run pytest") < _indice(comandos, "namescommons run --offline")
 

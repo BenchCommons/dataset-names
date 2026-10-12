@@ -15,8 +15,8 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlencode
 
+from namescommons import USER_AGENT
 from namescommons.adapters import wikidata
-from namescommons.cache import USER_AGENT
 
 PRENOMES = (
     "Q325872 Q25413386 Q39897333 Q18177306 Q18177321 Q493293 Q637123 Q21104340 Q830350 "

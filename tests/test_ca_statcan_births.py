@@ -104,7 +104,7 @@ def test_sexo_por_mapeamento(statcan, tmp_path):
 
 @pytest.mark.parametrize("sexo", ["Both sexes", "M", "F", "male"])
 def test_sexo_desconhecido_falha(statcan, tmp_path, sexo):
-    with pytest.raises(FormatError, match=f"17100147.csv, linha 2: Sex at birth '{sexo}' desconhecido"):
+    with pytest.raises(FormatError, match=f"17100147.csv, linha 2: Sex at birth '{sexo}' unknown"):
         list(statcan.parse(_zip(tmp_path, linha(sexo=sexo))))
 
 

@@ -46,7 +46,7 @@ def test_linha_de_rank_e_ignorada_mesmo_com_valor(cso, tmp_path):
 
 @pytest.mark.parametrize("texto, trecho", [
     ('"STATISTIC","TLIST(A1)","Nomes","VALUE"\r\n', "colunas ausentes \\['Boys Names'\\]"),
-    (CABECALHO + '"VSA50C01","x","2020","2020","1","Ola","Number","<3"\r\n', "contagem '<3'"),
+    (CABECALHO + '"VSA50C01","x","2020","2020","1","Ola","Number","<3"\r\n', "count '<3'"),
 ])
 def test_formato_inesperado_falha(cso, tmp_path, texto, trecho):
     with pytest.raises(FormatError, match=trecho):

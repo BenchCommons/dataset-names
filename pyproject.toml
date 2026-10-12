@@ -5,17 +5,19 @@ description = "Dataset mundial de primeiros nomes e sobrenomes a partir de fonte
 requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = [
+    "benchcommons-tools-dataset==0.1.0",
     "pyarrow>=17",
     "pycountry>=24.6",
-    "pyyaml>=6.0",
-    "xlrd==2.0.2",
 ]
 
 [project.scripts]
 namescommons = "namescommons.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "pyyaml==6.0.3"]  # tests importam yaml; mesma versão fixada pelo kit
+
+[tool.uv.sources]
+benchcommons-tools-dataset = { git = "https://github.com/BenchCommons/tools-dataset", tag = "v0.1.0" }
 
 [build-system]
 requires = ["hatchling"]
