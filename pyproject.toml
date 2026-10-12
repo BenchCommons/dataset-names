@@ -14,7 +14,7 @@ dependencies = [
 namescommons = "namescommons.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "pyyaml==6.0.3"]  # tests importam yaml; mesma versão fixada pelo kit
 
 [tool.uv.sources]
 benchcommons-tools-dataset = { git = "https://github.com/BenchCommons/tools-dataset", tag = "v0.1.0" }
