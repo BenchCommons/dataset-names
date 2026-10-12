@@ -91,4 +91,4 @@ Cada tarefa segue TDD: escrever os testes, ver falhar com `uv run pytest -q <arq
 | 9 | `test_gitignore_*` e `test_parquet_*` em `tests/test_ci.py` |
 | 10 | ADR 0015 (Aceito, manter congelado); `git diff origin/master -- legacy/` vazio; `tests/test_legacy.py` verde |
 
-`uv sync --locked` e `uv run pytest -q`: 653 testes verdes, sem rede.
+`uv sync --locked` e `uv run pytest -q`: 659 testes verdes, sem rede.

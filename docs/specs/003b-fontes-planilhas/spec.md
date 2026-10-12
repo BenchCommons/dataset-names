@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md), cujo contrato do adaptador (R2) vale aqui sem mudança. Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Leitor de planilha: [ADR 0005](../../adr/0005-leitor-de-planilhas.md). Contagem de sobrenomes: [ADR 0006](../../adr/0006-contagem-de-sobrenomes.md). Pendência herdada: issue #13.
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #27, 2026-10-12).
 
 ## Por quê
 

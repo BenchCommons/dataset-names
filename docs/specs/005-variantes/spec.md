@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md) e da [spec 004](../004-wikidata/spec.md). Esquema: [spec 001](../001-esquema/spec.md). Decisões: [ADR 0010](../../adr/0010-regras-de-agrupamento.md) (regras de agrupamento), [ADR 0011](../../adr/0011-correspondencia-sem-acento.md) (correspondência sem acento), [ADR 0012](../../adr/0012-transliteracao-ascii.md) (transliteração para ASCII). Pendências herdadas: issues #4 e #31.
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #38, 2026-10-12).
 
 ## Por quê
 
