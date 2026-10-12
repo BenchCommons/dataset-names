@@ -12,7 +12,21 @@ _ESCRITAS = {
     "GURMUKHI": "Guru", "SINHALA": "Sinh", "THAI": "Thai", "LAO": "Laoo",
     "KHMER": "Khmr", "MYANMAR": "Mymr", "TIBETAN": "Tibt", "GEORGIAN": "Geor",
     "ARMENIAN": "Armn", "ETHIOPIC": "Ethi", "MONGOLIAN": "Mong",
+    # Spec 005, R1.4: escritas medidas como Zzzz nos dados reais.
+    "ORIYA": "Orya", "BATAK": "Batk", "BRAHMI": "Brah", "PHOENICIAN": "Phnx",
+    "SYRIAC": "Syrc", "TIFINAGH": "Tfng", "GOTHIC": "Goth", "CHEROKEE": "Cher",
+    "MANDAIC": "Mand", "COPTIC": "Copt", "RUNIC": "Runr", "THAANA": "Thaa",
+    "NKO": "Nkoo", "VAI": "Vaii",
 }
+# Escritas cujo nome Unicode tem duas palavras.
+_ESCRITAS_DUPLAS = {
+    "OL CHIKI": "Olck", "CANADIAN SYLLABICS": "Cans", "WARANG CITI": "Wara",
+    "MEETEI MAYEK": "Mtei", "SYLOTI NAGRI": "Sylo", "EGYPTIAN HIEROGLYPH": "Egyp",
+}
+# R1.2: 々 é han; as marcas de som longo e de iteração do kana herdam a escrita vizinha.
+_HAN_EXTRA = frozenset("々〆")
+_SEM_ESCRITA = frozenset("ーゝゞヽヾ")
+_JAPONES = frozenset({"Hani", "Hira", "Kana"})
 
 # Separadores que iniciam uma nova palavra na capitalização.
 _SEPARADORES = re.compile(r"([ \-'’])")
@@ -45,17 +59,34 @@ def name_key(name: str) -> str:
     return unicodedata.normalize("NFC", name.casefold())
 
 
+def _escrita_da_letra(c: str) -> str:
+    if c in _HAN_EXTRA:
+        return "Hani"
+    palavras = unicodedata.name(c, "").split(" ")
+    if palavras[0] in ("FULLWIDTH", "HALFWIDTH"):
+        palavras = palavras[1:]
+    dupla = _ESCRITAS_DUPLAS.get(" ".join(palavras[:2]))
+    return dupla or _ESCRITAS.get(palavras[0] if palavras else "", "Zzzz")
+
+
 def detect_script(name: str) -> str:
-    """Código ISO 15924 predominante entre as letras; Zyyy sem letras, Zzzz se desconhecido."""
+    """Código ISO 15924 predominante entre as letras; Zyyy sem letras, Zzzz se desconhecido.
+
+    Spec 005, R1: Jpan para han com kana, Kore para hangul com han.
+    """
     contagem: dict[str, int] = {}
     for c in name:
-        if not c.isalpha():
+        if not c.isalpha() or c in _SEM_ESCRITA:
             continue
-        primeira = unicodedata.name(c, "").split(" ")[0]
-        codigo = _ESCRITAS.get(primeira, "Zzzz")
+        codigo = _escrita_da_letra(c)
         contagem[codigo] = contagem.get(codigo, 0) + 1
     if not contagem:
         return "Zyyy"
+    escritas = set(contagem)
+    if len(escritas) > 1 and escritas <= _JAPONES and escritas & {"Hira", "Kana"}:
+        return "Jpan"
+    if escritas == {"Hang", "Hani"}:
+        return "Kore"
     return max(sorted(contagem), key=lambda codigo: contagem[codigo])
 
 

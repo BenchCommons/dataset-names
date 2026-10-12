@@ -63,3 +63,35 @@ def test_forma_ascii_vazia_fora_da_escrita_latina():
 
 def test_georgiano_nao_recebe_capital_errada():
     assert normalize_name("ნინო") == "ნინო"
+
+
+# Spec 005, R1 (issue #4): escrita.
+import pytest
+
+
+@pytest.mark.parametrize("nome, escrita", [
+    ("佐々木", "Hani"),        # 々 conta como han (R1.2)
+    ("ユーリ", "Kana"),        # ー não conta (R1.2)
+    ("Ａｎｎａ", "Latn"),      # latim de largura total (R1.1)
+    ("ｱｲ", "Kana"),            # katakana de meia largura (R1.1)
+    ("さくら子", "Jpan"),      # kanji e hiragana (R1.3)
+    ("ゆかりユカリ", "Jpan"),  # hiragana e katakana (R1.3)
+    ("ゆかり", "Hira"),
+    ("김金", "Kore"),          # hangul e hanja (R1.3)
+    ("ଦାସ", "Orya"),            # R1.4
+    ("ܡܝܟܐܝܠ", "Syrc"),
+    ("ᏣᎳᎩ", "Cher"),
+    ("ᱥᱟᱱᱛᱟᱲ", "Olck"),       # prefixo de duas palavras
+    ("ꯃꯤꯇꯩ", "Mtei"),
+])
+def test_escrita_r1(nome, escrita):
+    assert detect_script(nome) == escrita
+
+
+def test_escrita_fora_da_tabela_continua_zzzz():
+    assert detect_script("\U00010300\U00010301") == "Zzzz"  # itálico antigo (OLD ITALIC)
+
+
+def test_empate_de_escrita_resolvido_pela_ordem_do_codigo():
+    assert detect_script("Aб") == "Cyrl"
+    assert detect_script("ーー") == "Zyyy"

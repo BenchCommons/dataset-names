@@ -8,9 +8,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/normalize.py`, `tests/test_normalize.py`.
 
-- [ ] Testes que falham: `佐々木` é `Hani`; `ユーリ` é `Kana`; `Ａｎｎａ` é `Latn`; `さくら子` e `ゆかりユカリ` são `Jpan`; `김金` é `Kore`; `ଦାସ` é `Orya`, `ܡܝܟܐܝܠ` é `Syrc`, `ᏣᎳᎩ` é `Cher`; letra de escrita fora da tabela continua `Zzzz`; empate entre duas escritas continua resolvido pela ordem do código.
-- [ ] `detect_script`: nome Unicode sem os prefixos `FULLWIDTH` e `HALFWIDTH`; prefixos de duas palavras (`OL CHIKI`, `CANADIAN SYLLABICS`, `WARANG CITI`, `MEETEI MAYEK`, `SYLOTI NAGRI`, `EGYPTIAN HIEROGLYPH`); `々` como `Hani`; `ー`, `ゝ`, `ゞ`, `ヽ`, `ヾ` ignorados; `Jpan` e `Kore` pelas combinações de R1.3.
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: `佐々木` é `Hani`; `ユーリ` é `Kana`; `Ａｎｎａ` é `Latn`; `さくら子` e `ゆかりユカリ` são `Jpan`; `김金` é `Kore`; `ଦାସ` é `Orya`, `ܡܝܟܐܝܠ` é `Syrc`, `ᏣᎳᎩ` é `Cher`; letra de escrita fora da tabela continua `Zzzz`; empate entre duas escritas continua resolvido pela ordem do código.
+- [x] `detect_script`: nome Unicode sem os prefixos `FULLWIDTH` e `HALFWIDTH`; prefixos de duas palavras (`OL CHIKI`, `CANADIAN SYLLABICS`, `WARANG CITI`, `MEETEI MAYEK`, `SYLOTI NAGRI`, `EGYPTIAN HIEROGLYPH`); `々` como `Hani`; `ー`, `ゝ`, `ゞ`, `ヽ`, `ヾ` ignorados; `Jpan` e `Kore` pelas combinações de R1.3.
+- [x] `uv run pytest -q` e commit.
 
 ### Task 2: forma ASCII (R2)
 
