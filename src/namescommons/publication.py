@@ -4,7 +4,11 @@ Os textos são em inglês, como o README; ver ADR 0001 (licença dos dados) e AD
 Statistics Canada).
 """
 
+import zipfile
 from collections.abc import Iterable, Mapping
+from pathlib import Path
+
+from datasettool.files import sha256_file
 
 from namescommons.sources import Source
 
@@ -301,3 +305,33 @@ def dataset_card(manifest: Mapping, sources: Mapping[str, Source], countries: Ma
         f"Release page: {REPOSITORIO}/releases/tag/{release}",
     ]
     return "\n".join(out) + "\n"
+
+
+# Pacote da release (spec 006, R5) -----------------------------------------------------------------
+
+SOMAS = "SHA256SUMS"
+ZIP_POR_PAIS = "by_country.zip"
+_DATA_FIXA = (1980, 1, 1, 0, 0, 0)
+
+
+def write_by_country_zip(out_dir: Path) -> None:
+    """by_country.zip com os CSV de by_country/, em ordem, com data e permissões fixas (R5.2)."""
+    with zipfile.ZipFile(out_dir / ZIP_POR_PAIS, "w") as z:
+        for csv_ in sorted((out_dir / "by_country").glob("*.csv")):
+            info = zipfile.ZipInfo(f"by_country/{csv_.name}", date_time=_DATA_FIXA)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            info.create_system = 3  # Unix, para external_attr valer igual em qualquer sistema
+            z.writestr(info, csv_.read_bytes(), compresslevel=9)
+
+
+def write_sha256sums(out_dir: Path) -> None:
+    """SHA256SUMS no formato do GNU sha256sum, sobre os arquivos do nível de cima (R5.3)."""
+    nomes = sorted(p.name for p in out_dir.iterdir() if p.is_file() and p.name != SOMAS)
+    linhas = "".join(f"{sha256_file(out_dir / n)}  {n}\n" for n in nomes)
+    (out_dir / SOMAS).write_bytes(linhas.encode("utf-8"))
+
+
+def write_text(path: Path, texto: str) -> None:
+    """Texto UTF-8 sem BOM, com LF em qualquer sistema."""
+    path.write_bytes(texto.encode("utf-8"))

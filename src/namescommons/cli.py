@@ -2,11 +2,11 @@
 
 import argparse
 import json
-from collections import Counter
 import os
 import shutil
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 from pyarrow import ArrowException
@@ -19,6 +19,9 @@ from namescommons.io import (
 from namescommons.links import VariantLink, validate_links
 from namescommons.manifest import RELEASE, build_manifest
 from namescommons.pipeline import Drops, PipelineError, fetch_sources, ingest_links, ingest_sources, select_sources
+from namescommons.publication import (
+    attribution_text, dataset_card, write_by_country_zip, write_sha256sums, write_text,
+)
 from namescommons.schema import Observation, ValidationError, validate
 from namescommons.sources import Source, SourceError, load_sources
 
@@ -32,6 +35,13 @@ def _opcoes_de_fonte(p: argparse.ArgumentParser, com_ids: bool = True) -> None:
         p.add_argument("ids", nargs="*", metavar="ID", help="fontes de sources.yaml (padrão: todas com adaptador)")
     p.add_argument("--cache", type=Path, default=Path("cache"), help="diretório do cache de downloads (padrão: %(default)s)")
     p.add_argument("--adapters", default=DEFAULT_PACKAGE, help="pacote Python dos adaptadores; precisa ser importável, ex.: PYTHONPATH=tests para o adaptador de teste (padrão: %(default)s)")
+
+
+def _opcao_de_licenca(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--data-license", type=Path, default=Path("DATA_LICENSE"),
+        help="licença dos dados copiada para a release (spec 006, R4.3) (padrão: %(default)s)",
+    )
 
 
 class _Ajuda(argparse.ArgumentDefaultsHelpFormatter):
@@ -74,12 +84,14 @@ def _parser() -> argparse.ArgumentParser:
             p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
             p.add_argument("--release", required=True, help="AAAA.MM[.N]")
             p.add_argument("--links", type=Path, help="variant_links.parquet gravado por ingest --links, copiado para a release")
+            _opcao_de_licenca(p)
     p = sub.add_parser("run", help="fetch, ingest e build em sequência")
     _opcoes_de_fonte(p, com_ids=False)
     p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
     p.add_argument("--release", required=True, help="AAAA.MM[.N]")
     p.add_argument("--offline", action="store_true", help="pula o fetch e não acessa a rede")
     p.add_argument("--refresh", action="store_true", help="baixa de novo mesmo com o arquivo no cache")
+    _opcao_de_licenca(p)
     for p in sub.choices.values():
         p.add_argument(
             "--sources", type=Path, default=Path("sources.yaml"), help="arquivo de catálogo de fontes (padrão: %(default)s)"
@@ -92,11 +104,13 @@ def _erro(mensagem: str) -> int:
     return 1
 
 
-def _saida_invalida(release: str, out: Path) -> str | None:
+def _saida_invalida(release: str, out: Path, data_license: Path) -> str | None:
     if not RELEASE.fullmatch(release):
         return f"release '{release}' fora do formato AAAA.MM[.N]"
     if out.exists() and (not out.is_dir() or any(out.iterdir())):
         return f"--out {out} já existe e não está vazio; use um diretório novo"
+    if not data_license.is_file():
+        return f"arquivo não encontrado: {data_license} (licença dos dados; use --data-license)"
     return None
 
 
@@ -104,6 +118,7 @@ def _build(
     obs: list[Observation], fontes: dict[str, Source], out: Path, release: str,
     links: list[VariantLink] | None = None,
     dropped: dict[str, dict[str, int]] | None = None,
+    data_license: Path = Path("DATA_LICENSE"),
 ) -> int:
     """Grava as saídas da spec 001 (e variant_links da spec 004, se houver) em out, tudo ou nada;
     devolve o número de países.
@@ -128,9 +143,13 @@ def _build(
         usadas = {o.source_id for o in obs} | {v.source_id for v in links or ()}
         por_fonte = Counter(o.source_id for o in obs)
         manifest = build_manifest(release, temporario, fontes, usadas, observations=por_fonte, dropped=dropped)
-        (temporario / "manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        write_text(temporario / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+        # Spec 006, R5: arquivos de publicação, fora de manifest["files"] e dentro de SHA256SUMS.
+        shutil.copyfile(data_license, temporario / "DATA_LICENSE")
+        write_text(temporario / "ATTRIBUTION.txt", attribution_text(release, fontes, usadas))
+        write_text(temporario / "DATASET_CARD.md", dataset_card(manifest, fontes, paises))
+        write_by_country_zip(temporario)
+        write_sha256sums(temporario)
         # rename sobre um diretório vazio existente (já checado por _saida_invalida) o substitui
         # de forma atômica em POSIX, sem apagar antes o diretório do usuário.
         os.replace(temporario, out)
@@ -143,7 +162,7 @@ def _build(
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.cmd in ("build", "run"):
-        problema = _saida_invalida(args.release, args.out)
+        problema = _saida_invalida(args.release, args.out, args.data_license)
         if problema:
             return _erro(problema)
     if args.cmd == "run" and args.offline and args.refresh:
@@ -196,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "validate":
                 print(f"OK: {_n(len(obs), 'observação válida', 'observações válidas')}.")
                 return 0
-        paises = _build(obs, fontes, args.out, args.release, links, dropped)
+        paises = _build(obs, fontes, args.out, args.release, links, dropped, args.data_license)
     except (
         PipelineError, SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException,
     ) as e:

@@ -1,13 +1,24 @@
 """Spec 006, R3 a R6: atribuições, licença, cartão do dataset e pacote da release."""
 
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import yaml
 
 from namescommons.aggregate import by_country
+from namescommons.cli import main
+from namescommons.io import write_observations
 from namescommons.publication import AVISOS, LICENCAS, attribution_text, dataset_attribution, dataset_card
 from namescommons.sources import LICENCAS_COMPATIVEIS, load_sources
+
+from conftest import FONTES
 
 RAIZ = Path(__file__).resolve().parent.parent
 STATCAN = "ca-statcan-births"
@@ -178,3 +189,81 @@ def test_cartao_traz_os_avisos_da_statcan(reais):
     licenca = texto.split("## Licence", 1)[1].split("\n## ", 1)[0]
     assert reais[STATCAN].attribution in licenca
     assert AVISOS["statcan-open-licence"] in licenca
+
+
+# R5 ----------------------------------------------------------------------------------------------
+
+def _build(tmp_path, observacoes, out_nome="dist", *extra):
+    fontes = tmp_path / "sources.yaml"
+    if not fontes.exists():
+        fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
+        write_observations(observacoes, tmp_path / "obs.parquet")
+    out = tmp_path / out_nome
+    codigo = main(["build", str(tmp_path / "obs.parquet"), "--sources", str(fontes), "--out", str(out),
+                   "--release", "2026.10", *extra])
+    return codigo, out
+
+
+def _somas(out):
+    linhas = (out / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    return dict(reversed(linha.split("  ", 1)) for linha in linhas), linhas
+
+
+def test_sha256sums_verifica(observacoes, tmp_path):
+    codigo, out = _build(tmp_path, observacoes)
+    assert codigo == 0
+    somas, linhas = _somas(out)
+    topo = sorted(p.name for p in out.iterdir() if p.is_file() and p.name != "SHA256SUMS")
+    assert list(somas) == topo and [l.split("  ", 1)[1] for l in linhas] == topo
+    for nome, soma in somas.items():
+        assert re.fullmatch(r"[0-9a-f]{64}", soma)
+        assert hashlib.sha256((out / nome).read_bytes()).hexdigest() == soma
+    assert (out / "SHA256SUMS").read_bytes().endswith(b"\n") and b"\r" not in (out / "SHA256SUMS").read_bytes()
+    verificador = shutil.which("sha256sum") or shutil.which("shasum")
+    if verificador:
+        args = [verificador, "-c", "SHA256SUMS"] if verificador.endswith("sha256sum") else [verificador, "-a", "256", "-c", "SHA256SUMS"]
+        assert subprocess.run(args, cwd=out, capture_output=True).returncode == 0
+
+
+def test_zip_tem_os_mesmos_bytes(observacoes, tmp_path):
+    _, out = _build(tmp_path, observacoes)
+    with zipfile.ZipFile(out / "by_country.zip") as z:
+        assert z.namelist() == ["by_country/BR.csv", "by_country/US.csv"]
+        for info in z.infolist():
+            assert z.read(info) == (out / info.filename).read_bytes()
+            assert info.date_time == (1980, 1, 1, 0, 0, 0) and info.compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_dois_builds_iguais(observacoes, tmp_path):
+    _, a = _build(tmp_path, observacoes, "a")
+    _, b = _build(tmp_path, observacoes, "b")
+    assert (a / "SHA256SUMS").read_bytes() == (b / "SHA256SUMS").read_bytes()
+
+
+def test_copia_de_data_license_identica(observacoes, tmp_path):
+    _, out = _build(tmp_path, observacoes)
+    assert (out / "DATA_LICENSE").read_bytes() == (RAIZ / "DATA_LICENSE").read_bytes()
+    outra = tmp_path / "OUTRA"
+    outra.write_text("outra licença\n", encoding="utf-8")
+    _, out2 = _build(tmp_path, observacoes, "d2", "--data-license", str(outra))
+    assert (out2 / "DATA_LICENSE").read_bytes() == outra.read_bytes()
+
+
+def test_data_license_ausente_falha_sem_saida(observacoes, tmp_path, capsys):
+    codigo, out = _build(tmp_path, observacoes, "dist", "--data-license", str(tmp_path / "nao_existe"))
+    assert codigo == 1
+    assert "nao_existe" in capsys.readouterr().err
+    assert not out.exists()
+    assert not [p for p in tmp_path.iterdir() if p.name.startswith(".dist")]
+
+
+def test_build_grava_atribuicoes_e_cartao(observacoes, tmp_path):
+    _, out = _build(tmp_path, observacoes)
+    fontes = {f["id"]: f for f in FONTES}
+    texto = (out / "ATTRIBUTION.txt").read_text(encoding="utf-8")
+    for i in ("br-ibge-censo", "us-births-b", "us-ssa", "wikidata"):
+        assert f"Id: {i}\n" in texto and f"Attribution: {fontes[i]['attribution']}\n" in texto
+    cartao = (out / "DATASET_CARD.md").read_text(encoding="utf-8")
+    manifesto = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert f"Observations: {manifesto['files']['observations.parquet']['rows']}" in cartao
+    assert not any(k in manifesto["files"] for k in ("ATTRIBUTION.txt", "DATASET_CARD.md", "DATA_LICENSE", "by_country.zip"))

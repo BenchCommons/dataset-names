@@ -43,7 +43,8 @@ def test_build_gera_todas_as_saidas(observacoes, tmp_path):
     assert main(["build", str(obs), "--sources", str(fontes), "--out", str(out), "--release", "2026.10"]) == 0
     arquivos = sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file())
     assert arquivos == [
-        "by_country/BR.csv", "by_country/US.csv", "family_names.csv", "family_names.parquet",
+        "ATTRIBUTION.txt", "DATASET_CARD.md", "DATA_LICENSE", "SHA256SUMS",
+        "by_country.zip", "by_country/BR.csv", "by_country/US.csv", "family_names.csv", "family_names.parquet",
         "given_names.csv", "given_names.parquet", "manifest.json", "observations.parquet",
     ]
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
