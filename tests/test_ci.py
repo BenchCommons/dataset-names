@@ -69,5 +69,5 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
-    assert "OK: 39 observações, 4 países" in r.stdout
+    assert "OK: 60 observações, 5 países" in r.stdout
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
