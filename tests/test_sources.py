@@ -155,3 +155,17 @@ def test_sources_que_nao_e_lista(tmp_path, conteudo):
     p.write_text(conteudo, encoding="utf-8")
     with pytest.raises(SourceError, match="'sources' deve ser uma lista"):
         load_sources(p)
+
+
+def test_attested_nao_exige_primary():
+    """Spec 004, R5 (issue #3): em attested, primary não tem efeito e não é conferido."""
+    sem_pais = [fonte(id=i, country=None, count_type="attested", primary=False) for i in ("a", "b")]
+    assert set(parse_sources(sem_pais)) == {"a", "b"}
+    mesmo_pais = [fonte(id=i, count_type="attested", primary=True) for i in ("a", "b")]
+    assert set(parse_sources(mesmo_pais)) == {"a", "b"}
+
+
+@pytest.mark.parametrize("tipo", ["births", "population"])
+def test_contagem_continua_exigindo_uma_primary(tipo):
+    with pytest.raises(SourceError, match=f"US/{tipo}: fontes \\['a', 'b'\\]; exatamente uma"):
+        parse_sources([fonte(id=i, count_type=tipo, primary=False) for i in ("a", "b")])
