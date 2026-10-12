@@ -15,7 +15,7 @@ O contrato do kit é do tools-dataset ([spec 004 de lá](https://github.com/Benc
 ## Comandos
 
 ```sh
-uv sync                      # instala as dependências
+uv sync --locked             # instala as dependências do uv.lock
 uv run pytest -q             # testes (nunca usam a rede)
 uv run namescommons --help        # CLI do pipeline
 ```

@@ -17,7 +17,7 @@ jobs:
         with:
           enable-cache: true
       - name: Instalar dependências
-        run: uv sync
+        run: uv sync --locked
       - name: Testes
         run: uv run pytest -q
       - name: namescommons run --offline sobre o cache montado a partir das fixtures

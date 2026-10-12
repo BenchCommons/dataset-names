@@ -56,7 +56,7 @@ The SSA server refuses automated downloads (HTTP 403). Download the national dat
 ## Development
 
 ```sh
-uv sync                 # installs the dependencies, including the source toolkit
+uv sync --locked        # installs the locked dependencies, including the source toolkit
 uv run pytest -q        # tests never use the network
 ```
 
