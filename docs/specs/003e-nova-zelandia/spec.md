@@ -65,7 +65,7 @@ Nenhuma codificação única lê o arquivo: `Esmé` aparece com `0x82` até 2023
 
 - **R3.1** Nome que, depois de R2, contém `?` ou U+FFFD é descartado: nenhum registro é emitido para a linha ([ADR 0006](../../adr/0006-nomes-corrompidos-na-fonte.md)).
 - **R3.2** Ao terminar o arquivo, se houve descarte, o adaptador registra um aviso no logger `namescommons.adapters.nz_dia_births` com o número de linhas descartadas, a soma das contagens delas e as formas distintas, por exemplo `nz-dia-births: 13 linha(s) com nome corrompido na fonte descartada(s), 164 registro(s): '?io', ...`. O aviso aparece no `stderr` da CLI sem configuração de logging.
-- **R3.3** Medido no arquivo real: 64 linhas recuperadas por R2.2 (`Amélie`, `André`, `Björn`, `Danté`, `Esmé`, `Reneé`, `Renée`, `Zoé`) e 13 linhas descartadas, com 164 registros: `?io` (2), `?ria`, `M?hina`, `M?ia`, `N?kau`, `K�whai` (3) e `N�kau` (4), em que `�` é U+FFFD. Restam 74.006 linhas e 2.856 nomes distintos.
+- **R3.3** Medido no arquivo real: 64 linhas recuperadas por R2.2 (`Amélie`, `André`, `Björn`, `Danté`, `Esmé`, `Reneé`, `Renée`, `Zoé`) e 13 linhas descartadas, com 164 registros: `?io` (2), `?ria`, `M?hina`, `M?ia`, `N?kau`, `K�whai` (3) e `N�kau` (4), em que `�` é U+FFFD. Restam 74.006 linhas e 2.856 nomes distintos. O `ingest` produz 73.991 observações e 2.854 nomes: 15 pares de linhas do mesmo ano e sexo diferem só na caixa (`Jo-Anne` e `Jo-anne`, `MacKenzie` e `Mackenzie`, `McKenzie` e `Mckenzie`) e são somados pela chave da spec 002 (R1.4), com 4.516.342 registros no total.
 
 ### R4. Download bloqueado com status 200
 
@@ -86,7 +86,7 @@ O passo da CI que roda as fontes oficiais sobre as amostras confere também `by_
 
 ### R7. Desempenho
 
-Com o arquivo real no cache, `namescommons ingest nz-dia-births --offline` termina em poucos segundos. A fonte é 2,4% do volume medido na spec 003 (R6) e não muda a margem de memória.
+Com o arquivo real no cache, `namescommons ingest nz-dia-births --offline` termina em poucos segundos (medido num Apple M4: 1,2 s e 114 MB de pico). A fonte é 2,4% do volume medido na spec 003 (R6) e não muda a margem de memória.
 
 ## Critérios de aceite
 
@@ -96,7 +96,7 @@ Com o arquivo real no cache, `namescommons ingest nz-dia-births --offline` termi
 4. Um arquivo UTF-8 válido com `Māia` é lido como UTF-8 e emite `Māia`.
 5. Um download respondido com 200 e `text/html` falha sem tentar de novo, não deixa arquivo no cache e diz onde gravar o arquivo baixado pelo navegador; um arquivo HTML já no cache gera `FormatError` com o caminho.
 6. `namescommons run --offline` sobre o cache montado com `tests/fixtures/` gera `by_country/NZ.csv`, e a CI roda verde no pull request.
-7. Com o arquivo real, `ingest --offline` da fonte produz 74.006 observações e avisa 13 linhas descartadas; tempo medido na descrição do pull request.
+7. Com o arquivo real, o adaptador emite 74.006 registros, `ingest --offline` da fonte produz 73.991 observações (R3.3) e avisa 13 linhas descartadas com 164 registros; tempo e memória medidos na descrição do pull request.
 8. A issue #10 é fechada pelo pull request.
 
 ## Fora de escopo

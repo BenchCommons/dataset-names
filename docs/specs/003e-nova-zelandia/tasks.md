@@ -57,6 +57,6 @@ Cada tarefa segue TDD: escrever os testes, ver que falham pelo motivo certo, esc
 
 ### Fechamento
 
-- [ ] Rodar `namescommons ingest nz-dia-births --offline` com o arquivo real num cache do scratchpad; conferir 74.006 observações e o aviso de 13 linhas e 164 registros; anotar tempo na descrição do pull request.
-- [ ] Conferir os critérios de aceite da spec, um a um.
+- [x] Rodar `namescommons ingest nz-dia-births --offline` com o arquivo real num cache do scratchpad; conferir 74.006 registros do adaptador, 73.991 observações depois da soma por caixa (spec, R3.3) e o aviso de 13 linhas e 164 registros; anotar tempo na descrição do pull request.
+- [x] Conferir os critérios de aceite da spec, um a um.
 - [ ] Pull request com `Closes #10`.
