@@ -24,8 +24,9 @@ _ESCRITAS_DUPLAS = {
     "MEETEI MAYEK": "Mtei", "SYLOTI NAGRI": "Sylo", "EGYPTIAN HIEROGLYPH": "Egyp",
 }
 # R1.2: 々 é han; as marcas de som longo e de iteração do kana herdam a escrita vizinha.
+# 々 e 〆 têm Script=Han no Unicode, mas o nome deles não começa por CJK.
 _HAN_EXTRA = frozenset("々〆")
-_SEM_ESCRITA = frozenset("ーゝゞヽヾ")
+_SEM_ESCRITA = frozenset("ーｰゝゞヽヾ")
 _JAPONES = frozenset({"Hani", "Hira", "Kana"})
 
 # Separadores que iniciam uma nova palavra na capitalização.
@@ -89,7 +90,8 @@ def _particulas(nome: str) -> str:
     for i in range(1, len(palavras)):
         minuscula = palavras[i].lower()
         anterior = palavras[i - 1].lower()
-        if minuscula in _PARTICULAS or (minuscula in _ARTIGOS and anterior in _PARTICULAS):
+        tem_seguinte = i + 1 < len(palavras)  # partícula no fim do nome é o próprio nome (John Van)
+        if tem_seguinte and (minuscula in _PARTICULAS or (minuscula in _ARTIGOS and anterior in _PARTICULAS)):
             palavras[i] = minuscula
         elif minuscula[:2] in _ELISOES and len(minuscula) > 2:
             palavras[i] = minuscula[:2] + palavras[i][2:]
@@ -114,7 +116,7 @@ def _escrita_da_letra(c: str) -> str:
 def detect_script(name: str) -> str:
     """Código ISO 15924 predominante entre as letras; Zyyy sem letras, Zzzz se desconhecido.
 
-    Spec 005, R1: Jpan para han com kana, Kore para hangul com han.
+    Spec 005, R1: Jpan para han com kana, Hrkt para hiragana com katakana, Kore para hangul com han.
     """
     contagem: dict[str, int] = {}
     for c in name:
@@ -126,7 +128,8 @@ def detect_script(name: str) -> str:
         return "Zyyy"
     escritas = set(contagem)
     if len(escritas) > 1 and escritas <= _JAPONES and escritas & {"Hira", "Kana"}:
-        return "Jpan"
+        # ISO 15924: Jpan é han com kana; Hrkt, hiragana com katakana sem han.
+        return "Jpan" if "Hani" in escritas else "Hrkt"
     if escritas == {"Hang", "Hani"}:
         return "Kore"
     return max(sorted(contagem), key=lambda codigo: contagem[codigo])
@@ -147,7 +150,9 @@ def ascii_form(name: str, script: str | None = None) -> str:
     `script` não decide mais nada; fica na assinatura por compatibilidade.
     """
     partes = []
-    for c in unicodedata.normalize("NFKD", name.casefold().translate(_PONTUACAO)):
+    # A NFKD pode criar maiúsculas (™ vira TM, ℳ vira M): casefold de novo depois dela.
+    base = unicodedata.normalize("NFKD", name.casefold().translate(_PONTUACAO))
+    for c in unicodedata.normalize("NFKD", base.casefold()):
         t = _ascii_do_caractere(c)
         if t is None:
             return ""

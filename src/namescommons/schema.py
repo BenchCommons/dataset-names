@@ -8,7 +8,9 @@ from namescommons.normalize import ascii_form, detect_script, name_key, normaliz
 from namescommons.sources import COUNT_TYPES, Source, is_country
 
 # 1.1.0: variant_links.parquet na release (spec 004, R4.7).
-# 1.2.0: group_id preenchido, ascii em cirílico, Jpan e Kore, partículas (spec 005, R8).
+# 1.2.0 (spec 005, R8): group_id preenchido; ascii em cirílico e possivelmente vazio em latim;
+# Jpan, Hrkt e Kore; partículas e nova forma de exibição. ingest e build de uma release devem usar
+# a mesma versão: validate confere script e ascii gravados pelo ingest.
 SCHEMA_VERSION = "1.2.0"
 KINDS = ("given", "family")
 GENDERS = ("F", "M")

@@ -75,7 +75,9 @@ import pytest
     ("Ａｎｎａ", "Latn"),      # latim de largura total (R1.1)
     ("ｱｲ", "Kana"),            # katakana de meia largura (R1.1)
     ("さくら子", "Jpan"),      # kanji e hiragana (R1.3)
-    ("ゆかりユカリ", "Jpan"),  # hiragana e katakana (R1.3)
+    ("ゆかりユカリ", "Hrkt"),  # hiragana e katakana sem han: Hrkt da ISO 15924 (R1.3)
+    ("ユｰリ", "Kana"),         # ｰ de meia largura também não conta (R1.2)
+    ("〆子", "Hani"),          # 〆 tem Script=Han no Unicode (R1.2)
     ("ゆかり", "Hira"),
     ("김金", "Kore"),          # hangul e hanja (R1.3)
     ("ଦାସ", "Orya"),            # R1.4
@@ -167,3 +169,23 @@ def test_particulas_em_caixa_uniforme(bruto, esperado):
 def test_caixa_publicada_nao_muda_particulas():
     assert normalize_name("Da Silva", uniform_case=False) == "Da Silva"
     assert normalize_name("Joana D'Arc", uniform_case=False) == "Joana D'Arc"
+
+
+# Revisão do PR #38: NFKD pode produzir maiúsculas; ascii_form nunca devolve maiúscula.
+@pytest.mark.parametrize("nome, esperado", [
+    ("Ali™", "alitm"),
+    ("ℳaria", "maria"),
+    ("℡", "tel"),
+    ("𝓜aria", "maria"),
+])
+def test_forma_ascii_sem_maiusculas_depois_da_nfkd(nome, esperado):
+    assert ascii_form(nome, detect_script(nome)) == esperado
+
+
+@pytest.mark.parametrize("bruto, esperado", [
+    ("JOHN VAN", "John Van"),        # partícula na última palavra não é partícula
+    ("MARIA DA", "Maria Da"),
+    ("ANA DE LA", "Ana de La"),
+])
+def test_particula_no_fim_do_nome_fica_capitalizada(bruto, esperado):
+    assert normalize_name(bruto, uniform_case=True) == esperado
