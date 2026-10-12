@@ -169,7 +169,7 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
     # Spec 003e, R6: a Nova Zelândia entra no passo, sem os nomes corrompidos na fonte.
     assert (tmp_path / "dist-oficiais" / "by_country" / "NZ.csv").read_text(encoding="utf-8") == NZ_CSV
-    assert "nz-dia-births: 3 linha(s) com nome corrompido" in r.stderr
+    assert "nz-dia-births: 3 linha(s) descartada(s) pelo adaptador, 49 registro(s)" in r.stderr  # spec 006, R1.3
     # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
     assert "variant_links.parquet" in passo["run"]
     assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
@@ -186,3 +186,34 @@ def test_passo_das_fontes_oficiais_confere_todos_os_paises():
     """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA e ES."""
     passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
     assert "for pais in CA ES FR IE NO NZ US;" in passo["run"]
+
+
+# Spec 006, R9: limpeza do .gitignore (issue #5) ----------------------------------------------------
+
+def _ignorado(caminho: str) -> bool:
+    return subprocess.run(["git", "check-ignore", "-q", "--no-index", caminho], cwd=RAIZ).returncode == 0
+
+
+def test_gitignore_sem_linhas_em_branco_duplas():
+    texto = (RAIZ / ".gitignore").read_text(encoding="utf-8")
+    assert "\n\n\n" not in texto
+
+
+def test_gitignore_sem_venv_na_secao_do_mypy():
+    linhas = (RAIZ / ".gitignore").read_text(encoding="utf-8").splitlines()
+    mypy = linhas.index("# mypy")
+    assert ".venv/" not in linhas[mypy:mypy + 3]
+    assert _ignorado(".venv/lib/x.py")
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git fora do PATH")
+def test_parquet_de_fixture_nao_e_ignorado():
+    assert not _ignorado("tests/fixtures/exemplo/tabela.parquet")
+    assert not _ignorado("tests/fixtures/x/y/tabela.parquet")
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git fora do PATH")
+def test_parquet_na_raiz_continua_ignorado():
+    assert _ignorado("observations.parquet")
+    assert _ignorado("dist/2026.10/given_names.parquet")
+    assert _ignorado("source-cache.tar.gz")

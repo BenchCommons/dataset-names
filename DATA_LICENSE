@@ -1,3 +1,23 @@
+Names Commons Dataset: data licence
+
+The data published by this project, that is, the release files built by the
+namescommons package from the sources declared in sources.yaml, is licensed
+under the Creative Commons Attribution 4.0 International licence (CC BY 4.0),
+reproduced below. The code is licensed under Apache-2.0 (see LICENSE). The
+contents of legacy/ are not part of the dataset and are not covered by this
+licence.
+
+Attribute the dataset as:
+
+  Names Commons Dataset, release <release>, BenchCommons (https://github.com/BenchCommons/dataset-names), licensed under CC BY 4.0. Upstream sources and notices: see ATTRIBUTION.txt.
+
+Each release carries ATTRIBUTION.txt with the attribution text and licence of
+every upstream source, and the notices some of those licences require (for
+example the Statistics Canada Open Licence). Keep them when you redistribute
+the data.
+
+=======================================================================
+
 Attribution 4.0 International
 
 =======================================================================

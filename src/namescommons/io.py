@@ -3,6 +3,7 @@
 import csv
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -48,20 +49,38 @@ COUNTRY_CSV_COLUMNS = [
 LOTE_DE_ESCRITA = 250_000
 
 
-def write_observations(observations: list[Observation], path: Path) -> None:
+# Spec 006, R1.4: descartes por fonte nos metadados chave-valor do observations.parquet.
+CHAVE_DESCARTES = b"namescommons.dropped"
+
+
+def write_observations(
+    observations: list[Observation], path: Path, dropped: Mapping[str, Mapping[str, int]] | None = None,
+) -> None:
+    """Grava as observações; dropped ({source_id: {"lines", "records"}}) vai para os metadados."""
+    esquema = OBSERVATION_SCHEMA
+    if dropped is not None:
+        texto = json.dumps({k: dict(v) for k, v in dropped.items()}, sort_keys=True, separators=(",", ":"))
+        esquema = esquema.with_metadata({CHAVE_DESCARTES: texto.encode("utf-8")})
     path.parent.mkdir(parents=True, exist_ok=True)
     # Grava ao lado e troca por rename: uma falha não deixa arquivo parcial nem apaga o anterior.
     temporario = path.with_name(path.name + ".part")
     try:
-        with pq.ParquetWriter(temporario, OBSERVATION_SCHEMA) as escritor:
+        with pq.ParquetWriter(temporario, esquema) as escritor:
             for inicio in range(0, max(len(observations), 1), LOTE_DE_ESCRITA):
                 lote = observations[inicio:inicio + LOTE_DE_ESCRITA]
                 # Colunar: evita um dicionário por observação (R8, spec 002).
                 colunas = {campo: [getattr(o, campo) for o in lote] for campo in OBSERVATION_SCHEMA.names}
-                escritor.write_table(pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA))
+                escritor.write_table(pa.Table.from_pydict(colunas, schema=esquema))
         os.replace(temporario, path)
     finally:
         temporario.unlink(missing_ok=True)
+
+
+def read_dropped(path: Path) -> dict[str, dict[str, int]] | None:
+    """Descartes gravados por write_observations; None se o arquivo não os traz (spec 006, R1.4)."""
+    metadados = pq.read_schema(path).metadata or {}
+    texto = metadados.get(CHAVE_DESCARTES)
+    return None if texto is None else json.loads(texto)
 
 
 def _valores(coluna: pa.ChunkedArray) -> list:

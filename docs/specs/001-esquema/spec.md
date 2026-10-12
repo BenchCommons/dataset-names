@@ -101,9 +101,11 @@ docs/specs/, docs/adr/
 
 Nota: a release pode incluir `variant_links.parquet` (spec 004, R4.6), contado no `manifest.json`, cuja lista de fontes é a união das fontes das observações e das ligações (spec 005, R7.4). Versões: `1.1.0` (spec 004, R4.7) e `1.2.0` (spec 005, R8).
 
+Nota (spec 006, R2 e R5): o manifesto ganha `data_license` e, por fonte, `name`, `observations` e `dropped`; a release ganha `DATA_LICENSE`, `ATTRIBUTION.txt`, `DATASET_CARD.md`, `by_country.zip` e `SHA256SUMS`, fora de `files`. Versão `1.3.0` ([spec 006](../006-publicacao/spec.md)).
+
 ### R6. Legado
 
-`first_names.all.txt`, `last_names.all.txt` e `generate/` vão para `legacy/` sem alteração de conteúdo e não são ingeridos no dataset novo (ADR 0001). A retirada é decidida na spec 006.
+`first_names.all.txt`, `last_names.all.txt` e `generate/` vão para `legacy/` sem alteração de conteúdo e não são ingeridos no dataset novo (ADR 0001). A retirada é decidida na spec 006. Decisão: [ADR 0015](../../adr/0015-legado-congelado.md) (fica congelado no repositório).
 
 ## Critérios de aceite
 
