@@ -25,7 +25,7 @@ Há três caminhos para os dados:
 ## Consequências
 
 - `fetch` baixa 15 arquivos (216 MB, em 54 s na medição de 2026-10-12), e `ingest --offline` lê o cache sem rede, como as outras fontes.
-- O projeto depende de um serviço acadêmico sem acordo de nível de serviço. Se o QLever sair do ar, as consultas valem no WDQS só para as classes pequenas; a ingestão do dump completo fica registrada como alternativa numa issue.
+- O projeto depende de um serviço acadêmico sem acordo de nível de serviço. Se o QLever sair do ar, as consultas valem no WDQS só para as classes pequenas; a ingestão do dump completo fica registrada como alternativa na issue #29.
 - O resultado reflete o índice do QLever no momento do download, que pode estar alguns dias atrás do Wikidata. O `.meta.json` do cache registra a data e a hora de cada página.
 - Se o índice mudar entre o download de duas páginas da mesma consulta, linhas podem se repetir (inofensivo: o pipeline soma observações repetidas de fonte `attested` sem alterar nada) ou faltar na fronteira. A falta não é detectável pela página; o risco é pequeno porque as páginas de uma consulta são baixadas em segundos.
 - Quando o Wikidata crescer além da folga, a ingestão falha alto e a correção é mudar um número no módulo.

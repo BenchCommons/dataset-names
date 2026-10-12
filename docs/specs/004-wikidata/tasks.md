@@ -48,5 +48,5 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 ### Fechamento
 
 - [x] Medição de R8 com os 15 arquivos reais no cache: `/usr/bin/time -l uv run namescommons run --offline` só com o Wikidata (`sources.yaml` temporário).
-- [x] Issues para o que ficou fora: ingestão do dump e endpoint alternativo; rótulos sem P1705; margem de memória com o Wikidata.
+- [x] Issues para o que ficou fora: ingestão do dump e endpoint alternativo (#29); rótulos sem P1705 (#30); margem de memória com o Wikidata (#31).
 - [x] Pull request com `Closes #3`.

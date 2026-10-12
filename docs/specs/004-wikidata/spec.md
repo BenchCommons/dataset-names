@@ -136,7 +136,7 @@ Medido num Apple M4 com 24 GB, em 2026-10-12: `fetch` baixou os 15 arquivos (216
 ## Fora de escopo
 
 - Agrupamento de variantes, `group_id` e transliteração para ASCII (spec 005).
-- Ingestão do dump completo do Wikidata e um endpoint alternativo ao QLever: ficam numa issue.
-- Rótulos de itens sem P1705 (rótulos por língua, inclusive `mul`) e lexemas do Wikidata.
+- Ingestão do dump completo do Wikidata e um endpoint alternativo ao QLever (issue #29).
+- Rótulos de itens sem P1705 (rótulos por língua, inclusive `mul`; issue #30) e lexemas do Wikidata.
 - País de origem (P495) e língua do nome (P407) como atributos do nome.
 - Publicação da tabela de ligações no README e no cartão do dataset (spec 006).
