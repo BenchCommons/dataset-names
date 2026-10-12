@@ -33,7 +33,7 @@ def test_user_agent_identifica_projeto_e_repositorio(servidor, tmp_path):
     fetch_resource(tmp_path, "exemplo", _recurso(servidor))
     agente = servidor.requisicoes[0][1]
     assert agente.startswith("namescommons/")
-    assert "https://github.com/OpenSoftwareAlliance/names-commons-dataset" in agente
+    assert "https://github.com/BenchCommons/dataset-names" in agente
 
 
 def test_arquivo_no_cache_nao_e_baixado_de_novo(servidor, tmp_path):
@@ -170,17 +170,26 @@ def test_tentativas_menor_que_um_e_recusada(servidor, tmp_path, n):
     assert servidor.requisicoes == []
 
 
-def test_refresh_nao_deixa_meta_antigo_descrevendo_o_arquivo_novo(servidor, tmp_path, monkeypatch):
-    """Se a gravação do meta falha, o meta antigo não pode continuar ao lado do arquivo novo."""
+def test_refresh_com_falha_na_troca_do_arquivo_nao_deixa_meta_que_descreve_outro_arquivo(
+    servidor, tmp_path, monkeypatch,
+):
+    """A troca do arquivo de dados falha: o meta ao lado nunca pode descrever um arquivo que não está lá."""
+    import os
+
     r = _recurso(servidor)
     fetch_resource(tmp_path, "exemplo", r)
+    antigo = (tmp_path / "exemplo" / "a.csv").read_bytes()
     servidor.arquivos["/a.csv"] = b"versao nova\n"
+    real = os.replace
 
-    def falha(destino, conteudo):
-        raise OSError("disco cheio")
+    def falha_na_troca_dos_dados(origem, destino):
+        if os.path.basename(destino) == "a.csv":
+            raise OSError("disco cheio")
+        return real(origem, destino)
 
-    monkeypatch.setattr("namescommons.cache._gravar_atomico", falha)
+    monkeypatch.setattr("namescommons.cache.os.replace", falha_na_troca_dos_dados)
     with pytest.raises(FetchError, match="disco cheio"):
         fetch_resource(tmp_path, "exemplo", r, refresh=True, tentativas=1)
+    assert (tmp_path / "exemplo" / "a.csv").read_bytes() == antigo
     meta = tmp_path / "exemplo" / "a.csv.meta.json"
-    assert not meta.exists() or json.loads(meta.read_text(encoding="utf-8"))["size"] == (tmp_path / "exemplo" / "a.csv").stat().st_size
+    assert not meta.exists() or json.loads(meta.read_text(encoding="utf-8"))["sha256"] == hashlib.sha256(antigo).hexdigest()
