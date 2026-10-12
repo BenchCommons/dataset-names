@@ -21,3 +21,13 @@ sources:
     suppression: 3
     retrieved: 2026-10-12
     uniform_case: true
+  - id: ie-cso-births
+    name: Central Statistics Office, Irish Babies' Names (VSA50 e VSA60)
+    url: https://data.gov.ie/dataset/vsa50-boys-names-in-ireland-with-3-or-more-occurrences
+    license: CC-BY-4.0
+    attribution: "Central Statistics Office (Irlanda), tabelas VSA50 e VSA60, CC BY 4.0"
+    country: IE
+    count_type: births
+    primary: true
+    suppression: 3
+    retrieved: 2026-10-12
