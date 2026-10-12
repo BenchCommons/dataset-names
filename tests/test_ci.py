@@ -113,8 +113,8 @@ given,Begoña,begoña,begona,Latn,36293,population,4,1.000000,36293,2025,2025
 given,Iñigo,iñigo,inigo,Latn,22083,population,5,0.000000,22083,2025,2025
 given,Llorenç,llorenç,llorenc,Latn,2513,population,6,0.000000,2513,2025,2025
 given,Françoise,françoise,francoise,Latn,338,population,7,1.000000,338,2025,2025
-given,Francesc D'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
-given,Joana D'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
+given,Francesc d'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
+given,Joana d'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
 given,Zulma Patricia,zulma patricia,zulma patricia,Latn,20,population,10,1.000000,20,2025,2025
 given,Zunair,zunair,zunair,Latn,20,population,10,0.000000,20,2025,2025
 """

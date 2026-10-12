@@ -31,6 +31,13 @@ _JAPONES = frozenset({"Hani", "Hira", "Kana"})
 # Separadores que iniciam uma nova palavra na capitalização.
 _SEPARADORES = re.compile(r"([ \-'’])")
 
+# Spec 005, R3: partículas em minúsculas fora da primeira palavra (fontes de caixa uniforme).
+_PARTICULAS = frozenset({
+    "da", "das", "de", "del", "della", "der", "den", "des", "di", "do", "dos", "du", "van", "von", "y",
+})
+_ARTIGOS = frozenset({"la", "las", "le", "los"})  # só logo depois de uma partícula (R3.2)
+_ELISOES = ("d'", "l'")  # R3.3
+
 # Spec 005, R2 (ADR 0012): transliteração para ASCII pelo ICAO Doc 9303, parte 3, seção 6
 # (8.ª edição, 2021). Tabelas em minúsculas; o nome passa por casefold antes.
 # Latim (tabela A): letras sem decomposição NFKD. Onde o ICAO dá alternativa ("AE or A"),
@@ -72,8 +79,21 @@ def normalize_name(raw: str, uniform_case: bool | None = None) -> str:
         uniform_case = tem_caixa and nome in (nome.upper(), nome.lower())
     if uniform_case:
         partes = _SEPARADORES.split(nome.lower())
-        nome = "".join(p[:1].title() + p[1:] for p in partes)
+        nome = _particulas("".join(p[:1].title() + p[1:] for p in partes))
     return unicodedata.normalize("NFC", nome)
+
+
+def _particulas(nome: str) -> str:
+    """Spec 005, R3.1 a R3.3: só palavras separadas por espaço e fora da primeira."""
+    palavras = nome.split(" ")
+    for i in range(1, len(palavras)):
+        minuscula = palavras[i].lower()
+        anterior = palavras[i - 1].lower()
+        if minuscula in _PARTICULAS or (minuscula in _ARTIGOS and anterior in _PARTICULAS):
+            palavras[i] = minuscula
+        elif minuscula[:2] in _ELISOES and len(minuscula) > 2:
+            palavras[i] = minuscula[:2] + palavras[i][2:]
+    return " ".join(palavras)
 
 
 def name_key(name: str) -> str:

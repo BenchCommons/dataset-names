@@ -2,7 +2,7 @@ from namescommons.normalize import ascii_form, detect_script, name_key, normaliz
 
 
 def test_caixa_uniforme_vira_capitalizada_por_palavra():
-    assert normalize_name("  MARIA   DA  SILVA ") == "Maria Da Silva"
+    assert normalize_name("  MARIA   DA  SILVA ") == "Maria da Silva"  # spec 005, R3.1
     assert normalize_name("jean-luc") == "Jean-Luc"
     assert normalize_name("o'neil") == "O'Neil"
 
@@ -141,3 +141,29 @@ def test_forma_ascii_vazia_quando_algum_caractere_nao_tem_transliteracao(nome):
 def test_acento_agudo_isolado_vira_apostrofo():
     assert ascii_form("D´Arcy", "Latn") == "d'arcy"
     assert ascii_form("D`Arcy", "Latn") == "d'arcy"
+
+
+# Spec 005, R3 (issue #4): partículas na capitalização das fontes de caixa uniforme.
+@pytest.mark.parametrize("bruto, esperado", [
+    ("JOANA D'ARC", "Joana d'Arc"),
+    ("FRANCESC D'ASSIS", "Francesc d'Assis"),
+    ("MARIA DEL CARMEN", "Maria del Carmen"),
+    ("VAN DER BERG", "Van der Berg"),
+    ("DE LA DE LAS HERAS", "De la de las Heras"),
+    ("ABEL DE LA CRUZ", "Abel de la Cruz"),
+    ("ALVES DA SILVA", "Alves da Silva"),
+    ("GABRIEL Y GALAN", "Gabriel y Galan"),
+    ("JIA LE", "Jia Le"),
+    ("MARIA LA", "Maria La"),
+    ("D'ARCY", "D'Arcy"),
+    ("JEAN-DE-DIEU", "Jean-De-Dieu"),
+    ("MARIE L'AMOUR", "Marie l'Amour"),
+    ("O'NEIL", "O'Neil"),
+])
+def test_particulas_em_caixa_uniforme(bruto, esperado):
+    assert normalize_name(bruto, uniform_case=True) == esperado
+
+
+def test_caixa_publicada_nao_muda_particulas():
+    assert normalize_name("Da Silva", uniform_case=False) == "Da Silva"
+    assert normalize_name("Joana D'Arc", uniform_case=False) == "Joana D'Arc"

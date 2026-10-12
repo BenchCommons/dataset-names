@@ -24,10 +24,10 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/normalize.py`, `tests/test_normalize.py`, `tests/test_ci.py`.
 
-- [ ] Testes que falham: os exemplos do critério de aceite 3; `ALVES DA SILVA` vira `Alves da Silva`; `GABRIEL Y GALAN` vira `Gabriel y Galan`; `JEAN-DE-DIEU` continua `Jean-De-Dieu`; fonte de caixa mista não muda `Da Silva`.
-- [ ] `normalize_name` com `uniform_case` verdadeiro aplica R3.1 a R3.3 depois da capitalização por palavra.
-- [ ] Atualizar `ES_CSV` em `tests/test_ci.py` (`Francesc d'Assis`, `Joana d'Arc`).
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: os exemplos do critério de aceite 3; `ALVES DA SILVA` vira `Alves da Silva`; `GABRIEL Y GALAN` vira `Gabriel y Galan`; `JEAN-DE-DIEU` continua `Jean-De-Dieu`; fonte de caixa mista não muda `Da Silva`.
+- [x] `normalize_name` com `uniform_case` verdadeiro aplica R3.1 a R3.3 depois da capitalização por palavra.
+- [x] Atualizar `ES_CSV` em `tests/test_ci.py` (`Francesc d'Assis`, `Joana d'Arc`).
+- [x] `uv run pytest -q` e commit.
 
 ### Task 4: fontes que removem acentos (R6, R7.3)
 
