@@ -4,6 +4,7 @@ O formato é reconhecido pelos primeiros bytes. XLSX é lido em fluxo com a bibl
 XLS, com xlrd. Os dois devolvem valores do mesmo tipo: str, int, float, bool ou None.
 """
 
+import io
 import posixpath
 import re
 import zipfile
@@ -31,6 +32,8 @@ _MAX_MEMBRO = 1 << 30
 _MAX_TAXA = 100
 _MIN_BYTES_TAXA = 1 << 20
 _INTEIRO = re.compile(r"-?[0-9]+")
+# Defesa em profundidade (ADR 0005): membro XML com DTD é recusado antes de ir ao parser.
+_MAX_PROLOGO = 1 << 16
 
 
 def _formato(caminho: Path) -> str:
@@ -114,7 +117,77 @@ def _membro(z: zipfile.ZipFile, nome: str, caminho: Path):
     if tamanho > _MIN_BYTES_TAXA and tamanho / compactado > _MAX_TAXA:
         raise FormatError(f"{caminho.name}: membro {nome} descompacta {tamanho} bytes, "
                           f"taxa de compressão {tamanho // compactado}:1 acima de {_MAX_TAXA}:1")
-    return z.open(info)
+    return _SemDtd(z.open(info), nome, caminho)
+
+
+class _SemDtd(io.RawIOBase):
+    """Fluxo de um membro XML que recusa DTD no prólogo e depois repassa os bytes ao parser.
+
+    Lê no máximo 64 KiB, até a primeira tag de elemento, e devolve esse prefixo ao parser antes
+    do resto do fluxo; a leitura em fluxo de abas grandes continua igual.
+    """
+
+    def __init__(self, fh, nome: str, caminho: Path):
+        super().__init__()
+        self._fh = fh
+        prefixo = b""
+        while True:
+            parte = fh.read(4096)
+            prefixo += parte
+            decisao = _prologo(prefixo)
+            if decisao == "dtd":
+                fh.close()
+                raise FormatError(f"{caminho.name}: membro {nome} tem DTD (DOCTYPE ou ENTITY); recusado")
+            if decisao == "raiz" or not parte:
+                break
+            if len(prefixo) >= _MAX_PROLOGO:
+                fh.close()
+                raise FormatError(f"{caminho.name}: membro {nome}: prólogo acima de {_MAX_PROLOGO} bytes sem elemento raiz")
+        self._prefixo = memoryview(prefixo)
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, buf) -> int:
+        if self._prefixo:
+            n = min(len(buf), len(self._prefixo))
+            buf[:n] = self._prefixo[:n]
+            self._prefixo = self._prefixo[n:]
+            return n
+        return self._fh.readinto(buf)
+
+    def close(self) -> None:
+        self._fh.close()
+        super().close()
+
+
+def _prologo(dados: bytes) -> str:
+    """'dtd' se há DOCTYPE/ENTITY antes do elemento raiz, 'raiz' se a raiz já começou, senão 'mais'."""
+    if dados[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        texto = dados.decode("utf-16", errors="replace")
+    elif b"\x00" in dados[:4]:
+        texto = dados.decode("utf-16-le" if dados[1:2] == b"\x00" else "utf-16-be", errors="replace")
+    else:
+        texto = dados.decode("latin-1")
+    i = 0
+    while True:
+        m = re.compile(r"[\s\ufeff]*").match(texto, i)
+        i = m.end()
+        if i >= len(texto):
+            return "mais"
+        if texto.startswith("<?", i):
+            fim, salto = texto.find("?>", i), 2
+        elif texto.startswith("<!--", i):
+            fim, salto = texto.find("-->", i), 3
+        elif texto[i:i + 9].upper() == "<!DOCTYPE" or texto[i:i + 8].upper() == "<!ENTITY":
+            return "dtd"
+        elif len(texto) - i < 9 and any(m.startswith(texto[i:].upper()) for m in ("<!DOCTYPE", "<!ENTITY", "<!--")):
+            return "mais"  # prefixo curto demais para decidir
+        else:
+            return "raiz"  # elemento raiz (ou lixo, que o parser descreve)
+        if fim < 0:
+            return "mais"
+        i = fim + salto
 
 
 def _xlsx_abas(z: zipfile.ZipFile, caminho: Path) -> list[tuple[str, str]]:
