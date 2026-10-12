@@ -39,6 +39,8 @@ Campos novos, opcionais:
 - `uniform_case` (booleano, padrão `false`): a fonte publica todos os nomes na mesma caixa e a capitalização por palavra da 001 se aplica a todos.
 - `adapter` (booleano, padrão `true`): `false` registra uma fonte usada só manualmente.
 
+Nota (spec 005, R6): `strips_accents` (booleano, padrão `false`) marca a fonte que publica os nomes sem acento por regra própria; ele decide a correspondência sem acento do agrupamento de variantes ([ADR 0011](../../adr/0011-correspondencia-sem-acento.md)).
+
 ### R3. Validação cruzada com a fonte
 
 `validate` passa a recusar, além do que a 001 recusa:

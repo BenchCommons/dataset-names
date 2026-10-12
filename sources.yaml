@@ -1,4 +1,4 @@
-# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, na spec 003d (ADR 0004), na spec 003b, R2, e na spec 004, R1.
+# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, na spec 003d (ADR 0004), na spec 003b, R2, e na spec 004, R1. Evidência de strips_accents na spec 005, R6.
 sources:
   - id: us-ssa-births
     name: Social Security Administration, Popular Baby Names (national data)
@@ -10,6 +10,7 @@ sources:
     primary: true
     suppression: 5
     retrieved: 2026-10-12
+    strips_accents: true
   - id: fr-insee-births
     name: INSEE, Fichier des prénoms (France, nível nacional)
     url: https://www.insee.fr/fr/statistiques/8595130
@@ -62,6 +63,7 @@ sources:
     suppression: 5
     retrieved: 2026-10-12
     uniform_case: true
+    strips_accents: true
   - id: es-ine-residentes
     name: INE, Apellidos y nombres más frecuentes (residentes en España, total nacional)
     url: https://ine.es/dyngs/INEbase/operacion.htm?c=Estadistica_C&cid=1254736177009&menu=resultados&idp=1254735572981
@@ -73,6 +75,7 @@ sources:
     suppression: 20
     retrieved: 2026-10-12
     uniform_case: true
+    strips_accents: true
   - id: nz-dia-births
     name: Department of Internal Affairs, Baby Name popularity over time (Nova Zelândia)
     url: https://catalogue.data.govt.nz/dataset/baby-name-popularity-over-time

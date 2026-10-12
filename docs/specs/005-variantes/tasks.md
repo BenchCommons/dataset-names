@@ -33,9 +33,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/sources.py`, `sources.yaml`, `tests/test_sources_extensoes.py`, `docs/specs/002-pipeline/spec.md`.
 
-- [ ] Testes que falham: `strips_accents` padrão `false`; `true` aceito; valor não booleano recusado; em `sources.yaml`, exatamente `ca-statcan-births`, `es-ine-residentes` e `us-ssa-births` têm `true`.
-- [ ] `OPCIONAIS` e `Source` ganham `strips_accents`; nota em R2 da spec 002.
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: `strips_accents` padrão `false`; `true` aceito; valor não booleano recusado; em `sources.yaml`, exatamente `ca-statcan-births`, `es-ine-residentes` e `us-ssa-births` têm `true`.
+- [x] `OPCIONAIS` e `Source` ganham `strips_accents`; nota em R2 da spec 002.
+- [x] `uv run pytest -q` e commit.
 
 ### Task 5: forma de exibição (R4)
 
