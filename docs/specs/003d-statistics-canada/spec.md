@@ -20,7 +20,7 @@ Uma entrada em `sources.yaml` e um adaptador em `src/namescommons/adapters/ca_st
 |---|---|
 | `id` | `ca-statcan-births` |
 | Instituto e produto | Statistics Canada, tabela 17-10-0147-01, "First names at birth by sex at birth, selected indicators" (pesquisa 3231, Vital Statistics, Birth Database) |
-| Página | https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014701 |
+| Página | https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014701 (DOI https://doi.org/10.25318/1710014701-eng, usado em `url` de `sources.yaml`) |
 | Recurso | https://www150.statcan.gc.ca/n1/tbl/csv/17100147-eng.zip, gravado como `17100147-eng.zip` |
 | Formato | ZIP com `17100147.csv` (dados) e `17100147_MetaData.csv` (metadados). CSV UTF-8 com BOM, separado por vírgula, todos os campos entre aspas, fim de linha LF, 17 colunas: `REF_DATE`, `GEO`, `DGUID`, `Sex at birth`, `First name at birth`, `Indicator`, `UOM`, `UOM_ID`, `SCALAR_FACTOR`, `SCALAR_ID`, `VECTOR`, `COORDINATE`, `VALUE`, `STATUS`, `SYMBOL`, `TERMINATED`, `DECIMALS` |
 | Tamanho | 41.740.086 bytes compactado; 581.606.635 bytes de CSV |
@@ -45,6 +45,7 @@ Particularidades que o adaptador trata:
 - **R1.7 Escala.** Linha `Frequency` com `SCALAR_ID` diferente de `0` (unidades) é `FormatError`, para que uma contagem em milhares não entre como unidades.
 - **R1.8 Ano.** `REF_DATE` é o ano, lido por `parse_count` com `field="REF_DATE"`.
 - **R1.9 Contagens do Québec.** A nota 3 diz que, para o Québec, frequências de 1 a 4 da Retraite Québec foram trocadas por um número aleatório de 1 a 4 e somadas às das outras províncias. O adaptador usa os valores como publicados, como faz com o arredondamento do INSEE (spec 003, R1.2).
+- **R1.10 Escopo da validação.** `STATUS`, `SYMBOL`, sexo, escala e ano são conferidos só nas linhas que podem virar registro: `Frequency`, `GEO` `Canada`, nome diferente de `Grand Total`. Marcadores em linhas descartadas (`Rank`, `Proportion (%)`, outra geografia, o agregado) não são conferidos de propósito, porque nenhum valor delas entra no dataset. O indicador é conferido em todas as linhas (R1.1).
 
 ### R2. Leitura em fluxo
 

@@ -5,6 +5,10 @@ ano, geografia, sexo, nome e indicador (Frequency, Rank, Proportion (%)); só a 
 nacional vira registro. VALUE vazio com STATUS '..' é nome ausente ou suprimido (menos de 5)
 e é omitido (ADR 0002). Os nomes vêm em maiúsculas e sem acento.
 
+STATUS, SYMBOL, sexo, escala e ano são conferidos só nas linhas nacionais de frequência que não são
+o agregado Grand Total; marcadores em linhas descartadas (Rank, Proportion (%), outra geografia)
+não são conferidos de propósito, porque nada delas entra no dataset. O indicador é conferido em todas.
+
 O CSV real tem 582 MB: a leitura é em fluxo, linha a linha, sem guardar o arquivo.
 """
 

@@ -55,7 +55,9 @@ The SSA server refuses automated downloads (HTTP 403). Download the national dat
 ## Licences
 
 - Code: Apache-2.0, see [`LICENSE`](LICENSE).
-- Data: CC BY 4.0, see [`DATA_LICENSE`](DATA_LICENSE). Only sources whose licence allows redistribution under CC BY 4.0 are accepted ([ADR 0001](docs/adr/0001-licenca-dos-dados.md), extended by [ADR 0004](docs/adr/0004-licenca-statistics-canada.md)). Data adapted from Statistics Canada carries the notice required by its licence, kept verbatim in `sources.yaml`.
+- Data: CC BY 4.0, see [`DATA_LICENSE`](DATA_LICENSE). Only sources whose licence allows redistribution under CC BY 4.0 are accepted ([ADR 0001](docs/adr/0001-licenca-dos-dados.md), extended by [ADR 0004](docs/adr/0004-licenca-statistics-canada.md)).
+- Statistics Canada notice: "Adapted from Statistics Canada, First names at birth by sex at birth, selected indicators (table 17-10-0147-01), 1991 to 2025. This does not constitute an endorsement by Statistics Canada of this product."
+- Data adapted from Statistics Canada remain subject to the Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence); users must not use them to identify individuals, imply endorsement, misrepresent them, or use Statistics Canada or Government of Canada symbols.
 - [`legacy/`](legacy/README.md) holds the original flat lists and scripts. It is not part of the dataset and is not covered by these licences.
 
 ## Contributing

@@ -53,7 +53,7 @@ sources:
     retrieved: 2026-10-12
   - id: ca-statcan-births
     name: Statistics Canada, First names at birth by sex at birth (tabela 17-10-0147-01)
-    url: https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014701
+    url: https://doi.org/10.25318/1710014701-eng
     license: statcan-open-licence
     attribution: "Adapted from Statistics Canada, First names at birth by sex at birth, selected indicators (table 17-10-0147-01), 1991 to 2025. This does not constitute an endorsement by Statistics Canada of this product."
     country: CA
