@@ -18,6 +18,7 @@ Originally forked from [Debdut/names.io](https://github.com/Debdut/names.io).
 | [Statistics Norway, table 10467](https://www.ssb.no/en/statbank/table/10467) | NO | given | births | CC BY 4.0 |
 | [Statistics Norway, table 12891](https://www.ssb.no/en/statbank/table/12891) | NO | family | population | CC BY 4.0 |
 | [Statistics Canada, table 17-10-0147-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710014701) | CA | given | births | [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence) |
+| [INE, Apellidos y nombres más frecuentes](https://ine.es/dyngs/INEbase/operacion.htm?c=Estadistica_C&cid=1254736177009&menu=resultados&idp=1254735572981) | ES | given, family | population | CC BY 4.0 |
 
 Attribution text for each source is in `sources.yaml`.
 
