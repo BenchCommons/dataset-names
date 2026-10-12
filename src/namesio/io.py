@@ -37,14 +37,26 @@ COUNTRY_CSV_COLUMNS = [
 
 
 def write_observations(observations: list[Observation], path: Path) -> None:
-    tabela = pa.Table.from_pylist([asdict(o) for o in observations], schema=OBSERVATION_SCHEMA)
+    # Colunar: evita um dicionário por observação (R8, spec 002).
+    colunas = {campo: [getattr(o, campo) for o in observations] for campo in OBSERVATION_SCHEMA.names}
+    tabela = pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA)
     path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(tabela, path)
 
 
+def _valores(coluna: pa.ChunkedArray) -> list:
+    """Valores Python da coluna; textos repetidos compartilham o mesmo objeto."""
+    if not pa.types.is_string(coluna.type):
+        return coluna.to_pylist()
+    codificada = coluna.combine_chunks().dictionary_encode()
+    textos = codificada.dictionary.to_pylist()
+    return [None if i is None else textos[i] for i in codificada.indices.to_pylist()]
+
+
 def read_observations(path: Path) -> list[Observation]:
     tabela = pq.read_table(path).select(OBSERVATION_SCHEMA.names).cast(OBSERVATION_SCHEMA)
-    return [Observation(**linha) for linha in tabela.to_pylist()]
+    colunas = [_valores(tabela.column(campo)) for campo in OBSERVATION_SCHEMA.names]
+    return [Observation(*valores) for valores in zip(*colunas)]
 
 
 def _celula(valor) -> str:

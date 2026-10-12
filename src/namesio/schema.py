@@ -13,7 +13,7 @@ GENDERS = ("F", "M")
 ANO_MINIMO = 1800
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Observation:
     name: str
     name_key: str
