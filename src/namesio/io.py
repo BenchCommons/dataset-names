@@ -2,7 +2,7 @@
 
 import csv
 import json
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 
 import pyarrow as pa
@@ -17,6 +17,9 @@ OBSERVATION_SCHEMA = pa.schema([
     ("gender", pa.string()), ("year", pa.int32()), ("count", pa.int64()),
     ("count_type", pa.string()), ("source_id", pa.string()),
 ])
+
+# read_observations constrói Observation por posição (R8): a ordem precisa coincidir.
+assert [f.name for f in fields(Observation)] == OBSERVATION_SCHEMA.names, "OBSERVATION_SCHEMA fora de ordem"
 
 INDEX_SCHEMA = pa.schema([
     ("name", pa.string()), ("name_key", pa.string()), ("ascii", pa.string()),
@@ -37,13 +40,26 @@ COUNTRY_CSV_COLUMNS = [
 
 
 def write_observations(observations: list[Observation], path: Path) -> None:
-    tabela = pa.Table.from_pylist([asdict(o) for o in observations], schema=OBSERVATION_SCHEMA)
+    # Colunar: evita um dicionário por observação (R8, spec 002).
+    colunas = {campo: [getattr(o, campo) for o in observations] for campo in OBSERVATION_SCHEMA.names}
+    tabela = pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA)
+    path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(tabela, path)
+
+
+def _valores(coluna: pa.ChunkedArray) -> list:
+    """Valores Python da coluna; textos repetidos compartilham o mesmo objeto."""
+    if not pa.types.is_string(coluna.type):
+        return coluna.to_pylist()
+    codificada = coluna.combine_chunks().dictionary_encode()
+    textos = codificada.dictionary.to_pylist()
+    return [None if i is None else textos[i] for i in codificada.indices.to_pylist()]
 
 
 def read_observations(path: Path) -> list[Observation]:
     tabela = pq.read_table(path).select(OBSERVATION_SCHEMA.names).cast(OBSERVATION_SCHEMA)
-    return [Observation(**linha) for linha in tabela.to_pylist()]
+    colunas = [_valores(tabela.column(campo)) for campo in OBSERVATION_SCHEMA.names]
+    return [Observation(*valores) for valores in zip(*colunas)]
 
 
 def _celula(valor) -> str:
@@ -64,6 +80,8 @@ def _index_dict(r: IndexRow) -> dict:
 
 def write_index(rows: list[IndexRow], csv_path: Path, parquet_path: Path) -> None:
     dados = [_index_dict(r) for r in rows]
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(pa.Table.from_pylist(dados, schema=INDEX_SCHEMA), parquet_path)
     with open(csv_path, "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")

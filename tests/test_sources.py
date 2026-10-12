@@ -66,6 +66,13 @@ def test_campo_invalido(campos, trecho):
         parse_sources([fonte(**campos)])
 
 
+@pytest.mark.parametrize("ident", ["../../etc", "Us-Ssa", "us_ssa", "-us", "us-", "us--ssa", "us ssa", "a/b"])
+def test_id_com_formato_invalido(ident):
+    with pytest.raises(SourceError, match="formato inválido") as e:
+        parse_sources([fonte(id=ident)])
+    assert ident in str(e.value)
+
+
 def test_campo_ausente():
     entrada = fonte()
     del entrada["license"]

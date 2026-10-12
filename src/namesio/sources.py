@@ -1,8 +1,11 @@
-"""Registro de fontes (sources.yaml) e regras de licença do ADR 0001."""
+"""Registro de fontes (sources.yaml), regras de licença do ADR 0001 e campos da spec 002 (R2)."""
 
+import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+
+from urllib.parse import urlsplit
 
 import pycountry
 import yaml
@@ -11,11 +14,14 @@ LICENCAS_COMPATIVEIS = frozenset({
     "public-domain", "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0",
     "ODC-By-1.0", "OGL-UK-3.0", "etalab-2.0",
 })
+ID_FORMATO = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 COUNT_TYPES = ("births", "population", "attested")
 CAMPOS = (
     "id", "name", "url", "license", "attribution", "country",
     "count_type", "primary", "suppression", "retrieved",
 )
+# Campos opcionais da spec 002 (R2) e seus valores padrão.
+OPCIONAIS = {"uniform_case": False, "adapter": True}
 
 
 class SourceError(ValueError):
@@ -34,6 +40,8 @@ class Source:
     primary: bool
     suppression: int | None
     retrieved: date
+    uniform_case: bool = False
+    adapter: bool = True
 
 
 def is_country(code: object) -> bool:
@@ -44,6 +52,11 @@ def is_country(code: object) -> bool:
         return pycountry.countries.get(alpha_2=code) is not None
     except (KeyError, LookupError):
         return False
+
+
+def _url_http(url: str) -> bool:
+    partes = urlsplit(url)
+    return partes.scheme.lower() in ("http", "https") and bool(partes.netloc)
 
 
 def load_sources(path: Path) -> dict[str, Source]:
@@ -78,12 +91,16 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
         if faltando:
             erros.append(f"{rotulo}: campos ausentes {faltando}")
             continue
-        extras = sorted(set(e) - set(CAMPOS))
+        extras = sorted(set(e) - set(CAMPOS) - set(OPCIONAIS))
         if extras:
             erros.append(f"{rotulo}: campos desconhecidos {extras}")
         for campo in ("id", "name", "url", "attribution"):
             if not isinstance(e[campo], str) or not e[campo].strip():
                 erros.append(f"{rotulo}: '{campo}' vazio")
+        if isinstance(e["id"], str) and e["id"].strip() and not ID_FORMATO.fullmatch(e["id"]):
+            erros.append(f"{rotulo}: 'id' com formato inválido (use [a-z0-9]+(-[a-z0-9]+)*)")
+        if isinstance(e["url"], str) and e["url"].strip() and not _url_http(e["url"]):
+            erros.append(f"{rotulo}: 'url' deve usar o esquema http ou https")
         if not isinstance(e["license"], str) or e["license"] not in LICENCAS_COMPATIVEIS:
             erros.append(f"{rotulo}: licença '{e['license']}' incompatível com o ADR 0001")
         if e["country"] is not None and not is_country(e["country"]):
@@ -95,14 +112,18 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
         s = e["suppression"]
         if s is not None and (isinstance(s, bool) or not isinstance(s, int) or s < 1):
             erros.append(f"{rotulo}: 'suppression' deve ser inteiro positivo ou vazio")
-        if not isinstance(e["retrieved"], date):
-            erros.append(f"{rotulo}: 'retrieved' deve ser uma data AAAA-MM-DD")
+        if not isinstance(e["retrieved"], date) or isinstance(e["retrieved"], datetime):
+            erros.append(f"{rotulo}: 'retrieved' deve ser uma data AAAA-MM-DD, sem hora")
+        for campo in OPCIONAIS:
+            if campo in e and not isinstance(e[campo], bool):
+                erros.append(f"{rotulo}: '{campo}' deve ser true ou false")
         if len(erros) > antes:
             continue
         if e["id"] in fontes:
             erros.append(f"{rotulo}: id duplicado")
             continue
-        fontes[e["id"]] = Source(**{c: e[c] for c in CAMPOS})
+        opcionais = {c: e.get(c, padrao) for c, padrao in OPCIONAIS.items()}
+        fontes[e["id"]] = Source(**{c: e[c] for c in CAMPOS}, **opcionais)
 
     grupos: dict[tuple, list[Source]] = {}
     for f in fontes.values():

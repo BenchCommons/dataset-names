@@ -111,3 +111,6 @@ ENV/
 # mypy
 .mypy_cache/
 .venv/
+
+# Cache de downloads das fontes (spec 002, R4)
+/cache/

@@ -25,6 +25,12 @@ def test_validate_ok(observacoes, tmp_path, capsys):
     assert "16 observações válidas" in capsys.readouterr().out
 
 
+def test_validate_singular(observacoes, tmp_path, capsys):
+    obs, fontes = _preparar(tmp_path, observacoes[:1])
+    assert main(["validate", str(obs), "--sources", str(fontes)]) == 0
+    assert "OK: 1 observação válida." in capsys.readouterr().out
+
+
 def test_validate_falha_com_mensagem(observacoes, tmp_path, capsys):
     obs, fontes = _preparar(tmp_path, [replace(observacoes[0], gender="X")])
     assert main(["validate", str(obs), "--sources", str(fontes)]) == 1
@@ -64,7 +70,7 @@ def test_arquivo_ausente_retorna_1_sem_traceback(tmp_path, capsys):
     fontes.write_text(yaml.safe_dump({"sources": FONTES}, allow_unicode=True), encoding="utf-8")
     assert main(["validate", str(tmp_path / "nao_existe.parquet"), "--sources", str(fontes)]) == 1
     err = capsys.readouterr().err
-    assert "nao_existe.parquet" in err
+    assert "arquivo não encontrado" in err and "nao_existe.parquet" in err
     assert "Traceback" not in err
 
 

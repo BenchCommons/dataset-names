@@ -67,6 +67,9 @@ def display_name(obs: list[Observation]) -> str:
 
 def _fontes_oficiais(observations: list[Observation], sources: dict[str, Source]) -> dict[tuple, str]:
     """(país, count_type) -> source_id cuja contagem vale (R3.3)."""
+    desconhecidas = sorted({o.source_id for o in observations} - set(sources))
+    if desconhecidas:
+        raise AggregationError(f"source_id desconhecido em sources.yaml: {desconhecidas}")
     ids: dict[tuple, set[str]] = defaultdict(set)
     for o in observations:
         if o.count is not None and o.country is not None:

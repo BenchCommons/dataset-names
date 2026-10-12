@@ -1,7 +1,12 @@
-"""Fixture do critério de aceite 3: duas fontes births no mesmo país (uma primary),
-uma population, uma attested; escritas latina, cirílica e chinesa; nome com espaço."""
+"""Fixture do critério de aceite 3 da spec 001: duas fontes births no mesmo país (uma primary),
+uma population, uma attested; escritas latina, cirílica e chinesa; nome com espaço.
+Servidor HTTP local da spec 002 (R7): downloads testados sem rede."""
 
+import sys
+import threading
+import time
 from datetime import date
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
@@ -57,3 +62,61 @@ def fontes():
 @pytest.fixture
 def observacoes():
     return _obs()
+
+
+class ServidorLocal:
+    """Servidor HTTP em 127.0.0.1 com respostas programáveis por caminho."""
+
+    def __init__(self):
+        self.arquivos: dict[str, bytes] = {}
+        self.falhas: dict[str, int] = {}  # caminho -> quantas respostas 500 antes de servir
+        self.truncados: set[str] = set()  # caminhos que anunciam o dobro do tamanho e fecham
+        self.lentos: dict[str, float] = {}  # caminho -> segundos de espera antes de responder
+        self.requisicoes: list[tuple[str, str]] = []  # (caminho, User-Agent)
+        servidor = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                servidor.requisicoes.append((self.path, self.headers.get("User-Agent", "")))
+                if servidor.falhas.get(self.path, 0) > 0:
+                    servidor.falhas[self.path] -= 1
+                    self.send_error(500)
+                    return
+                time.sleep(servidor.lentos.get(self.path, 0))
+                corpo = servidor.arquivos.get(self.path)
+                if corpo is None:
+                    self.send_error(404)
+                    return
+                anunciado = len(corpo) * 2 if self.path in servidor.truncados else len(corpo)
+                self.send_response(200)
+                self.send_header("Content-Length", str(anunciado))
+                self.end_headers()
+                self.wfile.write(corpo)
+
+            def log_message(self, *args):
+                pass
+
+        class Servidor(ThreadingHTTPServer):
+            def handle_error(self, request, client_address):
+                # Cliente que desiste (timeout) fecha a conexão; isso não é falha do teste.
+                if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+                    return
+                super().handle_error(request, client_address)
+
+        self.httpd = Servidor(("127.0.0.1", 0), Handler)
+
+    def url(self, caminho: str) -> str:
+        return f"http://127.0.0.1:{self.httpd.server_port}{caminho}"
+
+    def caminhos(self) -> list[str]:
+        return [caminho for caminho, _ in self.requisicoes]
+
+
+@pytest.fixture
+def servidor():
+    s = ServidorLocal()
+    thread = threading.Thread(target=s.httpd.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+    thread.start()
+    yield s
+    s.httpd.shutdown()
+    s.httpd.server_close()

@@ -24,11 +24,17 @@ _LATINAS_ESPECIAIS = str.maketrans({
 })
 
 
-def normalize_name(raw: str) -> str:
-    """Forma de exibição: NFC, espaços colapsados, capitalização se a caixa for uniforme."""
+def normalize_name(raw: str, uniform_case: bool | None = None) -> str:
+    """Forma de exibição: NFC, espaços colapsados e capitalização por palavra.
+
+    uniform_case=True capitaliza todo nome (a fonte publica tudo na mesma caixa);
+    False preserva a caixa publicada; None decide pelo próprio nome (regra da spec 001).
+    """
     nome = " ".join(unicodedata.normalize("NFC", raw).split())
-    tem_caixa = any(c.isupper() or c.islower() for c in nome)
-    if tem_caixa and nome in (nome.upper(), nome.lower()):
+    if uniform_case is None:
+        tem_caixa = any(c.isupper() or c.islower() for c in nome)
+        uniform_case = tem_caixa and nome in (nome.upper(), nome.lower())
+    if uniform_case:
         partes = _SEPARADORES.split(nome.lower())
         nome = "".join(p[:1].title() + p[1:] for p in partes)
     return unicodedata.normalize("NFC", nome)
