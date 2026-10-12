@@ -70,6 +70,14 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 - [x] Notas na spec 001 (R3 e R5) e na spec 002 (R1).
 - [x] `uv run pytest -q` e commit.
 
+### Task 9: memória do `run` (R9.3, R9.4; issue #31)
+
+**Arquivos:** `src/namescommons/io.py`, `tools/bench_pipeline.py`, `tests/test_benchmark.py`.
+
+- [x] Testes que falham: `write_observations` com lote de 2 grava e relê as mesmas observações, em vários grupos de linhas; arquivo vazio continua com o esquema; `bench_pipeline --wikidata` com a amostra de `tests/fixtures/wikidata` mede e grava `variant_links.parquet`.
+- [x] `write_observations` com `pq.ParquetWriter` e `LOTE_DE_ESCRITA = 250_000`; `--wikidata` no bench.
+- [x] `uv run pytest -q` e commit.
+
 ### Fechamento
 
 - [ ] Medição de R9 com os arquivos reais: `run --offline` com o lote completo e com o sintético mais o Wikidata, na master e nesta branch, nas mesmas condições.

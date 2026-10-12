@@ -213,7 +213,20 @@ def test_ingest_que_falha_preserva_o_arquivo_existente(cache_das_fixtures, tmp_p
         caminho.write_bytes(b"parcial")
         raise OSError("disco cheio")
 
-    monkeypatch.setattr("namescommons.io.pq.write_table", lambda *a, **k: falha(None, a[1]))
+    class EscritorQueFalha:  # spec 005, R9.3: a escrita é em lotes, por ParquetWriter
+        def __init__(self, caminho, esquema):
+            self.caminho = caminho
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def write_table(self, tabela):
+            falha(None, self.caminho)
+
+    monkeypatch.setattr("namescommons.io.pq.ParquetWriter", EscritorQueFalha)
     args = ["ingest", "--out", str(obs), "--offline", "--cache", str(cache_das_fixtures), *ADAPTADORES]
     assert main(args) == 1
     assert obs.read_bytes() == b"anterior"

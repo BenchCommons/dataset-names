@@ -92,6 +92,8 @@ As demais fontes publicam acentos (INSEE, CSO, SSB, DIA da Nova Zelândia, Wikid
 
 - **R9.1** O agrupamento trabalha sobre os nós (`kind`, `name_key`), um `kind` por vez, com inteiros e as chaves que o índice já tem; não cria outra cópia das observações nem das ligações.
 - **R9.2** `run --offline` com o lote real completo, e num único `run` com as 3 milhões de observações sintéticas de `tools/bench_pipeline.py` mais o Wikidata real, fica dentro de R8 da spec 002 (menos de 10 minutos e de 4 GB), e o pico de memória não passa do medido na master nas mesmas condições. Se passar, esta spec reduz o pico (issue #31). A medição vai para o pull request.
+- **R9.3** Medido em 2026-10-12, com as fases instrumentadas no `run` sintético mais Wikidata: o pico vem de `write_observations`, que monta 11 listas Python de 3,8 milhões de valores e a tabela Arrow inteira antes de gravar (de 2.635 MB para 3.217 MB). `write_observations` passa a gravar em lotes de no máximo 250.000 observações, com o mesmo esquema e o mesmo conteúdo.
+- **R9.4** `tools/bench_pipeline.py` ganha a opção `--wikidata DIR`, que inclui o Wikidata com os arquivos de `DIR` (o cache real) na medição, com `ingest --links` e `build --links` (issue #31).
 
 ### R10. Testes e CI
 

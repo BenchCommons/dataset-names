@@ -26,6 +26,7 @@
 | A forma ASCII do nó é a de `ascii_form` sobre a forma exibida | Observações lidas de um Parquet antigo podem ter `ascii` da regra anterior; a forma exibida é a mesma que vai para o índice |
 | `CountryRow` ganha o campo interno `published_case` (não sai no CSV) | O índice precisa saber se a forma exibida no país veio de fonte de caixa publicada (R4.3) sem reler as observações |
 | `name_index(observations, country_rows, kind, sources=None, links=None)` | Chamadas existentes sem fontes e sem ligações continuam válidas: tratam toda fonte como de caixa publicada e sem remoção de acento, e não usam ligações |
+| `write_observations` com `ParquetWriter` e lotes de 250.000 linhas | O pico do `run` estava na conversão de todas as observações para colunas Python e Arrow de uma vez (R9.3); em lotes, o arquivo tem vários grupos de linhas e o mesmo conteúdo |
 | `validate` confere `ascii` só como ASCII sem maiúsculas | Recalcular `ascii_form` para 4 milhões de observações custaria tempo e memória; a coerência vem de `derive_name_fields` |
 | Partículas só depois de espaço e fora da primeira palavra | Medido no INE: 1.449 `De`, 432 `La`, 121 `Del`; `Jia Le` mostra que artigo isolado também é nome |
 
@@ -48,6 +49,7 @@
 | `src/namescommons/aggregate.py`, `tests/test_aggregate.py` | Forma de exibição (R4) | 5 |
 | `src/namescommons/variants.py`, `tests/test_variants.py` | `group_ids` (R5) | 6 |
 | `src/namescommons/aggregate.py`, `src/namescommons/cli.py`, `tests/test_cli_links.py` | `group_id` no índice, manifesto com as fontes das ligações (R5, R7.4) | 7 |
+| `src/namescommons/io.py`, `tools/bench_pipeline.py`, `tests/test_benchmark.py` | Escrita em lotes e Wikidata na medição (R9.3, R9.4; issue #31) | 9 |
 | `src/namescommons/schema.py`, `tests/test_manifest.py`, `.github/workflows/ci.yml`, `tests/test_ci.py`, `docs/specs/001-esquema/spec.md`, `docs/specs/002-pipeline/spec.md` | Versão (R8), notas de contrato (R7.1, R7.2) e CI (R10) | 8 |
 
 ## Cobertura da spec
@@ -64,7 +66,8 @@
 | R7.3 | 4 |
 | R7.4 | 7 |
 | R8 | 8 |
-| R9 | Fechamento |
+| R9.1, R9.2 | Fechamento |
+| R9.3, R9.4 | 9 |
 | R10 | 1 a 8 |
 | Critério de aceite 1 | 1 |
 | Critério 2 | 2 |

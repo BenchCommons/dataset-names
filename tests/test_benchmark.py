@@ -69,3 +69,34 @@ def test_falha_numa_etapa_imprime_a_linha_r8_e_o_diretorio(tmp_path, capsys, mon
     assert bench.main(["--observacoes", "120", "--dir", str(tmp_path / "b")]) == 1
     saida = capsys.readouterr().out
     assert saida.startswith("R8: FALHA no ingest (código 1)") and str(tmp_path / "b") in saida
+
+
+def test_escrita_em_lotes_relê_as_mesmas_observacoes(observacoes, tmp_path, monkeypatch):
+    """Spec 005, R9.3 (issue #31): write_observations grava em lotes."""
+    import pyarrow.parquet as pq
+    import namescommons.io as io_
+    monkeypatch.setattr(io_, "LOTE_DE_ESCRITA", 2)
+    p = tmp_path / "observations.parquet"
+    write_observations(observacoes, p)
+    assert read_observations(p) == observacoes
+    assert pq.ParquetFile(p).metadata.num_row_groups == (len(observacoes) + 1) // 2
+
+
+def test_escrita_sem_observacoes_mantem_o_esquema(tmp_path):
+    import pyarrow.parquet as pq
+    from namescommons.io import OBSERVATION_SCHEMA
+    p = tmp_path / "observations.parquet"
+    write_observations([], p)
+    assert pq.read_table(p).schema.equals(OBSERVATION_SCHEMA) and read_observations(p) == []
+
+
+def test_bench_com_wikidata(tmp_path, capsys):
+    """Spec 005, R9.4 (issue #31): o Wikidata entra na medição com as ligações."""
+    registro = tmp_path / "r8.json"
+    assert _bench().main(["--observacoes", "120", "--dir", str(tmp_path / "b"), "--registro", str(registro),
+                          "--wikidata", str(RAIZ / "tests" / "fixtures" / "wikidata")]) == 0
+    saida = capsys.readouterr().out
+    assert "120 observações sintéticas mais o Wikidata; ingest " in saida and "dentro dos limites" in saida
+    assert (tmp_path / "b" / "dist" / "variant_links.parquet").is_file()
+    dados = json.loads(registro.read_text(encoding="utf-8"))
+    assert dados["observacoes"] == 120 and dados["wikidata"] is True
