@@ -86,6 +86,13 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 - [x] Fase 1 por itens (R5.3), concorrência na fase 2 (R5.4), `casefold` depois da NFKD (R2.1), `Hrkt` (R1.3), partícula só com palavra seguinte (R3).
 - [x] Medição do agrupamento no lote real (R5.8) e `uv run pytest -q`.
 
+### Task 11: segunda revisão do PR #38
+
+**Arquivos:** `src/namescommons/variants.py`, `tests/test_variants.py`, spec, ADR 0010, `src/namescommons/schema.py`.
+
+- [x] Testes que falham: `Герман` origem de transliteração em dois itens não junta `German` e `Herman`; leque `Кінаш` -> `Kinach` e `Kinasz`; `Омельчук` -> `Omelczuk` continua juntando; romanização de han (`术`, `黑`, `炳`, `辉`, `福`, `郦`) não entra em sobrenome latino de outro item; `陈` -> `Chen` sem outro item continua juntando.
+- [x] Origem de transliteração conta como rótulo do item (R5.3); regras de CJK e de leque (R5.4); métrica com os QIDs das origens de transliteração (R5.8); texto de R8.
+
 ### Fechamento
 
 - [x] Medição de R9 com os arquivos reais: `run --offline` com o lote completo e com o sintético mais o Wikidata, na master e nesta branch, nas mesmas condições.
