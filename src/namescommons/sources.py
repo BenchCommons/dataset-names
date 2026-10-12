@@ -1,32 +1,27 @@
-"""Registro de fontes (sources.yaml), regras de licença do ADR 0001 (ampliado pelo 0004) e campos da spec 002 (R2)."""
+"""Registro de fontes (sources.yaml) do dataset de nomes (spec 001, R2; spec 002, R2; spec 007, R3.2).
 
-import re
+A leitura do YAML, os campos genéricos (id, name, url, license, attribution, retrieved, adapter)
+e a coleta de todos os erros são do registro do kit de fontes do tools-dataset (spec 004 de lá, R5).
+Daqui são os campos de nomes, a lista de licenças aceitas pelo ADR 0001 (ampliado pelo 0004),
+a regra de uma primary por país e tipo de contagem e o tipo Source.
+"""
+
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import pycountry
-import yaml
-
-from datasettool.sources.adapters import is_http_url as url_http
-
-LICENCAS_COMPATIVEIS = frozenset({
-    "public-domain", "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0",
-    "ODC-By-1.0", "OGL-UK-3.0", "etalab-2.0",
-    "statcan-open-licence",  # ADR 0004 (docs/adr/0004-licenca-statistics-canada.md)
-})
-ID_FORMATO = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
-COUNT_TYPES = ("births", "population", "attested")
-CAMPOS = (
-    "id", "name", "url", "license", "attribution", "country",
-    "count_type", "primary", "suppression", "retrieved",
+from datasettool.sources.registry import (
+    ATTRIBUTION_ONLY_LICENSES, Field, RegistryError, RegistrySchema, load_registry, parse_registry,
 )
-# Campos opcionais da spec 002 (R2) e seus valores padrão.
-OPCIONAIS = {"uniform_case": False, "adapter": True, "strips_accents": False}  # strips_accents: spec 005, R6
 
+LICENCAS_COMPATIVEIS = ATTRIBUTION_ONLY_LICENSES | {
+    "statcan-open-licence",  # ADR 0004 (docs/adr/0004-licenca-statistics-canada.md)
+}
+COUNT_TYPES = ("births", "population", "attested")
 
-class SourceError(ValueError):
-    """sources.yaml inválido. A mensagem lista todos os problemas encontrados."""
+SourceError = RegistryError  # sources.yaml inválido; a mensagem lista todos os problemas encontrados
 
 
 @dataclass(frozen=True)
@@ -56,86 +51,64 @@ def is_country(code: object) -> bool:
         return False
 
 
-def load_sources(path: Path) -> dict[str, Source]:
-    try:
-        dados = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    except OSError as e:
-        raise SourceError(f"não foi possível ler {path}: {e}") from e
-    except yaml.YAMLError as e:
-        raise SourceError(f"{path}: YAML inválido: {e}") from e
-    if dados is None:
-        dados = {}
-    if not isinstance(dados, dict):
-        raise SourceError(f"{path}: a raiz deve ser um mapeamento com a chave 'sources'")
-    entradas = dados.get("sources", [])
-    if entradas is None:
-        entradas = []
-    if not isinstance(entradas, list):
-        raise SourceError(f"{path}: 'sources' deve ser uma lista")
-    return parse_sources(entradas)
+def _country(valor: object) -> str | None:
+    if isinstance(valor, bool):
+        return f"país lido como booleano {valor}; escreva o código entre aspas, ex.: \"NO\""
+    if valor is not None and not is_country(valor):
+        return f"país '{valor}' fora da ISO 3166-1 alfa-2"
+    return None
 
 
-def parse_sources(entradas: list[dict]) -> dict[str, Source]:
-    erros: list[str] = []
-    fontes: dict[str, Source] = {}
-    for i, e in enumerate(entradas):
-        if not isinstance(e, dict):
-            erros.append(f"#{i}: entrada deve ser um mapeamento")
-            continue
-        rotulo = str(e.get("id") or f"#{i}")
-        antes = len(erros)
-        faltando = [c for c in CAMPOS if c not in e]
-        if faltando:
-            erros.append(f"{rotulo}: campos ausentes {faltando}")
-            continue
-        extras = sorted(set(e) - set(CAMPOS) - set(OPCIONAIS))
-        if extras:
-            erros.append(f"{rotulo}: campos desconhecidos {extras}")
-        for campo in ("id", "name", "url", "attribution"):
-            if not isinstance(e[campo], str) or not e[campo].strip():
-                erros.append(f"{rotulo}: '{campo}' vazio")
-        if isinstance(e["id"], str) and e["id"].strip() and not ID_FORMATO.fullmatch(e["id"]):
-            erros.append(f"{rotulo}: 'id' com formato inválido (use [a-z0-9]+(-[a-z0-9]+)*)")
-        if isinstance(e["url"], str) and e["url"].strip() and not url_http(e["url"]):
-            erros.append(f"{rotulo}: 'url' deve usar o esquema http ou https")
-        if not isinstance(e["license"], str) or e["license"] not in LICENCAS_COMPATIVEIS:
-            erros.append(f"{rotulo}: licença '{e['license']}' incompatível com o ADR 0001")
-        if isinstance(e["country"], bool):
-            erros.append(f"{rotulo}: país lido como booleano {e['country']}; escreva o código entre aspas, ex.: \"NO\"")
-        elif e["country"] is not None and not is_country(e["country"]):
-            erros.append(f"{rotulo}: país '{e['country']}' fora da ISO 3166-1 alfa-2")
-        if e["count_type"] not in COUNT_TYPES:
-            erros.append(f"{rotulo}: count_type '{e['count_type']}' inválido")
-        if not isinstance(e["primary"], bool):
-            erros.append(f"{rotulo}: 'primary' deve ser true ou false")
-        s = e["suppression"]
-        if s is not None and (isinstance(s, bool) or not isinstance(s, int) or s < 1):
-            erros.append(f"{rotulo}: 'suppression' deve ser inteiro positivo ou vazio")
-        if not isinstance(e["retrieved"], date) or isinstance(e["retrieved"], datetime):
-            erros.append(f"{rotulo}: 'retrieved' deve ser uma data AAAA-MM-DD, sem hora")
-        for campo in OPCIONAIS:
-            if campo in e and not isinstance(e[campo], bool):
-                erros.append(f"{rotulo}: '{campo}' deve ser true ou false")
-        if len(erros) > antes:
-            continue
-        if e["id"] in fontes:
-            erros.append(f"{rotulo}: id duplicado")
-            continue
-        opcionais = {c: e.get(c, padrao) for c, padrao in OPCIONAIS.items()}
-        fontes[e["id"]] = Source(**{c: e[c] for c in CAMPOS}, **opcionais)
+def _count_type(valor: object) -> str | None:
+    return None if valor in COUNT_TYPES else f"count_type '{valor}' inválido"
 
-    # Exatamente uma primary por (country, count_type) com contagem; em attested, primary não
-    # tem efeito e não é conferido (spec 004, R5; issue #3).
+
+def _booleano(campo: str):
+    def conferir(valor: object) -> str | None:
+        return None if isinstance(valor, bool) else f"'{campo}' deve ser true ou false"
+    return conferir
+
+
+def _suppression(valor: object) -> str | None:
+    if valor is not None and (isinstance(valor, bool) or not isinstance(valor, int) or valor < 1):
+        return "'suppression' deve ser inteiro positivo ou vazio"
+    return None
+
+
+def _uma_primary(fontes: Mapping[str, Source]) -> list[str]:
+    """Exatamente uma primary por (country, count_type) com contagem; em attested, primary não
+    tem efeito e não é conferido (spec 004, R5; issue #3)."""
     grupos: dict[tuple, list[Source]] = {}
     for f in fontes.values():
         if f.count_type == "attested":
             continue
         grupos.setdefault((f.country, f.count_type), []).append(f)
+    erros = []
     for (pais, tipo), fs in sorted(grupos.items(), key=lambda kv: (str(kv[0][0]), kv[0][1])):
         if len(fs) > 1 and sum(f.primary is True for f in fs) != 1:
-            ids = sorted(f.id for f in fs)
-            erros.append(f"{pais}/{tipo}: fontes {ids}; exatamente uma deve ter primary: true")
+            erros.append(f"{pais}/{tipo}: fontes {sorted(f.id for f in fs)}; exatamente uma deve ter primary: true")
+    return erros
 
-    if erros:
-        raise SourceError("\n".join(erros))
-    return fontes
+
+SCHEMA: RegistrySchema[Source] = RegistrySchema(
+    accepted_licenses=LICENCAS_COMPATIVEIS,
+    license_policy="ADR 0001",
+    fields=(
+        Field("country", _country),
+        Field("count_type", _count_type),
+        Field("primary", _booleano("primary")),
+        Field("suppression", _suppression),
+        Field("uniform_case", _booleano("uniform_case"), required=False, default=False),  # spec 002, R2
+        Field("strips_accents", _booleano("strips_accents"), required=False, default=False),  # spec 005, R6
+    ),
+    checks=(_uma_primary,),
+    factory=lambda campos: Source(**campos),
+)
+
+
+def load_sources(path: Path) -> dict[str, Source]:
+    return load_registry(Path(path), SCHEMA)
+
+
+def parse_sources(entradas: list[dict]) -> dict[str, Source]:
+    return parse_registry(entradas, SCHEMA)

@@ -1,3 +1,8 @@
+"""Registro de fontes: campos de nomes, licenças do ADR 0001 e regra de primary (spec 001, R2; spec 007, R3.2).
+
+Os campos e as regras genéricas do registro são testados no tools-dataset (spec 007, R2.6).
+"""
+
 from datetime import date
 
 import pytest
@@ -39,12 +44,6 @@ def test_carrega_yaml(tmp_path):
     assert load_sources(p)["wikidata"].retrieved == date(2026, 10, 1)
 
 
-def test_arquivo_sem_fontes(tmp_path):
-    p = tmp_path / "sources.yaml"
-    p.write_text("sources: []\n", encoding="utf-8")
-    assert load_sources(p) == {}
-
-
 @pytest.mark.parametrize("licenca", ["CC-BY-SA-4.0", "ODbL-1.0", "CC-BY-NC-4.0", "desconhecida"])
 def test_licenca_incompativel_e_recusada(licenca):
     with pytest.raises(SourceError, match="ADR 0001"):
@@ -63,32 +62,18 @@ def test_statcan_open_licence_e_aceita_pelo_adr_0004():
     ({"count_type": "deaths"}, "count_type"),
     ({"primary": "sim"}, "primary"),
     ({"suppression": 0}, "suppression"),
-    ({"retrieved": "ontem"}, "retrieved"),
-    ({"url": ""}, "'url' vazio"),
-    ({"extra": 1}, "desconhecidos"),
 ])
 def test_campo_invalido(campos, trecho):
     with pytest.raises(SourceError, match=trecho):
         parse_sources([fonte(**campos)])
 
 
-@pytest.mark.parametrize("ident", ["../../etc", "Us-Ssa", "us_ssa", "-us", "us-", "us--ssa", "us ssa", "a/b"])
-def test_id_com_formato_invalido(ident):
-    with pytest.raises(SourceError, match="formato inválido") as e:
-        parse_sources([fonte(id=ident)])
-    assert ident in str(e.value)
-
-
-def test_campo_ausente():
+@pytest.mark.parametrize("campo", ["country", "count_type", "primary", "suppression"])
+def test_campo_de_nomes_ausente(campo):
     entrada = fonte()
-    del entrada["license"]
-    with pytest.raises(SourceError, match="ausentes"):
+    del entrada[campo]
+    with pytest.raises(SourceError, match=f"us-ssa-births: missing fields \\['{campo}'\\]"):
         parse_sources([entrada])
-
-
-def test_id_duplicado():
-    with pytest.raises(SourceError, match="duplicado"):
-        parse_sources([fonte(), fonte()])
 
 
 def test_duas_fontes_no_mesmo_par_exigem_uma_primary():
@@ -105,16 +90,6 @@ def test_todos_os_erros_sao_listados():
     assert "ADR 0001" in str(e.value) and "ISO 3166-1" in str(e.value)
 
 
-def test_licenca_nao_textual_vira_source_error():
-    with pytest.raises(SourceError, match="ADR 0001"):
-        parse_sources([fonte(license=["CC0-1.0"])])
-
-
-def test_id_nao_textual_vira_source_error():
-    with pytest.raises(SourceError, match="'id' vazio"):
-        parse_sources([fonte(id=["us-ssa-births"])])
-
-
 @pytest.mark.parametrize("campos, trecho", [
     ({"country": ["US"]}, "ISO 3166-1"),
     ({"count_type": ["births"]}, "count_type"),
@@ -122,39 +97,6 @@ def test_id_nao_textual_vira_source_error():
 def test_campo_nao_textual_vira_source_error(campos, trecho):
     with pytest.raises(SourceError, match=trecho):
         parse_sources([fonte(**campos)])
-
-
-def test_entrada_que_nao_e_mapeamento():
-    with pytest.raises(SourceError, match="#0: entrada deve ser um mapeamento") as e:
-        parse_sources(["foo", None])
-    assert "#1: entrada deve ser um mapeamento" in str(e.value)
-
-
-def test_arquivo_inexistente(tmp_path):
-    with pytest.raises(SourceError, match="não foi possível ler"):
-        load_sources(tmp_path / "nao-existe.yaml")
-
-
-def test_yaml_malformado(tmp_path):
-    p = tmp_path / "sources.yaml"
-    p.write_text("sources: [\n", encoding="utf-8")
-    with pytest.raises(SourceError, match="YAML inválido"):
-        load_sources(p)
-
-
-def test_raiz_que_nao_e_mapeamento(tmp_path):
-    p = tmp_path / "sources.yaml"
-    p.write_text("- foo\n", encoding="utf-8")
-    with pytest.raises(SourceError, match="a raiz deve ser um mapeamento"):
-        load_sources(p)
-
-
-@pytest.mark.parametrize("conteudo", ["sources: 5\n", "sources: texto\n"])
-def test_sources_que_nao_e_lista(tmp_path, conteudo):
-    p = tmp_path / "sources.yaml"
-    p.write_text(conteudo, encoding="utf-8")
-    with pytest.raises(SourceError, match="'sources' deve ser uma lista"):
-        load_sources(p)
 
 
 def test_attested_nao_exige_primary():

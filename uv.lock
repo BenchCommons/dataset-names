@@ -37,7 +37,6 @@ dependencies = [
     { name = "benchcommons-tools-dataset" },
     { name = "pyarrow" },
     { name = "pycountry" },
-    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -50,7 +49,6 @@ requires-dist = [
     { name = "benchcommons-tools-dataset", git = "https://github.com/BenchCommons/tools-dataset?tag=v0.1.0" },
     { name = "pyarrow", specifier = ">=17" },
     { name = "pycountry", specifier = ">=24.6" },
-    { name = "pyyaml", specifier = ">=6.0" },
 ]
 
 [package.metadata.requires-dev]

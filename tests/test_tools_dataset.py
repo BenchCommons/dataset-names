@@ -94,3 +94,26 @@ def test_pipeline_envia_o_user_agent_do_projeto(servir_fixtures, tmp_path):
     fontes = load_sources(RAIZ / "tests" / "fixtures" / "sources.yaml")
     fetch_sources(select_sources(fontes, ["exemplo"]), tmp_path, adapters="adaptadores")
     assert [agente for _, agente in servidor.requisicoes] == [USER_AGENT, USER_AGENT]
+
+
+# R3.2: registro de fontes sobre o kit -------------------------------------------------------------
+
+def test_source_error_e_o_registry_error_do_kit():
+    from datasettool.sources.registry import RegistryError
+
+    from namescommons.sources import SourceError
+    assert SourceError is RegistryError
+
+
+def test_esquema_de_nomes_sobre_o_kit():
+    from datasettool.sources.registry import ATTRIBUTION_ONLY_LICENSES, RegistrySchema
+
+    from namescommons.sources import SCHEMA
+    assert isinstance(SCHEMA, RegistrySchema)
+    assert SCHEMA.accepted_licenses == ATTRIBUTION_ONLY_LICENSES | {"statcan-open-licence"}
+    assert SCHEMA.license_policy == "ADR 0001"
+    campos = {f.name: (f.required, f.default) for f in SCHEMA.fields}
+    assert campos == {
+        "country": (True, None), "count_type": (True, None), "primary": (True, None), "suppression": (True, None),
+        "uniform_case": (False, False), "strips_accents": (False, False),
+    }

@@ -8,7 +8,6 @@ dependencies = [
     "benchcommons-tools-dataset==0.1.0",
     "pyarrow>=17",
     "pycountry>=24.6",
-    "pyyaml>=6.0",
 ]
 
 [project.scripts]
