@@ -2,6 +2,8 @@
 
 ![Generic badge](https://img.shields.io/badge/build-success-brightgreen.svg) ![Generic badge](https://img.shields.io/badge/tests-100%25-brightgreen.svg)
 
+> **Note:** the original lists moved to [`legacy/`](legacy/README.md) (raw URLs at the old root paths no longer work, and `legacy/` carries no licence grant beyond its original sources). This repository is becoming a world names dataset, see [docs/specs/ROADMAP.md](docs/specs/ROADMAP.md).
+
 > _A Global Exhaustive First and Last Name Database_
 
 <img src='assets/logo.png'/>
@@ -17,7 +19,7 @@
 
 ## Dataset Generation
 
-[generate.sh](name-dataset/blob/master/generate/index.sh)
+[generate.sh](legacy/generate/index.sh)
 
 - [listofrandomnames.com](http://listofrandomnames.com/index.cfm?generated)
 - [sajari.com 5000 Names around the Globe](https://www.sajari.com/public-data)
