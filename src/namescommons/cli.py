@@ -2,7 +2,10 @@
 
 import argparse
 import json
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from pyarrow import ArrowException
@@ -92,15 +95,32 @@ def _saida_invalida(release: str, out: Path) -> str | None:
 
 
 def _build(obs: list[Observation], fontes: dict[str, Source], out: Path, release: str) -> int:
-    """Grava as saídas da spec 001 em out; devolve o número de países."""
+    """Grava as saídas da spec 001 em out, tudo ou nada; devolve o número de países.
+
+    As saídas são montadas num diretório temporário ao lado de out e só então renomeadas:
+    uma falha em qualquer etapa não deixa saída parcial.
+    """
     paises = by_country(obs, fontes)
-    out.mkdir(parents=True, exist_ok=True)
-    write_observations(obs, out / "observations.parquet")
-    for kind, base in (("given", "given_names"), ("family", "family_names")):
-        write_index(name_index(obs, paises, kind), out / f"{base}.csv", out / f"{base}.parquet")
-    write_by_country(paises, out / "by_country")
-    manifest = build_manifest(release, out, fontes, {o.source_id for o in obs})
-    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    temporario = Path(tempfile.mkdtemp(prefix=f".{out.name}.", dir=out.parent))
+    try:
+        umask = os.umask(0)
+        os.umask(umask)
+        temporario.chmod(0o777 & ~umask)
+        write_observations(obs, temporario / "observations.parquet")
+        for kind, base in (("given", "given_names"), ("family", "family_names")):
+            write_index(name_index(obs, paises, kind), temporario / f"{base}.csv", temporario / f"{base}.parquet")
+        write_by_country(paises, temporario / "by_country")
+        manifest = build_manifest(release, temporario, fontes, {o.source_id for o in obs})
+        (temporario / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        if out.is_dir():
+            out.rmdir()  # já checado como vazio por _saida_invalida
+        os.replace(temporario, out)
+    except BaseException:
+        shutil.rmtree(temporario, ignore_errors=True)
+        raise
     return len(paises)
 
 
@@ -123,6 +143,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             obs = ingest_sources(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
             if args.cmd == "ingest":
+                if args.out.exists():
+                    print(f"aviso: {args.out} já existe e será substituído", file=sys.stderr)
                 write_observations(obs, args.out)
                 print(f"OK: {_n(len(obs), 'observação', 'observações')} de {_n(len(selecionadas), 'fonte', 'fontes')} em {args.out}.")
                 return 0

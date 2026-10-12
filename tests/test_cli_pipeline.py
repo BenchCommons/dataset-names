@@ -187,3 +187,70 @@ def test_ajuda_lista_os_comandos(capsys):
     saida = capsys.readouterr().out
     for comando in ("fetch", "ingest", "validate", "build", "run"):
         assert comando in saida
+
+
+def test_fetch_imprime_a_mensagem_de_sucesso(exemplo_no_servidor, tmp_path, capsys):
+    cache = tmp_path / "cache"
+    assert main(["fetch", "--cache", str(cache), *ADAPTADORES]) == 0
+    assert capsys.readouterr().out == f"OK: 1 fonte em {cache}.\n"
+
+
+def test_ingest_avisa_ao_sobrescrever_e_grava_de_forma_atomica(cache_das_fixtures, tmp_path, capsys):
+    obs = tmp_path / "observations.parquet"
+    args = ["ingest", "--out", str(obs), "--offline", "--cache", str(cache_das_fixtures), *ADAPTADORES]
+    assert main(args) == 0
+    assert "substituído" not in capsys.readouterr().err
+    assert main(args) == 0
+    assert f"aviso: {obs} já existe e será substituído" in capsys.readouterr().err
+    assert sorted(p.name for p in tmp_path.iterdir() if p.name.startswith("observations")) == ["observations.parquet"]
+
+
+def test_ingest_que_falha_preserva_o_arquivo_existente(cache_das_fixtures, tmp_path, capsys, monkeypatch):
+    obs = tmp_path / "observations.parquet"
+    obs.write_bytes(b"anterior")
+
+    def falha(observacoes, caminho):
+        caminho.write_bytes(b"parcial")
+        raise OSError("disco cheio")
+
+    monkeypatch.setattr("namescommons.io.pq.write_table", lambda *a, **k: falha(None, a[1]))
+    args = ["ingest", "--out", str(obs), "--offline", "--cache", str(cache_das_fixtures), *ADAPTADORES]
+    assert main(args) == 1
+    assert obs.read_bytes() == b"anterior"
+    assert [p.name for p in tmp_path.iterdir() if p.name != "cache"] == ["observations.parquet"]
+
+
+def _parquet(cache, tmp_path):
+    obs = tmp_path / "observations.parquet"
+    assert main(["ingest", "--out", str(obs), "--offline", "--cache", str(cache), *ADAPTADORES]) == 0
+    return obs
+
+
+@pytest.mark.parametrize("existente", [False, True])
+def test_build_que_falha_na_agregacao_nao_deixa_saida_parcial(
+    cache_das_fixtures, tmp_path, capsys, monkeypatch, existente,
+):
+    from namescommons.aggregate import AggregationError
+
+    obs = _parquet(cache_das_fixtures, tmp_path)
+    out = tmp_path / "dist"
+    if existente:
+        out.mkdir()
+
+    def falha(*a, **k):
+        raise AggregationError("agregação impossível")
+
+    monkeypatch.setattr("namescommons.cli.name_index", falha)
+    assert main(["build", str(obs), "--out", str(out), "--release", "2026.10", "--sources", FONTES]) == 1
+    assert "agregação impossível" in capsys.readouterr().err
+    assert (out.is_dir() and list(out.iterdir()) == []) if existente else not out.exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(["cache", "observations.parquet"] + (["dist"] if existente else []))
+
+
+def test_build_em_diretorio_vazio_existente_funciona(cache_das_fixtures, tmp_path):
+    obs = _parquet(cache_das_fixtures, tmp_path)
+    out = tmp_path / "dist"
+    out.mkdir()
+    assert main(["build", str(obs), "--out", str(out), "--release", "2026.10", "--sources", FONTES]) == 0
+    assert (out / "manifest.json").is_file() and (out / "by_country" / "PT.csv").is_file()
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith("dist")] == ["dist"]
