@@ -75,6 +75,7 @@ class ServidorLocal:
         self.truncados: set[str] = set()  # caminhos que anunciam o dobro do tamanho e fecham
         self.lentos: dict[str, float] = {}  # caminho -> segundos de espera antes de responder
         self.recusados: set[str] = set()  # caminhos que respondem 403, como um servidor que bloqueia robôs
+        self.tipos: dict[str, str] = {}  # caminho -> Content-Type enviado com a resposta
         self.respostas: dict[str, list[int]] = {}  # caminho -> códigos HTTP servidos em sequência antes de servir
         self.cabecalho_tamanho: dict[str, str] = {}  # caminho -> Content-Length literal (para valores malformados)
         self.requisicoes: list[tuple[str, str]] = []  # (caminho, User-Agent)
@@ -101,6 +102,8 @@ class ServidorLocal:
                 anunciado = len(corpo) * 2 if self.path in servidor.truncados else len(corpo)
                 self.send_response(200)
                 self.send_header("Content-Length", servidor.cabecalho_tamanho.get(self.path, str(anunciado)))
+                if self.path in servidor.tipos:
+                    self.send_header("Content-Type", servidor.tipos[self.path])
                 self.end_headers()
                 self.wfile.write(corpo)
 
