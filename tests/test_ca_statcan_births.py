@@ -88,6 +88,7 @@ def test_geografia_nao_nacional_e_pulada(statcan, tmp_path):
     (),
     (linha(geo="Ontario"),),
     (linha(indicador="Rank"),),
+    (linha(nome="Grand Total", status="..", valor=""),),
 ])
 def test_sem_linhas_nacionais_de_frequencia_falha(statcan, tmp_path, linhas):
     with pytest.raises(FormatError, match="nenhuma linha 'Frequency' de 'Canada'"):

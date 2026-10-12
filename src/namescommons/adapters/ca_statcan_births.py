@@ -58,9 +58,9 @@ def _ler(leitor) -> Iterator[RawRecord]:
                 raise FormatError(f"Indicator {campos[indicador]!r} desconhecido; esperado um de {sorted(_INDICADORES)}")
             if campos[indicador] != "Frequency" or campos[geo] != _NACIONAL:
                 continue
-            nacionais += 1
             if campos[nome] == _AGREGADO:
                 continue
+            nacionais += 1
             genero = parse_code(campos[sexo], _SEXO, "Sex at birth")
             if campos[escala] != _UNIDADES:
                 raise FormatError(f"SCALAR_ID {campos[escala]!r}; esperado {_UNIDADES!r} (unidades)")
