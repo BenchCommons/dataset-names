@@ -30,6 +30,8 @@ Cada fonte de `sources.yaml` com adaptador tem um módulo `src/namescommons/adap
 - **R1.4** Registros repetidos pela chave de unicidade da 001 (R1.4) são somados.
 - **R1.5** Uma fonte não pode emitir, para o mesmo (`name_key`, `kind`, `country`, `year`), linhas com `gender` informado e linhas sem `gender`. A violação falha a ingestão daquela fonte.
 
+Nota (spec 004, R4.1): o módulo pode expor também a função opcional `links(files) -> Iterator[RawLink]`, com as ligações entre variantes; o contrato dela é da spec 004.
+
 Nota: a spec 003 (R2.1) esclarece que o adaptador converte os valores; "como a fonte publica" vale só para o nome.
 
 ### R2. Extensões de `sources.yaml`

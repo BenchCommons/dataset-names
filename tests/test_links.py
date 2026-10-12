@@ -121,7 +121,7 @@ def test_ida_e_volta_em_parquet(tmp_path):
 
 
 def test_versao_do_esquema():
-    assert SCHEMA_VERSION == "1.1.0"
+    assert SCHEMA_VERSION == "1.2.0"  # 1.1.0 na spec 004; 1.2.0 na spec 005, R8
 
 
 def _modulo(**extra):

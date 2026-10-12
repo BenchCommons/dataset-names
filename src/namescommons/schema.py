@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from namescommons.normalize import ascii_form, detect_script, name_key, normalize_name
 from namescommons.sources import COUNT_TYPES, Source, is_country
 
-SCHEMA_VERSION = "1.1.0"  # 1.1.0: variant_links.parquet na release (spec 004, R4.7)
+# 1.1.0: variant_links.parquet na release (spec 004, R4.7).
+# 1.2.0: group_id preenchido, ascii em cirílico, Jpan e Kore, partículas (spec 005, R8).
+SCHEMA_VERSION = "1.2.0"
 KINDS = ("given", "family")
 GENDERS = ("F", "M")
 ANO_MINIMO = 1800

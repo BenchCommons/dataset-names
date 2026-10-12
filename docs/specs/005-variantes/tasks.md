@@ -66,9 +66,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/schema.py`, `tests/test_manifest.py`, `tests/test_io.py`, `.github/workflows/ci.yml`, `tests/test_ci.py`, `docs/specs/001-esquema/spec.md`, `docs/specs/002-pipeline/spec.md`.
 
-- [ ] Testes que falham: `schema_version` `1.2.0`; o passo da CI das fontes oficiais confere `group_id` em todas as linhas de `given_names.csv`.
-- [ ] Notas na spec 001 (R3 e R5) e na spec 002 (R1).
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: `schema_version` `1.2.0`; o passo da CI das fontes oficiais confere `group_id` em todas as linhas de `given_names.csv`.
+- [x] Notas na spec 001 (R3 e R5) e na spec 002 (R1).
+- [x] `uv run pytest -q` e commit.
 
 ### Fechamento
 

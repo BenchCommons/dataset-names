@@ -1,5 +1,6 @@
 """Spec 002, R7: o workflow da CI roda uv sync, pytest e namescommons run --offline sobre as fixtures."""
 
+import csv
 import os
 import re
 import shutil
@@ -172,6 +173,13 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
     assert "variant_links.parquet" in passo["run"]
     assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
+    # Spec 005, R10: group_id preenchido em todas as linhas do índice.
+    assert "group_id" in passo["run"]
+    for arquivo in ("given_names.csv", "family_names.csv"):
+        with open(tmp_path / "dist-oficiais" / arquivo, encoding="utf-8", newline="") as fh:
+            grupos = {linha["name"]: linha["group_id"] for linha in csv.DictReader(fh)}
+        assert grupos and all(grupos.values())
+    assert grupos["Иванов"] == grupos["Ivanov"] == "ivanov"
 
 
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():

@@ -37,3 +37,6 @@ jobs:
             --out "$RUNNER_TEMP/dist-oficiais" --release "$(date -u +%Y.%m)"
           for pais in CA ES FR IE NO NZ US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
           test -s "$RUNNER_TEMP/dist-oficiais/variant_links.parquet"
+          for indice in given_names family_names; do
+            uv run python -c 'import csv, sys; linhas = list(csv.DictReader(open(sys.argv[1], encoding="utf-8"))); sys.exit(not linhas or not all(l["group_id"] for l in linhas))' "$RUNNER_TEMP/dist-oficiais/$indice.csv"
+          done
