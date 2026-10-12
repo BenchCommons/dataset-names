@@ -30,13 +30,34 @@ absoluto() {
     (cd "$1" && pwd)
 }
 
-# Estado da release no GitHub: true (rascunho), false (publicada) ou ausente.
+# Estado da release no GitHub: true (rascunho), false (publicada) ou ausente. Qualquer outro erro
+# do gh (credencial, rede, limite de requisições) derruba o script com a mensagem real.
 estado() {
-    gh release view "$1" --json isDraft --jq .isDraft 2>/dev/null || echo ausente
+    local saida
+    if saida=$(gh release view "$1" --json isDraft --jq .isDraft 2>&1); then
+        echo "$saida"
+    elif [[ "$saida" == *"release not found"* ]]; then
+        echo ausente
+    else
+        erro "falha ao consultar a release '$1' no GitHub: $saida"
+    fi
+}
+
+# Nomes dos assets da release, um por linha; falha do gh derruba o script.
+assets_da_release() {
+    gh release view "$1" --json assets --jq '.assets[].name' || erro "falha ao listar os assets da release '$1'"
+}
+
+# Verdadeiro se a lista de nomes (um por linha) tem o asset do cache. Sem pipe nem grep -q:
+# com pipefail, um SIGPIPE faria a busca falhar em silêncio.
+tem_cache() {
+    [[ $'\n'"$1"$'\n' == *$'\n'"$CACHE_ASSET"$'\n'* ]]
 }
 
 exigir_rascunho() {
-    case "$(estado "$1")" in
+    local e
+    e=$(estado "$1") || exit 1
+    case "$e" in
         true) ;;
         false) erro "a release '$1' já está publicada; releases são imutáveis, use uma release nova" ;;
         *) erro "nenhum rascunho de release '$1': crie um rascunho (draft) da release '$1' no GitHub e anexe $CACHE_ASSET (ADR 0014; procedimento no AGENTS.md)" ;;
@@ -113,8 +134,13 @@ case "$comando" in
         done
         # Sem sobrescrever: um asset que já existe no rascunho faz o envio falhar.
         gh release upload "$1" "${assets[@]}"
-        if gh release view "$1" --json assets --jq '.assets[].name' | grep -qx "$CACHE_ASSET"; then
+        nomes=$(assets_da_release "$1") || exit 1
+        if tem_cache "$nomes"; then
             gh release delete-asset "$1" "$CACHE_ASSET" --yes
+            nomes=$(assets_da_release "$1") || exit 1
+            if tem_cache "$nomes"; then
+                erro "$CACHE_ASSET continua no rascunho '$1' depois da remoção; apague-o antes de publicar"
+            fi
         fi
         echo "Assets enviados ao rascunho '$1'. Revise e publique pelo GitHub; este script não publica."
         ;;

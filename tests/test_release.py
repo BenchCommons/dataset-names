@@ -5,6 +5,7 @@ nenhum teste chama o gh real nem a rede.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -24,19 +25,29 @@ ASSETS = sorted([
 ])
 
 GH_FALSO = r"""#!/usr/bin/env bash
-# gh falso: registra a chamada e simula um rascunho conforme FAKE_DRAFT (true, false ou ausente).
+# gh falso: registra a chamada e simula um rascunho conforme FAKE_DRAFT (true, false, ausente ou erro).
+# O estado dos assets fica em FAKE_STATE: delete-asset tira o cache, salvo com FAKE_DELETE_IGNORADO.
 printf '%s\n' "$*" >> "$FAKE_GH_LOG"
+estado="$FAKE_GH_LOG.assets"
+[ -f "$estado" ] || printf '%s\n' $FAKE_ASSETS > "$estado"
 case "$1 $2" in
   "release view")
     [ "$FAKE_DRAFT" = ausente ] && { echo "release not found" >&2; exit 1; }
+    [ "$FAKE_DRAFT" = erro ] && { echo "HTTP 401: Bad credentials (https://api.github.com/graphql)" >&2; exit 1; }
     case "$*" in
       *isDraft*) echo "$FAKE_DRAFT" ;;
-      *assets*) printf '%s\n' $FAKE_ASSETS ;;
+      *assets*)
+        if [ -n "$FAKE_VIEW_ASSETS_FALHA" ] && grep -q "release upload" "$FAKE_GH_LOG"; then
+          echo "HTTP 502" >&2; exit 1
+        fi
+        cat "$estado" ;;
     esac ;;
   "release download")
     [ -n "$FAKE_TAR" ] || { echo "no assets match" >&2; exit 1; }
     while [ $# -gt 0 ]; do [ "$1" = --dir ] && dir=$2; shift; done
     cp "$FAKE_TAR" "$dir/source-cache.tar.gz" ;;
+  "release delete-asset")
+    [ -n "$FAKE_DELETE_IGNORADO" ] || { grep -vx "$4" "$estado" > "$estado.novo"; mv "$estado.novo" "$estado"; } ;;
 esac
 exit 0
 """
@@ -58,7 +69,8 @@ def gh(tmp_path):
     log = tmp_path / "gh.log"
     log.touch()
     ambiente = {"PATH": f"{binario}{os.pathsep}{os.environ['PATH']}", "FAKE_GH_LOG": str(log),
-                "FAKE_DRAFT": "true", "FAKE_ASSETS": "source-cache.tar.gz", "FAKE_TAR": ""}
+                "FAKE_DRAFT": "true", "FAKE_ASSETS": "source-cache.tar.gz", "FAKE_TAR": "",
+                "FAKE_VIEW_ASSETS_FALHA": "", "FAKE_DELETE_IGNORADO": ""}
     return ambiente, log
 
 
@@ -246,3 +258,51 @@ def test_ci_roda_o_ensaio():
     dados, _ = _yaml(CI_YML)
     comandos = "\n".join(_runs(dados["jobs"]["testes"]))
     assert "tools/release.sh fixture-cache" in comandos and "tools/release.sh build" in comandos
+
+
+def test_token_so_nos_passos_que_usam_o_gh():
+    """Revisão do PR #45: GH_TOKEN não chega ao uv sync nem ao build."""
+    dados, _ = _yaml(RELEASE_YML)
+    for nome, job in dados["jobs"].items():
+        assert "GH_TOKEN" not in job.get("env", {}) and "GH_REPO" not in job.get("env", {}), nome
+        for passo in job["steps"]:
+            usa_gh = any(c in passo.get("run", "") for c in ("fetch-cache", "tools/release.sh upload"))
+            assert ("GH_TOKEN" in passo.get("env", {})) == usa_gh, passo.get("name")
+            if passo.get("uses", "").startswith("actions/checkout"):
+                assert passo["with"]["persist-credentials"] is False
+
+
+def test_actions_fixadas_por_sha():
+    texto = RELEASE_YML.read_text(encoding="utf-8")
+    usos = re.findall(r"uses: (\S+)(.*)", texto)
+    assert usos
+    for acao, resto in usos:
+        assert re.fullmatch(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}", acao), acao
+        assert re.fullmatch(r"\s+# v\d+\.\d+\.\d+", resto), acao
+
+
+def test_job_release_sem_cache_do_uv():
+    dados, _ = _yaml(RELEASE_YML)
+    uv = next(p for p in dados["jobs"]["release"]["steps"] if p.get("uses", "").startswith("astral-sh/setup-uv"))
+    assert uv["with"]["enable-cache"] is False
+
+
+def test_upload_falha_se_nao_consegue_listar_os_assets(gh, release_pronta, tmp_path):
+    """Revisão do PR #45: view falhando depois do upload não pode pular a remoção do cache em silêncio."""
+    ambiente, log = gh
+    r = _rodar("upload", "2026.10", _copia(release_pronta, tmp_path), **{**ambiente, "FAKE_VIEW_ASSETS_FALHA": "1"})
+    assert r.returncode != 0
+    assert "release upload" in log.read_text(encoding="utf-8")
+
+
+def test_upload_falha_se_o_cache_continua_no_rascunho(gh, release_pronta, tmp_path):
+    ambiente, _ = gh
+    r = _rodar("upload", "2026.10", _copia(release_pronta, tmp_path), **{**ambiente, "FAKE_DELETE_IGNORADO": "1"})
+    assert r.returncode != 0 and "source-cache.tar.gz" in r.stderr
+
+
+def test_estado_com_erro_que_nao_e_ausencia_falha(gh, tmp_path):
+    ambiente, _ = gh
+    r = _rodar("fetch-cache", "2026.10", tmp_path / "c", **{**ambiente, "FAKE_DRAFT": "erro"})
+    assert r.returncode != 0
+    assert "HTTP 401: Bad credentials" in r.stderr and "rascunho" not in r.stderr

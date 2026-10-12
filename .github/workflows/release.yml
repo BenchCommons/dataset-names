@@ -2,6 +2,7 @@ name: Release
 
 # Spec 006, R7, e ADR 0014. Na tag CalVer, monta a release a partir do cache anexado ao rascunho
 # e envia os assets ao rascunho. Nunca publica a release nem cria tag; o disparo manual é ensaio.
+# Actions fixadas por SHA de commit; o comentário diz a tag correspondente.
 on:
   push:
     tags:
@@ -27,8 +28,10 @@ jobs:
     env:
       RELEASE: ${{ inputs.release }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           enable-cache: true
       - name: Instalar dependências
@@ -39,7 +42,7 @@ jobs:
         run: tools/release.sh fixture-cache "$RUNNER_TEMP/cache"
       - name: Build offline e verificação
         run: tools/release.sh build "$RELEASE" "$RUNNER_TEMP/cache" "$RUNNER_TEMP/dist/$RELEASE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ensaio-release
           path: ${{ runner.temp }}/dist/
@@ -51,22 +54,30 @@ jobs:
       contents: write
     env:
       RELEASE: ${{ github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          enable-cache: false
       - name: Instalar dependências
         run: uv sync --locked
       - name: Conferir o nome da release
         run: tools/release.sh check "$RELEASE"
       - name: Cache das fontes anexado ao rascunho
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: tools/release.sh fetch-cache "$RELEASE" "$RUNNER_TEMP/cache"
       - name: Build offline e verificação
         run: tools/release.sh build "$RELEASE" "$RUNNER_TEMP/cache" "$RUNNER_TEMP/dist/$RELEASE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release
           path: ${{ runner.temp }}/dist/
       - name: Enviar os assets ao rascunho
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: tools/release.sh upload "$RELEASE" "$RUNNER_TEMP/dist/$RELEASE"
