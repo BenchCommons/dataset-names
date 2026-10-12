@@ -1,7 +1,5 @@
 # 001. Esquema do dataset: plano de implementação
 
-> **Para agentes:** SUB-SKILL OBRIGATÓRIA: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar [`tasks.md`](tasks.md) tarefa por tarefa. Os passos usam checkbox (`- [ ]`).
-
 **Objetivo:** implementar o esquema canônico de observações, o registro de fontes, as saídas agregadas e o manifesto da spec 001, com uma CLI que valida e gera as saídas a partir de um `observations.parquet`.
 
 **Arquitetura:** pacote Python `namesio` em `src/`, com um módulo por responsabilidade: normalização de nomes, registro de fontes, esquema e validação, agregação, entrada e saída, manifesto, CLI. As observações são `dataclass` imutáveis em memória; a agregação usa Python puro (dicionários), e o pyarrow só entra na leitura e na escrita de Parquet. Os adaptadores de fonte (specs 003 e 004) produzirão `list[Observation]` com `make_observation`.
@@ -13,13 +11,12 @@
 ## Restrições globais
 
 - Python `>=3.12`; dependências de runtime só `pyarrow>=17`, `pycountry>=24.6`, `pyyaml>=6.0`; dev só `pytest>=8`.
-- Nome do pacote e do comando: `namesio` (provisório, R4).
+- Nome do pacote e do comando: `namesio` (R4).
 - `SCHEMA_VERSION = "1.0.0"`.
 - Licenças aceitas em `sources.yaml`: `public-domain`, `CC0-1.0`, `CC-BY-3.0`, `CC-BY-4.0`, `ODC-By-1.0`, `OGL-UK-3.0`, `etalab-2.0`.
 - `count_type`: `births`, `population`, `attested`. `kind`: `given`, `family`. `gender`: `F`, `M` ou vazio.
 - Release: `AAAA.MM` ou `AAAA.MM.N` (N ≥ 1).
 - `female_share` no CSV com 6 casas decimais; células vazias para `None`.
-- Commits assinados com GPG, autor `Matheus Breguêz <matbrgz@gmail.com>`, trailer `Co-Authored-By` no rodapé. Nunca `--no-gpg-sign`.
 
 ## Decisões de implementação
 

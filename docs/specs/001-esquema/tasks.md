@@ -1,5 +1,7 @@
 # 001. Esquema do dataset: tarefas
 
+> Roteiro histórico da implementação (PR #1). O código vigente está em `src/` e `tests/`; em divergência, vale o código.
+
 Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório.
 
 ---
@@ -14,7 +16,7 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos
 **Interfaces:**
 - Produz: pacote importável `namesio`; comando `uv run pytest`; arquivos legados em `legacy/`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_legacy.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_legacy.py`
 
 ```python
 """Critério de aceite 6: as listas legadas foram movidas sem alteração de conteúdo."""
@@ -41,7 +43,7 @@ def test_listas_nao_estao_mais_na_raiz():
     assert (RAIZ / "legacy" / "generate" / "index.sh").exists()
 ```
 
-- [ ] **Passo 2: criar `pyproject.toml`**
+- [x] **Passo 2: criar `pyproject.toml`**
 
 ```toml
 [project]
@@ -70,7 +72,7 @@ build-backend = "hatchling.build"
 testpaths = ["tests"]
 ```
 
-- [ ] **Passo 3: criar o pacote vazio e o registro de fontes vazio**
+- [x] **Passo 3: criar o pacote vazio e o registro de fontes vazio**
 
 ```bash
 mkdir -p src/namesio
@@ -78,12 +80,12 @@ mkdir -p src/namesio
 printf 'sources: []\n' > sources.yaml
 ```
 
-- [ ] **Passo 4: rodar e ver falhar**
+- [x] **Passo 4: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_legacy.py`
 Esperado: `2 failed` (`FileNotFoundError` em `legacy/first_names.all.txt` e `AssertionError` porque as listas ainda estão na raiz)
 
-- [ ] **Passo 5: mover o legado, corrigir o `.gitignore` e baixar a licença dos dados**
+- [x] **Passo 5: mover o legado, corrigir o `.gitignore` e baixar a licença dos dados**
 
 ```bash
 mkdir -p legacy
@@ -96,12 +98,12 @@ head -3 DATA_LICENSE
 
 Esperado no `head`: texto começando com `Attribution 4.0 International`.
 
-- [ ] **Passo 6: rodar e ver passar**
+- [x] **Passo 6: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `2 passed`
 
-- [ ] **Passo 7: commit**
+- [x] **Passo 7: commit**
 
 ```bash
 git add pyproject.toml uv.lock src/namesio/__init__.py sources.yaml DATA_LICENSE .gitignore legacy tests/test_legacy.py
@@ -119,7 +121,7 @@ git commit -m "Cria estrutura do pacote namesio e move listas para legacy/" -m "
 **Interfaces:**
 - Produz: `normalize_name(raw: str) -> str`, `name_key(name: str) -> str`, `detect_script(name: str) -> str`, `ascii_form(name: str, script: str) -> str`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_normalize.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_normalize.py`
 
 ```python
 from namesio.normalize import ascii_form, detect_script, name_key, normalize_name
@@ -189,12 +191,12 @@ def test_georgiano_nao_recebe_capital_errada():
     assert normalize_name("ნინო") == "ნინო"
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_normalize.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.normalize'`
 
-- [ ] **Passo 3: implementar** `src/namesio/normalize.py`
+- [x] **Passo 3: implementar** `src/namesio/normalize.py`
 
 ```python
 """Normalização de nomes: forma de exibição, chave, sistema de escrita e forma ASCII."""
@@ -261,12 +263,12 @@ def ascii_form(name: str, script: str) -> str:
     return "".join(c for c in base if not unicodedata.combining(c) and c.isascii())
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_normalize.py src/namesio/normalize.py
@@ -284,7 +286,7 @@ git commit -m "Adiciona normalização de nomes, escrita e forma ASCII" -m "Co-A
 **Interfaces:**
 - Produz: `Source` (dataclass imutável com `id, name, url, license, attribution, country, count_type, primary, suppression, retrieved`), `load_sources(path: Path) -> dict[str, Source]`, `parse_sources(entradas: list[dict]) -> dict[str, Source]`, `is_country(code) -> bool`, `SourceError`, `COUNT_TYPES`, `LICENCAS_COMPATIVEIS`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_sources.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_sources.py`
 
 ```python
 from datetime import date
@@ -433,12 +435,12 @@ def test_sources_que_nao_e_lista(tmp_path, conteudo):
         load_sources(p)
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_sources.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.sources'`
 
-- [ ] **Passo 3: implementar** `src/namesio/sources.py`
+- [x] **Passo 3: implementar** `src/namesio/sources.py`
 
 ```python
 """Registro de fontes (sources.yaml) e regras de licença do ADR 0001."""
@@ -560,12 +562,12 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
     return fontes
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_sources.py src/namesio/sources.py
@@ -584,7 +586,7 @@ git commit -m "Adiciona registro de fontes com regras de licença do ADR 0001" -
 - Consome: `normalize_name`, `name_key`, `detect_script`, `ascii_form` (Task 2); `Source`, `COUNT_TYPES`, `is_country` (Task 3).
 - Produz: `Observation` (dataclass imutável com os 11 campos de R1 e `key() -> tuple`), `make_observation(raw_name, *, kind, source_id, count_type, country=None, gender=None, year=None, count=None) -> Observation`, `validate(observations, sources) -> None`, `ValidationError` (atributo `erros: list[str]`), `SCHEMA_VERSION`, `KINDS`, `GENDERS`. Fixtures `fontes` e `observacoes` e a constante `FONTES` em `tests/conftest.py`.
 
-- [ ] **Passo 1: criar a fixture compartilhada** em `tests/conftest.py`
+- [x] **Passo 1: criar a fixture compartilhada** em `tests/conftest.py`
 
 ```python
 """Fixture do critério de aceite 3: duas fontes births no mesmo país (uma primary),
@@ -648,7 +650,7 @@ def observacoes():
     return _obs()
 ```
 
-- [ ] **Passo 1b: escrever o teste que falha** em `tests/test_schema.py`
+- [x] **Passo 1b: escrever o teste que falha** em `tests/test_schema.py`
 
 ```python
 from dataclasses import replace
@@ -722,12 +724,12 @@ def test_campos_derivados_contradizem_r1(fontes, campos, trecho):
         validate([replace(ok, **campos)], fontes)
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_schema.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.schema'`
 
-- [ ] **Passo 3: implementar** `src/namesio/schema.py`
+- [x] **Passo 3: implementar** `src/namesio/schema.py`
 
 ```python
 """Tabela canônica de observações (spec 001, R1) e sua validação."""
@@ -827,12 +829,12 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         raise ValidationError(erros)
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_schema.py src/namesio/schema.py tests/conftest.py
@@ -851,7 +853,7 @@ git commit -m "Adiciona esquema canônico de observações e validação" -m "Co
 - Consome: `Observation`, `make_observation` (Task 4); `Source`, `parse_sources` (Task 3); `detect_script`, `ascii_form` (Task 2); fixtures da Task 4.
 - Produz: `by_country(observations, sources) -> dict[str, list[CountryRow]]` (chaves em ordem alfabética), `name_index(observations, country_rows, kind) -> list[IndexRow]` (ordenado por `name_key`), `display_name(obs) -> str`, `CountryRow`, `CountryEntry`, `IndexRow`, `AggregationError`, `PRECEDENCIA`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_aggregate.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_aggregate.py`
 
 ```python
 """Critério de aceite 3: valores esperados calculados à mão a partir de tests/conftest.py."""
@@ -1026,12 +1028,12 @@ def test_population_nome_so_em_edicao_antiga_nao_e_contado(observacoes, fontes):
     assert (maria.count, maria.rank) == (12000, 1)
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_aggregate.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.aggregate'`
 
-- [ ] **Passo 3: implementar** `src/namesio/aggregate.py`
+- [x] **Passo 3: implementar** `src/namesio/aggregate.py`
 
 ```python
 """Saídas agregadas (spec 001, R3): listas por país e índice mundial."""
@@ -1224,12 +1226,12 @@ def name_index(
     return indice
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_aggregate.py src/namesio/aggregate.py
@@ -1248,7 +1250,7 @@ git commit -m "Adiciona agregação por país e índice mundial de nomes" -m "Co
 - Consome: `Observation` (Task 4); `CountryRow`, `IndexRow`, `by_country`, `name_index` (Task 5); `SCHEMA_VERSION` (Task 4); `Source` (Task 3).
 - Produz: `write_observations(observations, path)`, `read_observations(path) -> list[Observation]`, `write_index(rows, csv_path, parquet_path)`, `write_by_country(rows_by_country, directory)`, `build_manifest(release, out_dir, sources, used) -> dict`, `OBSERVATION_SCHEMA`, `INDEX_SCHEMA`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_io.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_io.py`
 
 ```python
 import csv
@@ -1311,12 +1313,12 @@ def test_release_fora_do_formato(release, fontes, tmp_path):
         build_manifest(release, tmp_path, fontes, set())
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_io.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.io'`
 
-- [ ] **Passo 3: implementar** `src/namesio/io.py`
+- [x] **Passo 3: implementar** `src/namesio/io.py`
 
 ```python
 """Leitura e escrita das tabelas em Parquet e CSV."""
@@ -1407,7 +1409,7 @@ def write_by_country(rows_by_country: dict[str, list[CountryRow]], directory: Pa
                 w.writerow([_celula(getattr(r, c)) for c in COUNTRY_CSV_COLUMNS])
 ```
 
-- [ ] **Passo 4: implementar** `src/namesio/manifest.py`
+- [x] **Passo 4: implementar** `src/namesio/manifest.py`
 
 ```python
 """manifest.json de uma release (spec 001, R5)."""
@@ -1457,12 +1459,12 @@ def build_manifest(release: str, out_dir: Path, sources: dict[str, Source], used
     }
 ```
 
-- [ ] **Passo 5: rodar e ver passar**
+- [x] **Passo 5: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 6: commit**
+- [x] **Passo 6: commit**
 
 ```bash
 git add tests/test_io.py src/namesio/io.py src/namesio/manifest.py
@@ -1481,7 +1483,7 @@ git commit -m "Adiciona escrita em Parquet e CSV e manifesto da release" -m "Co-
 - Consome: tudo das Tasks 3 a 6.
 - Produz: `main(argv: list[str] | None = None) -> int`; comando `uv run namesio validate <obs.parquet> [--sources sources.yaml]` e `uv run namesio build <obs.parquet> --out <dir> --release AAAA.MM [--sources sources.yaml]`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_cli.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_cli.py`
 
 ```python
 import json
@@ -1598,12 +1600,12 @@ def test_parquet_com_tipo_de_coluna_errado_retorna_1(observacoes, tmp_path, caps
     assert "Traceback" not in err
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_cli.py`
 Esperado: FALHA com `ModuleNotFoundError: No module named 'namesio.cli'`
 
-- [ ] **Passo 3: implementar** `src/namesio/cli.py`
+- [x] **Passo 3: implementar** `src/namesio/cli.py`
 
 ```python
 """Linha de comando: namesio validate | namesio build."""
@@ -1673,24 +1675,24 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: todos os testes passam
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_cli.py src/namesio/cli.py
 git commit -m "Adiciona CLI namesio validate e build" -m "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-- [ ] **Passo 6: conferir o comando instalado**
+- [x] **Passo 6: conferir o comando instalado**
 
 Rodar: `uv run namesio --help`
 Esperado: uso com os subcomandos `validate` e `build`.
 
-- [ ] **Passo 7: suíte completa**
+- [x] **Passo 7: suíte completa**
 
 Rodar: `uv run pytest -q`
 Esperado: suíte inteira verde, sem falhas

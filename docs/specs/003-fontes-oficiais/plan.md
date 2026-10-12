@@ -1,7 +1,5 @@
 # 003. Fontes oficiais: plano de implementação
 
-> **Para agentes:** SUB-SKILL OBRIGATÓRIA: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar [`tasks.md`](tasks.md) tarefa por tarefa. Os passos usam checkbox (`- [ ]`).
-
 **Objetivo:** registrar e ingerir o primeiro lote de fontes oficiais (SSA, INSEE, CSO e Statistics Norway) e fechar no contrato do adaptador as regras levantadas na issue #8.
 
 **Arquitetura:** o contrato da spec 002 ganha, em `namesio.adapters`, os auxiliares `parse_count` e `parse_code`, a exceção `FormatError` e o dicionário `SourceFiles`, que explica a chave pedida fora de `RESOURCES`. `load_adapter` separa adaptador ausente de adaptador quebrado. `pipeline.to_observations` confere `kind`, `gender`, `country` e `count` em cada registro, na ordem do arquivo, antes de ordenar. Cada fonte é um módulo em `src/namesio/adapters/` que lê o arquivo baixado só com a biblioteca padrão (`zipfile`, `csv`, `json`); as duas tabelas do SSB dividem o leitor de JSON-stat num módulo privado `_ssb.py`. `cache.py` explica o 403. A CI ganha um passo que roda as fontes reais sobre as amostras.
@@ -20,7 +18,6 @@
 - Valores suprimidos são omitidos pelo adaptador (ADR 0002); registro com `count` vazio numa fonte `births` ou `population` é erro.
 - Mensagem de erro de registro: `registro N: <causa>`, com N a partir de 1 na ordem de `parse`. Mensagem de formato: `FormatError` com o valor recebido e o esperado.
 - `SCHEMA_VERSION` continua `1.0.0`: nenhum campo de saída muda.
-- Commits assinados com GPG, autor `Matheus Breguêz <matbrgz@gmail.com>`, trailer `Co-Authored-By` no rodapé. Nunca `--no-gpg-sign`.
 
 ## Decisões de implementação
 

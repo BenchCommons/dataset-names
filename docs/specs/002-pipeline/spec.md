@@ -2,6 +2,8 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 001](../001-esquema/spec.md). Pendências herdadas: issue #2.
 
+Status: Implementada e mesclada (PR #7, 2026-10-12).
+
 ## Por quê
 
 A spec 001 definiu o esquema e a CLI que valida e agrega um `observations.parquet` já pronto, mas não há caminho reproduzível da fonte publicada até esse arquivo. As specs 003 (fontes oficiais) e 004 (Wikidata) vão escrever dezenas de adaptadores; sem um contrato comum, cada um baixaria, faria cache e trataria erros de um jeito, e as regras que a revisão da 001 deixou em aberto (vazio como `""`, total e divisão por gênero emitidos juntos, caixa decidida nome a nome) seriam resolvidas de formas diferentes em cada fonte.
@@ -27,6 +29,8 @@ Cada fonte de `sources.yaml` com adaptador tem um módulo `src/namesio/adapters/
 - **R1.3** A capitalização segue `uniform_case` da fonte (R2), e não a caixa de cada nome isolado.
 - **R1.4** Registros repetidos pela chave de unicidade da 001 (R1.4) são somados.
 - **R1.5** Uma fonte não pode emitir, para o mesmo (`name_key`, `kind`, `country`, `year`), linhas com `gender` informado e linhas sem `gender`. A violação falha a ingestão daquela fonte.
+
+Nota: a spec 003 (R2.1) esclarece que o adaptador converte os valores; "como a fonte publica" vale só para o nome.
 
 ### R2. Extensões de `sources.yaml`
 

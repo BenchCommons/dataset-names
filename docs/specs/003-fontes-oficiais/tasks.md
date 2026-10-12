@@ -1,5 +1,7 @@
 # 003. Fontes oficiais: tarefas
 
+> Roteiro histórico da implementação (PR #11). O código vigente está em `src/` e `tests/`; em divergência, vale o código.
+
 Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório, a partir de `master` com a spec 002. Antes da Task 1, rodar `uv sync` e conferir `uv run pytest -q` com `244 passed`.
 
 Os arquivos de `src/` que já existem aparecem inteiros: substituir o conteúdo do arquivo pelo bloco. A linha **Mudanças** resume o que difere da versão anterior. Em `sources.yaml` e `tests/fixtures/ATRIBUICAO.md`, as Tasks 3 a 5 acrescentam linhas ao fim do arquivo criado na Task 2.
@@ -19,7 +21,7 @@ As amostras de `tests/fixtures/` são trechos dos arquivos reais (spec 003, R3).
 - Consome: `RawRecord`, `Resource`, `AdapterError`, `load_adapter` (spec 002, Task 5); `to_observations`, `ingest_sources` (spec 002, Task 7); `is_country` (spec 001); `KINDS`, `GENDERS` de `namesio.schema`; fixture `servidor` (spec 002, Task 6).
 - Produz: `namesio.adapters.FormatError(ValueError)`; `SourceFiles(dict)` com `AdapterError` para chave ausente; `parse_count(value, missing=(), field="contagem") -> int | None`; `parse_code(value, mapping, field) -> str`; `load_adapter` com mensagens "ausente (esperado em <caminho>)", "quebrado: <exceção>" e "pacote '<p>' não encontrado". `to_observations` recusa, na ordem de `parse`, `kind`, `gender` e `country` inválidos, `count` vazio em fonte com contagem e `count` em fonte `attested` (`RecordError` com `registro N: ...`). `FormatError` entra nas mensagens de domínio de `PipelineError`. Fixtures de teste `servir_fixtures(modulo) -> servidor` e `servidor.recusados: set[str]` (403).
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_contrato_adaptador.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_contrato_adaptador.py`
 
 ```python
 """Spec 003, R2: regras do contrato do adaptador que a spec 002 deixou implícitas (issue #8)."""
@@ -154,7 +156,7 @@ def test_r2_6_pacote_de_adaptadores_inexistente():
         load_adapter("x", "nao_ha_pacote")
 ```
 
-- [ ] **Passo 2: substituir o conteúdo de** `tests/conftest.py`
+- [x] **Passo 2: substituir o conteúdo de** `tests/conftest.py`
 
 **Mudanças:** importa `Path` e `Resource`; `ServidorLocal.recusados` responde 403; fixture `servir_fixtures`.
 
@@ -309,7 +311,7 @@ def servir_fixtures(servidor, monkeypatch):
     return servir
 ```
 
-- [ ] **Passo 3: ajustar** `tests/test_pipeline.py`
+- [x] **Passo 3: ajustar** `tests/test_pipeline.py`
 
 Trocar:
 
@@ -326,12 +328,12 @@ def test_r1_4_repetidos_com_e_sem_contagem_sao_recusados():
     with pytest.raises(RecordError, match="registro 2: count vazio numa fonte 'births'"):
 ```
 
-- [ ] **Passo 4: rodar e ver falhar**
+- [x] **Passo 4: rodar e ver falhar**
 
 Rodar: `uv run pytest -q`
 Esperado: `1 error` na coleta (`ImportError: cannot import name 'FormatError'`)
 
-- [ ] **Passo 5: substituir o conteúdo de** `src/namesio/adapters/__init__.py`
+- [x] **Passo 5: substituir o conteúdo de** `src/namesio/adapters/__init__.py`
 
 **Mudanças:** docstring com as regras da spec 003; importa `importlib.util`, `re`, `Iterable`, `Mapping`, `Path`; `FormatError`; `load_adapter` separa ausente de quebrado e mostra o caminho esperado (`_caminho_esperado`); `SourceFiles`, `parse_count`, `parse_code`.
 
@@ -476,7 +478,7 @@ def parse_code(value: str, mapping: Mapping[str, str], field: str) -> str:
         raise FormatError(f"{field} {value!r} desconhecido; esperado um de {sorted(mapping)}") from None
 ```
 
-- [ ] **Passo 6: substituir o conteúdo de** `src/namesio/pipeline.py`
+- [x] **Passo 6: substituir o conteúdo de** `src/namesio/pipeline.py`
 
 **Mudanças:** importa `FormatError`, `SourceFiles`, `GENDERS`, `KINDS` e `is_country`; `FormatError` em `_ERROS_DO_DOMINIO`; `_checar_valores` chamado por registro em `to_observations`; `ingest_sources` passa `SourceFiles` a `parse`.
 
@@ -666,12 +668,12 @@ def ingest_sources(
     return observacoes
 ```
 
-- [ ] **Passo 7: rodar e ver passar**
+- [x] **Passo 7: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `269 passed`
 
-- [ ] **Passo 8: commit**
+- [x] **Passo 8: commit**
 
 ```bash
 git add src/namesio/adapters/__init__.py src/namesio/pipeline.py tests/conftest.py tests/test_pipeline.py tests/test_contrato_adaptador.py
@@ -692,7 +694,7 @@ git commit -m "Explicita no contrato do adaptador a conversão de valores, a sup
 - Consome: `FormatError`, `parse_code`, `parse_count`, `servir_fixtures`, `servidor.recusados` (Task 1); `fetch_resource`, `FetchError` (spec 002).
 - Produz: fonte `us-ssa-births` em `sources.yaml`; adaptador com `RESOURCES = [Resource("https://www.ssa.gov/oact/babynames/names.zip", "names.zip")]`; `FetchError` de HTTP 403 com `grave-o em <cache>/<id>/<filename> e rode com --offline`; `tests/test_fontes_oficiais.py`, que percorre toda fonte com adaptador de `sources.yaml`.
 
-- [ ] **Passo 1: gerar a amostra** `tests/fixtures/us-ssa-births/names.zip`
+- [x] **Passo 1: gerar a amostra** `tests/fixtures/us-ssa-births/names.zip`
 
 Linhas copiadas de `yob1880.txt` e `yob2024.txt`.
 
@@ -713,7 +715,7 @@ with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
 PY
 ```
 
-- [ ] **Passo 2: substituir o conteúdo de** `sources.yaml`
+- [x] **Passo 2: substituir o conteúdo de** `sources.yaml`
 
 ```yaml
 # Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1.
@@ -730,7 +732,7 @@ sources:
     retrieved: 2026-10-12
 ```
 
-- [ ] **Passo 3: criar** `tests/fixtures/ATRIBUICAO.md`
+- [x] **Passo 3: criar** `tests/fixtures/ATRIBUICAO.md`
 
 ```markdown
 # Amostras das fontes oficiais
@@ -742,7 +744,7 @@ Cada diretório guarda um trecho pequeno do arquivo real da fonte, só para os t
 | `us-ssa-births` | public-domain | Social Security Administration (EUA), https://www.ssa.gov/oact/babynames/limits.html | 10 linhas de `yob1880.txt` e `yob2024.txt`, copiadas de um espelho do `names.zip` porque `www.ssa.gov` recusou o download automático |
 ```
 
-- [ ] **Passo 4: escrever os testes que falham** em `tests/test_us_ssa_births.py`
+- [x] **Passo 4: escrever os testes que falham** em `tests/test_us_ssa_births.py`
 
 ```python
 """Spec 003, R1.1 e R4: adaptador da SSA (EUA) sobre a amostra real em tests/fixtures/us-ssa-births/."""
@@ -823,7 +825,7 @@ def test_403_explica_como_colocar_o_arquivo_no_cache(servidor, tmp_path):
     assert len(servidor.requisicoes) == 3
 ```
 
-- [ ] **Passo 5: escrever o teste que percorre as fontes** em `tests/test_fontes_oficiais.py`
+- [x] **Passo 5: escrever o teste que percorre as fontes** em `tests/test_fontes_oficiais.py`
 
 ```python
 """Spec 003, R1 e R3: cada fonte de sources.yaml tem adaptador, amostra real e atribuição,
@@ -869,12 +871,12 @@ def test_fetch_e_ingest_sobre_a_amostra(source_id, servir_fixtures, tmp_path):
     assert {(o.source_id, o.country, o.count_type) for o in obs} == {(source_id, fonte.country, fonte.count_type)}
 ```
 
-- [ ] **Passo 6: rodar e ver falhar**
+- [x] **Passo 6: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_us_ssa_births.py tests/test_fontes_oficiais.py`
 Esperado: `3 failed, 1 passed, 7 errors` (o adaptador ainda não existe; o 403 ainda não traz o caminho do cache)
 
-- [ ] **Passo 7: criar** `src/namesio/adapters/us_ssa_births.py`
+- [x] **Passo 7: criar** `src/namesio/adapters/us_ssa_births.py`
 
 ```python
 """SSA, nomes de bebês dos EUA (spec 003, R1.1).
@@ -916,7 +918,7 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
                     )
 ```
 
-- [ ] **Passo 8: substituir o conteúdo de** `src/namesio/cache.py`
+- [x] **Passo 8: substituir o conteúdo de** `src/namesio/cache.py`
 
 **Mudanças:** importa `urllib.error`; a mensagem final de `fetch_resource` explica o 403.
 
@@ -1031,12 +1033,12 @@ def fetch_resource(
     raise FetchError(mensagem)
 ```
 
-- [ ] **Passo 9: rodar e ver passar**
+- [x] **Passo 9: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `280 passed`
 
-- [ ] **Passo 10: commit**
+- [x] **Passo 10: commit**
 
 ```bash
 git add sources.yaml src/namesio/adapters/us_ssa_births.py src/namesio/cache.py tests/fixtures/us-ssa-births/names.zip tests/fixtures/ATRIBUICAO.md tests/test_us_ssa_births.py tests/test_fontes_oficiais.py
@@ -1057,7 +1059,7 @@ git commit -m "Adiciona a fonte da SSA e explica o download recusado com 403" -m
 - Consome: `FormatError`, `parse_code`, `parse_count` (Task 1); `to_observations` (spec 002); `tests/test_fontes_oficiais.py` (Task 2).
 - Produz: fonte `fr-insee-births` (`uniform_case: true`, `suppression: 3`); adaptador com `RESOURCES = [Resource(".../8595130/prenoms-2025-nat_csv.zip", "prenoms-2025-nat_csv.zip")]`.
 
-- [ ] **Passo 1: gerar a amostra** `tests/fixtures/fr-insee-births/prenoms-2025-nat_csv.zip`
+- [x] **Passo 1: gerar a amostra** `tests/fixtures/fr-insee-births/prenoms-2025-nat_csv.zip`
 
 Linhas copiadas de `prenoms-2025-nat.csv`, com o fim de linha CRLF do original.
 
@@ -1086,7 +1088,7 @@ with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
 PY
 ```
 
-- [ ] **Passo 2: acrescentar ao fim de** `sources.yaml`
+- [x] **Passo 2: acrescentar ao fim de** `sources.yaml`
 
 ```yaml
   - id: fr-insee-births
@@ -1102,13 +1104,13 @@ PY
     uniform_case: true
 ```
 
-- [ ] **Passo 3: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
+- [x] **Passo 3: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
 
 ```markdown
 | `fr-insee-births` | etalab-2.0 | Source : Insee, Fichier des prénoms, édition 2025, https://www.insee.fr/fr/statistiques/8595130 | cabeçalho e 10 linhas de `prenoms-2025-nat.csv` |
 ```
 
-- [ ] **Passo 4: escrever os testes que falham** em `tests/test_fr_insee_births.py`
+- [x] **Passo 4: escrever os testes que falham** em `tests/test_fr_insee_births.py`
 
 ```python
 """Spec 003, R1.2: adaptador do INSEE (França) sobre a amostra real em tests/fixtures/fr-insee-births/."""
@@ -1191,12 +1193,12 @@ def test_zip_sem_um_unico_csv_falha(insee, tmp_path):
         list(insee.parse(_zip(tmp_path, "x", membro="leia.txt")))
 ```
 
-- [ ] **Passo 5: rodar e ver falhar**
+- [x] **Passo 5: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_fr_insee_births.py tests/test_fontes_oficiais.py`
 Esperado: `2 failed, 3 passed, 10 errors`
 
-- [ ] **Passo 6: criar** `src/namesio/adapters/fr_insee_births.py`
+- [x] **Passo 6: criar** `src/namesio/adapters/fr_insee_births.py`
 
 ```python
 """INSEE, Fichier des prénoms, edição 2025, nível nacional (spec 003, R1.2).
@@ -1245,12 +1247,12 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
                 )
 ```
 
-- [ ] **Passo 7: rodar e ver passar**
+- [x] **Passo 7: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `292 passed`
 
-- [ ] **Passo 8: commit**
+- [x] **Passo 8: commit**
 
 ```bash
 git add sources.yaml src/namesio/adapters/fr_insee_births.py tests/fixtures/fr-insee-births/prenoms-2025-nat_csv.zip tests/fixtures/ATRIBUICAO.md tests/test_fr_insee_births.py
@@ -1271,7 +1273,7 @@ git commit -m "Adiciona a fonte do INSEE" -m "Co-Authored-By: Claude Opus 5.5 (1
 - Consome: `FormatError`, `parse_count` (Task 1); `tests/test_fontes_oficiais.py` (Task 2).
 - Produz: fonte `ie-cso-births` (`suppression: 3`); adaptador com dois recursos do PxStat, `VSA50.csv` (meninos) e `VSA60.csv` (meninas).
 
-- [ ] **Passo 1: gerar as amostras** em `tests/fixtures/ie-cso-births/`
+- [x] **Passo 1: gerar as amostras** em `tests/fixtures/ie-cso-births/`
 
 Linhas copiadas dos CSV do PxStat, com o BOM e o fim de linha CRLF do original.
 
@@ -1309,7 +1311,7 @@ for nome, linhas in tabelas.items():
 PY
 ```
 
-- [ ] **Passo 2: acrescentar ao fim de** `sources.yaml`
+- [x] **Passo 2: acrescentar ao fim de** `sources.yaml`
 
 ```yaml
   - id: ie-cso-births
@@ -1324,13 +1326,13 @@ PY
     retrieved: 2026-10-12
 ```
 
-- [ ] **Passo 3: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
+- [x] **Passo 3: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
 
 ```markdown
 | `ie-cso-births` | CC-BY-4.0 | Central Statistics Office (Irlanda), tabelas VSA50 e VSA60, https://data.gov.ie/dataset/vsa50-boys-names-in-ireland-with-3-or-more-occurrences | cabeçalho e 6 linhas de cada CSV |
 ```
 
-- [ ] **Passo 4: escrever os testes que falham** em `tests/test_ie_cso_births.py`
+- [x] **Passo 4: escrever os testes que falham** em `tests/test_ie_cso_births.py`
 
 ```python
 """Spec 003, R1.3: adaptador do CSO (Irlanda) sobre a amostra real em tests/fixtures/ie-cso-births/."""
@@ -1383,12 +1385,12 @@ def test_formato_inesperado_falha(cso, tmp_path, texto, trecho):
         list(cso.parse(_arquivos(tmp_path, texto)))
 ```
 
-- [ ] **Passo 5: rodar e ver falhar**
+- [x] **Passo 5: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_ie_cso_births.py tests/test_fontes_oficiais.py`
 Esperado: `2 failed, 5 passed, 4 errors`
 
-- [ ] **Passo 6: criar** `src/namesio/adapters/ie_cso_births.py`
+- [x] **Passo 6: criar** `src/namesio/adapters/ie_cso_births.py`
 
 ```python
 """CSO, nomes de bebês da Irlanda, tabelas VSA50 (meninos) e VSA60 (meninas) do PxStat (spec 003, R1.3).
@@ -1437,12 +1439,12 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
         yield from _ler(files[arquivo], estatistica, coluna, genero)
 ```
 
-- [ ] **Passo 7: rodar e ver passar**
+- [x] **Passo 7: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `298 passed`
 
-- [ ] **Passo 8: commit**
+- [x] **Passo 8: commit**
 
 ```bash
 git add sources.yaml src/namesio/adapters/ie_cso_births.py tests/fixtures/ie-cso-births/VSA50.csv tests/fixtures/ie-cso-births/VSA60.csv tests/fixtures/ATRIBUICAO.md tests/test_ie_cso_births.py
@@ -1463,7 +1465,7 @@ git commit -m "Adiciona a fonte do CSO da Irlanda" -m "Co-Authored-By: Claude Op
 - Consome: `FormatError`, `parse_code` (Task 1); `tests/test_fontes_oficiais.py` (Task 2).
 - Produz: `namesio.adapters._ssb`: `API` (modelo de URL), `MARCADORES = {".", ".."}`, `cells(caminho, dimensao) -> Iterator[(codigo, rotulo, ano, valor)]`; fontes `no-ssb-fornavn` (`births`, `suppression: 4`) e `no-ssb-etternavn` (`population`, `suppression: 200`); `parse_sources` recusa país booleano pedindo aspas.
 
-- [ ] **Passo 1: criar** `tests/fixtures/no-ssb-fornavn/10467.json`
+- [x] **Passo 1: criar** `tests/fixtures/no-ssb-fornavn/10467.json`
 
 Resposta real da API para `valueCodes[Fornavn]=1NORA,1Z3SE,1KIM,2KIM,2JAKOB` e `valueCodes[Tid]=1944,1990,2025`.
 
@@ -1471,7 +1473,7 @@ Resposta real da API para `valueCodes[Fornavn]=1NORA,1Z3SE,1KIM,2KIM,2JAKOB` e `
 {"version":"2.0","class":"dataset","label":"10467: Born persons, by girls' or boys' name and year","source":"Statistics Norway","updated":"2026-01-28T07:00:00Z","note":["Figures under 4 persons are not published.","Name list include first name used by at least 200 persons previous year. The figures show people by year of birth (before 2021) or year of naming (from 2021 onwards).",". = Less than 4 persons.","Number of persons earlier than 1945 are not published.",".. = Data not available. Figures have not been entered into our databases or are too unreliable to be published.",". = Category not applicable. Figures do not exist at this time, because the category was not in use when the figures were collected."],"role":{"time":["Tid"],"metric":["ContentsCode"]},"id":["Fornavn","ContentsCode","Tid"],"size":[5,1,3],"dimension":{"Fornavn":{"label":"girls' or boys' name","category":{"index":{"1NORA":0,"1Z3SE":1,"1KIM":2,"2KIM":3,"2JAKOB":4},"label":{"1NORA":"Nora","1Z3SE":"Åse","1KIM":"Kim","2KIM":"Kim","2JAKOB":"Jakob"}},"extension":{"elimination":false,"show":"value"}},"ContentsCode":{"label":"contents","category":{"index":{"Personer":0},"label":{"Personer":"Born persons"},"unit":{"Personer":{"base":"persons","decimals":0}}},"extension":{"elimination":false,"refperiod":{"Personer":""},"show":"value","measuringType":{"Personer":"Flow"},"priceType":{"Personer":"NotApplicable"},"adjustment":{"Personer":"None"},"alternativeText":{"Personer":"Born persons"}}},"Tid":{"label":"year","category":{"index":{"1944":0,"1990":1,"2025":2},"label":{"1944":"1944","1990":"1990","2025":"2025"}},"extension":{"elimination":false,"show":"code"}}},"extension":{"noteMandatory":{"2":true},"px":{"infofile":"None","tableid":"10467","decimals":0,"official-statistics":true,"aggregallowed":true,"copyright":false,"language":"en","contents":"10467: Born persons,","descriptiondefault":false,"heading":["ContentsCode","Tid"],"stub":["Fornavn"],"matrix":"10467","subject-code":"be","subject-area":"Population"},"discontinued":null,"contact":[{"name":"Anders Sønstebø","organization":"Statistics Norway","phone":"46 66 37 74","mail":"son@ssb.no","raw":"Anders Sønstebø, Statistics Norway# +47 46 66 37 74#son@ssb.no"}]},"value":[null,75,357,null,29,64,null,21,null,null,401,null,null,32,297],"status":{"0":"..","3":"..","6":"..","8":".","9":"..","11":".","12":".."}}
 ```
 
-- [ ] **Passo 2: criar** `tests/fixtures/no-ssb-etternavn/12891.json`
+- [x] **Passo 2: criar** `tests/fixtures/no-ssb-etternavn/12891.json`
 
 Resposta real da API para `valueCodes[Etternavn]=HANSEN,DA-SILVA,ABDO` e `valueCodes[Tid]=2020,2025`.
 
@@ -1479,7 +1481,7 @@ Resposta real da API para `valueCodes[Etternavn]=HANSEN,DA-SILVA,ABDO` e `valueC
 {"version":"2.0","class":"dataset","label":"12891: Last names used by 200 persons or more, by last name and year","source":"Statistics Norway","updated":"2026-01-28T07:00:00Z","note":[". = Less than 200 persons.",". = Category not applicable. Figures do not exist at this time, because the category was not in use when the figures were collected."],"role":{"time":["Tid"],"metric":["ContentsCode"]},"id":["Etternavn","ContentsCode","Tid"],"size":[3,1,2],"dimension":{"Etternavn":{"label":"last name","category":{"index":{"HANSEN":0,"DA-SILVA":1,"ABDO":2},"label":{"HANSEN":"Hansen","DA-SILVA":"Da Silva","ABDO":"Abdo"}},"extension":{"elimination":false,"show":"value"}},"ContentsCode":{"label":"contents","category":{"index":{"Personer":0},"label":{"Personer":"Persons"},"unit":{"Personer":{"base":"number","decimals":0}}},"extension":{"elimination":false,"refperiod":{"Personer":"31.12."},"show":"value","measuringType":{"Personer":"Flow"},"priceType":{"Personer":"NotApplicable"},"adjustment":{"Personer":"None"},"alternativeText":{"Personer":"Persons"}}},"Tid":{"label":"year","category":{"index":{"2020":0,"2025":1},"label":{"2020":"2020","2025":"2025"}},"extension":{"elimination":false,"show":"code"}}},"extension":{"noteMandatory":{"0":true},"px":{"infofile":"None","tableid":"12891","decimals":0,"official-statistics":true,"aggregallowed":true,"copyright":false,"language":"en","contents":"12891: Last names used by 200 persons or more,","descriptiondefault":false,"heading":["ContentsCode","Tid"],"stub":["Etternavn"],"matrix":"12891","subject-code":"be","subject-area":"Population"},"discontinued":null,"contact":[{"name":"Anders Sønstebø","organization":"Statistics Norway","phone":"46 66 37 74","mail":"son@ssb.no","raw":"Anders Sønstebø, Statistics Norway# +47 46 66 37 74#son@ssb.no"}]},"value":[50582,47879,null,219,null,232],"status":{"2":".","4":"."}}
 ```
 
-- [ ] **Passo 3: acrescentar ao fim de** `sources.yaml`
+- [x] **Passo 3: acrescentar ao fim de** `sources.yaml`
 
 `"NO"` vai entre aspas: sem elas, o YAML lê `false`.
 
@@ -1506,14 +1508,14 @@ Resposta real da API para `valueCodes[Etternavn]=HANSEN,DA-SILVA,ABDO` e `valueC
     retrieved: 2026-10-12
 ```
 
-- [ ] **Passo 4: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
+- [x] **Passo 4: acrescentar ao fim de** `tests/fixtures/ATRIBUICAO.md`
 
 ```markdown
 | `no-ssb-fornavn` | CC-BY-4.0 | Statistics Norway (SSB), tabela 10467, https://www.ssb.no/en/statbank/table/10467 | nomes 1NORA, 1Z3SE, 1KIM, 2KIM e 2JAKOB nos anos 1944, 1990 e 2025 |
 | `no-ssb-etternavn` | CC-BY-4.0 | Statistics Norway (SSB), tabela 12891, https://www.ssb.no/en/statbank/table/12891 | sobrenomes HANSEN, DA-SILVA e ABDO nos anos 2020 e 2025 |
 ```
 
-- [ ] **Passo 5: escrever os testes que falham** em `tests/test_no_ssb.py`
+- [x] **Passo 5: escrever os testes que falham** em `tests/test_no_ssb.py`
 
 ```python
 """Spec 003, R1.4, R1.5, R2.4 e R2.7: adaptadores do SSB (Noruega) sobre as amostras reais em tests/fixtures/no-ssb-*/."""
@@ -1604,12 +1606,12 @@ def test_prefixo_de_sexo_desconhecido_falha(tmp_path):
         list(mod.parse({"10467.json": tmp_path / "10467.json"}))
 ```
 
-- [ ] **Passo 6: rodar e ver falhar**
+- [x] **Passo 6: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_no_ssb.py tests/test_fontes_oficiais.py`
 Esperado: `12 failed, 8 passed`
 
-- [ ] **Passo 7: substituir o conteúdo de** `src/namesio/sources.py`
+- [x] **Passo 7: substituir o conteúdo de** `src/namesio/sources.py`
 
 **Mudanças:** `parse_sources` recusa `country` booleano com mensagem que pede aspas, antes da verificação ISO.
 
@@ -1756,7 +1758,7 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
     return fontes
 ```
 
-- [ ] **Passo 8: criar** `src/namesio/adapters/_ssb.py`
+- [x] **Passo 8: criar** `src/namesio/adapters/_ssb.py`
 
 ```python
 """Leitura das tabelas de nomes do Statistics Norway (SSB) em JSON-stat 2.0 (spec 003, R1.4 e R1.5).
@@ -1814,7 +1816,7 @@ def cells(caminho: Path, dimensao: str) -> Iterator[tuple[str, str, int, int]]:
             yield codigo, rotulo, int(ano), valor
 ```
 
-- [ ] **Passo 9: criar** `src/namesio/adapters/no_ssb_fornavn.py`
+- [x] **Passo 9: criar** `src/namesio/adapters/no_ssb_fornavn.py`
 
 ```python
 """SSB, nascidos por primeiro nome, tabela 10467 (spec 003, R1.4).
@@ -1843,7 +1845,7 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
         )
 ```
 
-- [ ] **Passo 10: criar** `src/namesio/adapters/no_ssb_etternavn.py`
+- [x] **Passo 10: criar** `src/namesio/adapters/no_ssb_etternavn.py`
 
 ```python
 """SSB, pessoas por sobrenome usado por 200 ou mais, tabela 12891 (spec 003, R1.5).
@@ -1866,12 +1868,12 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
         yield RawRecord(name=nome, kind="family", country="NO", year=ano, count=contagem)
 ```
 
-- [ ] **Passo 11: rodar e ver passar**
+- [x] **Passo 11: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `311 passed`
 
-- [ ] **Passo 12: commit**
+- [x] **Passo 12: commit**
 
 ```bash
 git add sources.yaml src/namesio/sources.py src/namesio/adapters/_ssb.py src/namesio/adapters/no_ssb_fornavn.py src/namesio/adapters/no_ssb_etternavn.py tests/fixtures/no-ssb-fornavn/10467.json tests/fixtures/no-ssb-etternavn/12891.json tests/fixtures/ATRIBUICAO.md tests/test_no_ssb.py
@@ -1890,7 +1892,7 @@ git commit -m "Adiciona as fontes do Statistics Norway e recusa país booleano e
 - Consome: as cinco fontes de `sources.yaml` e as amostras (Tasks 2 a 5); `namesio run` (spec 002).
 - Produz: passo da CI que roda `namesio run --offline` sobre `tests/fixtures/` com o `sources.yaml` da raiz.
 
-- [ ] **Passo 1: acrescentar ao fim de** `tests/test_ci.py`
+- [x] **Passo 1: acrescentar ao fim de** `tests/test_ci.py`
 
 Valores de `NO.csv` conferidos à mão: `Kim` soma 21 (F) e 401 (M) em 1990, 422 no total, `female_share` 21 ÷ 422 = 0,049763; os sobrenomes usam só a edição 2025 (`population`, spec 001, R3.3).
 
@@ -1919,12 +1921,12 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_ci.py`
 Esperado: `1 failed, 4 passed` (`StopIteration`: o passo ainda não existe)
 
-- [ ] **Passo 3: acrescentar ao fim de** `.github/workflows/ci.yml`
+- [x] **Passo 3: acrescentar ao fim de** `.github/workflows/ci.yml`
 
 ```yaml
       - name: namesio run --offline sobre as amostras das fontes oficiais
@@ -1936,12 +1938,12 @@ Esperado: `1 failed, 4 passed` (`StopIteration`: o passo ainda não existe)
           for pais in FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `312 passed`
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add .github/workflows/ci.yml tests/test_ci.py
@@ -1952,9 +1954,9 @@ git commit -m "Roda as fontes oficiais sobre as amostras na CI" -m "Co-Authored-
 
 ### Fechamento
 
-- [ ] Rodar `uv run pytest -q` e ver `312 passed`.
-- [ ] Medir R6 com os arquivos reais (precisa de rede; não roda na CI):
+- [x] Rodar `uv run pytest -q` e ver `312 passed`.
+- [x] Medir R6 com os arquivos reais (precisa de rede; não roda na CI):
   1. `uv run namesio fetch` baixa INSEE, CSO e SSB. Se a SSA responder 403, baixar `https://www.ssa.gov/oact/babynames/names.zip` pelo navegador e gravá-lo em `cache/us-ssa-births/names.zip`, como diz a mensagem.
   2. `/usr/bin/time -l uv run namesio run --offline --out /tmp/namesio-r6 --release 2026.10` (no Linux, `/usr/bin/time -v`).
   3. Esperado: `OK: ... observações, 4 países` em menos de 10 minutos e pico abaixo de 4 GB (no protótipo, num Apple M4 com 24 GB: 3.077.139 observações, 59 s, pico de 1,5 GB). Copiar a linha `OK:`, o tempo e o pico para a descrição do pull request (critério de aceite 7).
-- [ ] Abrir o pull request com `Closes #8` na descrição; conferir a CI verde no pull request (critério de aceite 6).
+- [x] Abrir o pull request com `Closes #8` na descrição; conferir a CI verde no pull request (critério de aceite 6).

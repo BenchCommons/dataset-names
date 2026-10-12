@@ -2,6 +2,8 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 002](../002-pipeline/spec.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Pendências herdadas: issue #8.
 
+Status: Implementada e mesclada (PR #11, 2026-10-12).
+
 ## Por quê
 
 A spec 002 entregou o contrato do adaptador, o cache e a CLI, mas `sources.yaml` ainda está vazio: o dataset não tem nenhum nome real. Esta spec registra o primeiro lote de institutos nacionais de estatística, com país, frequência e gênero, e escreve um adaptador para cada um.
