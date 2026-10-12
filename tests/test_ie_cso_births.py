@@ -33,10 +33,15 @@ def test_parse_da_amostra_real(cso):
     ]
 
 
-def test_valor_vazio_e_rank_sao_ignorados(cso, tmp_path):
-    texto = CABECALHO + '"VSA50C01","x","2020","2020","1","Ola","Number",""\r\n' \
-        '"VSA50C02","x","2020","2020","1","Ola","Number","7"\r\n'
+def test_valor_vazio_e_ignorado(cso, tmp_path):
+    texto = CABECALHO + '"VSA50C01","x","2020","2020","1","Ola","Number",""\r\n'
     assert [r for r in cso.parse(_arquivos(tmp_path, texto)) if r.gender == "M"] == []
+
+
+def test_linha_de_rank_e_ignorada_mesmo_com_valor(cso, tmp_path):
+    texto = CABECALHO + '"VSA50C02","x","2020","2020","1","Ola","Number","7"\r\n' \
+        '"VSA50C01","x","2020","2020","1","Ola","Number","12"\r\n'
+    assert [(r.name, r.count) for r in cso.parse(_arquivos(tmp_path, texto)) if r.gender == "M"] == [("Ola", 12)]
 
 
 @pytest.mark.parametrize("texto, trecho", [

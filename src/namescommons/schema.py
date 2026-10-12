@@ -2,7 +2,7 @@
 
 import unicodedata
 from dataclasses import dataclass
-from datetime import date
+from datetime import datetime, timezone
 
 from namescommons.normalize import ascii_form, detect_script, name_key, normalize_name
 from namescommons.sources import COUNT_TYPES, Source, is_country
@@ -11,6 +11,10 @@ SCHEMA_VERSION = "1.0.0"
 KINDS = ("given", "family")
 GENDERS = ("F", "M")
 ANO_MINIMO = 1800
+
+
+def _agora(tz: timezone) -> datetime:
+    return datetime.now(tz)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +72,7 @@ def make_observation(
 
 def validate(observations: list[Observation], sources: dict[str, Source]) -> None:
     """Levanta ValidationError com todos os problemas encontrados."""
-    ano_maximo = date.today().year + 1
+    ano_maximo = _agora(timezone.utc).year + 1  # UTC: o resultado não depende do fuso da máquina
     erros: list[str] = []
     vistas: set[tuple] = set()
     for i, o in enumerate(observations):

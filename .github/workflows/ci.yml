@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    branches: [master]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   testes:
@@ -10,6 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Instalar dependências
         run: uv sync
       - name: Testes
@@ -21,12 +27,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/cache"
           cp -R tests/fixtures/exemplo "$RUNNER_TEMP/cache/exemplo"
           uv run namescommons run --offline --sources tests/fixtures/sources.yaml --adapters adaptadores \
-            --cache "$RUNNER_TEMP/cache" --out "$RUNNER_TEMP/dist" --release 2026.10
+            --cache "$RUNNER_TEMP/cache" --out "$RUNNER_TEMP/dist" --release "$(date -u +%Y.%m)"
           test -s "$RUNNER_TEMP/dist/by_country/PT.csv"
       - name: namescommons run --offline sobre as amostras das fontes oficiais
         run: |
           mkdir -p "$RUNNER_TEMP/cache-oficiais"
-          cp -R tests/fixtures/. "$RUNNER_TEMP/cache-oficiais/"
+          find tests/fixtures -mindepth 1 -maxdepth 1 -type d ! -name exemplo ! -name planilhas -exec cp -R {} "$RUNNER_TEMP/cache-oficiais/" \;
           uv run namescommons run --offline --cache "$RUNNER_TEMP/cache-oficiais" \
-            --out "$RUNNER_TEMP/dist-oficiais" --release 2026.10
-          for pais in ES FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
+            --out "$RUNNER_TEMP/dist-oficiais" --release "$(date -u +%Y.%m)"
+          for pais in CA ES FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done

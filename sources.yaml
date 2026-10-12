@@ -1,4 +1,4 @@
-# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, e na spec 003b, R2.
+# Fontes do dataset (spec 001, R2; spec 002, R2). Licenças conferidas na spec 003, R1, na spec 003d (ADR 0004) e na spec 003b, R2.
 sources:
   - id: us-ssa-births
     name: Social Security Administration, Popular Baby Names (national data)
@@ -51,6 +51,17 @@ sources:
     primary: true
     suppression: 200
     retrieved: 2026-10-12
+  - id: ca-statcan-births
+    name: Statistics Canada, First names at birth by sex at birth (tabela 17-10-0147-01)
+    url: https://doi.org/10.25318/1710014701-eng
+    license: statcan-open-licence
+    attribution: "Adapted from Statistics Canada, First names at birth by sex at birth, selected indicators (table 17-10-0147-01), 1991 to 2025. This does not constitute an endorsement by Statistics Canada of this product."
+    country: CA
+    count_type: births
+    primary: true
+    suppression: 5
+    retrieved: 2026-10-12
+    uniform_case: true
   - id: es-ine-residentes
     name: INE, Apellidos y nombres más frecuentes (residentes en España, total nacional)
     url: https://ine.es/dyngs/INEbase/operacion.htm?c=Estadistica_C&cid=1254736177009&menu=resultados&idp=1254735572981

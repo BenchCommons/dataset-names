@@ -70,6 +70,13 @@ def test_adaptador_valido():
     ({"RESOURCES": [Resource("https://example.org/a.csv", "a.csv"),
                     Resource("https://example.org/b.csv", "a.csv")]}, "repetido"),
     ({"parse": None}, "parse"),
+    ({"RESOURCES": [Resource("http://[::1/a.csv", "a.csv")]}, "'x': url 'http://\\[::1/a.csv' deve usar http ou https"),
+    ({"RESOURCES": [Resource(" https://example.org/a.csv", "a.csv")]}, "http ou https"),
+    ({"RESOURCES": [Resource("https://example.org/a.csv", "")]}, "filename"),
+    ({"RESOURCES": [Resource("https://example.org/a.csv", "a.csv.part")]}, "filename"),
+    ({"RESOURCES": [Resource("https://example.org/a.csv", "a\x00.csv")]}, "filename"),
+    ({"RESOURCES": [Resource("https://example.org/a.csv", "a\n.csv")]}, "filename"),
+    ({"RESOURCES": [Resource("https://example.org/a.csv", "a\x7f.csv")]}, "filename"),
 ])
 def test_adaptador_invalido(campos, trecho):
     with pytest.raises(AdapterError, match=trecho):

@@ -1,14 +1,17 @@
 """Spec 002, R7: o workflow da CI roda uv sync, pytest e namescommons run --offline sobre as fixtures."""
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
+import pyarrow.parquet as pq
 import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
+FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
@@ -21,17 +24,48 @@ def _comandos() -> list[str]:
     return [p["run"] for p in passos if "run" in p]
 
 
-def test_roda_em_todo_push_e_pull_request():
+def test_gatilhos_sao_push_e_pull_request():
     dados = _workflow()
     gatilhos = dados.get("on", dados.get(True))  # PyYAML lê a chave "on" como True
     assert set(gatilhos) == {"push", "pull_request"}
 
 
+def test_push_so_na_branch_principal_para_nao_rodar_duas_vezes_em_pr_do_mesmo_repositorio():
+    dados = _workflow()
+    gatilhos = dados.get("on", dados.get(True))
+    assert gatilhos["push"] == {"branches": ["master"]}
+    assert gatilhos["pull_request"] in (None, {})
+
+
+def test_permissoes_minimas_e_cache_do_uv():
+    dados = _workflow()
+    assert dados["permissions"] == {"contents": "read"}
+    uv = next(p for p in dados["jobs"]["testes"]["steps"] if p.get("uses", "").startswith("astral-sh/setup-uv"))
+    assert uv["with"]["enable-cache"] is True
+
+
+def _indice(comandos, trecho):
+    return next(i for i, c in enumerate(comandos) if trecho in c)
+
+
 def test_passos_da_ci():
+    """Confere os passos pelo conteúdo e pela ordem, não pela posição na lista."""
     comandos = _comandos()
-    assert comandos[0] == "uv sync"
-    assert comandos[1] == "uv run pytest -q"
-    assert "namescommons run --offline" in comandos[2]
+    assert comandos[_indice(comandos, "uv sync")].strip() == "uv sync"
+    assert comandos[_indice(comandos, "uv run pytest")].strip() == "uv run pytest -q"
+    assert _indice(comandos, "uv sync") < _indice(comandos, "uv run pytest") < _indice(comandos, "namescommons run --offline")
+
+
+def test_release_da_ci_nao_e_fixa():
+    for comando in _comandos():
+        if "--release" in comando:
+            assert "--release 2026.10" not in comando
+            assert '--release "$(date -u +%Y.%m)"' in comando
+
+
+def test_cache_das_fontes_oficiais_copia_so_as_amostras_das_fontes():
+    passo = next(c for c in _comandos() if "cache-oficiais" in c)
+    assert "tests/fixtures/." not in passo
 
 
 def test_cache_fica_fora_do_git():
@@ -86,6 +120,18 @@ given,Zunair,zunair,zunair,Latn,20,population,10,0.000000,20,2025,2025
 """
 
 
+# Spec 003d: Noah 36 F de 2301 (0,015645); Riley 35 + 261 F de 762 (0,388451).
+CA_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+given,Noah,noah,noah,Latn,2301,births,1,0.015645,2301,1991,2025
+given,Olivia,olivia,olivia,Latn,2019,births,2,1.000000,2019,1991,2025
+given,Riley,riley,riley,Latn,762,births,3,0.388451,762,1991,2025
+given,Marie-Eve,marie-eve,marie-eve,Latn,664,births,4,1.000000,664,1991,1991
+given,Jean-Philippe,jean-philippe,jean-philippe,Latn,447,births,5,0.000000,447,1991,1991
+given,D'Arcy,d'arcy,d'arcy,Latn,13,births,6,0.000000,13,1991,1991
+"""
+
+
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
@@ -94,8 +140,17 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
-    assert "OK: 60 observações, 5 países" in r.stdout
+    resumo = re.search(r"OK: (\d+) observações, 6 países", r.stdout)
+    assert resumo, r.stdout
+    assert int(resumo.group(1)) == pq.ParquetFile(tmp_path / "dist-oficiais" / "observations.parquet").metadata.num_rows > 0
+    assert sorted(p.name for p in (tmp_path / "cache-oficiais").iterdir()) == sorted(FONTES_OFICIAIS)
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
+    assert (tmp_path / "dist-oficiais" / "by_country" / "CA.csv").read_text(encoding="utf-8") == CA_CSV
     # Spec 003b, R4: Espanha com nomes e sobrenomes population de 2025; ANDREA dos dois sexos
     assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
-    assert "for pais in ES FR IE NO US" in passo["run"]
+
+
+def test_passo_das_fontes_oficiais_confere_todos_os_paises():
+    """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA e ES."""
+    passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
+    assert "for pais in CA ES FR IE NO US;" in passo["run"]

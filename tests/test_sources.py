@@ -51,6 +51,12 @@ def test_licenca_incompativel_e_recusada(licenca):
         parse_sources([fonte(license=licenca)])
 
 
+def test_statcan_open_licence_e_aceita_pelo_adr_0004():
+    # ADR 0004 (0004-licenca-statistics-canada.md) amplia a lista do ADR 0001.
+    fontes = parse_sources([fonte(license="statcan-open-licence")])
+    assert fontes["us-ssa-births"].license == "statcan-open-licence"
+
+
 @pytest.mark.parametrize("campos, trecho", [
     ({"country": "XX"}, "ISO 3166-1"),
     ({"country": "br"}, "ISO 3166-1"),

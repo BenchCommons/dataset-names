@@ -54,7 +54,7 @@ Campos novos, opcionais:
 - Ao lado de cada arquivo, `cache/<source_id>/<filename>.meta.json` guarda `url`, data e hora do download, SHA-256 e tamanho.
 - Sem `--refresh`, um arquivo presente no cache não é baixado de novo.
 - Com `--offline`, nenhum acesso à rede acontece e a falta de um arquivo é erro.
-- Download com timeout, três tentativas com espera crescente e `User-Agent` que identifica o projeto e o repositório.
+- Download com timeout, até três tentativas com espera crescente (não se repete resposta 4xx, exceto 408 e 429) e `User-Agent` que identifica o projeto e o repositório.
 - Download parcial nunca fica no cache: grava em arquivo temporário e renomeia só ao concluir.
 
 ### R5. Comandos

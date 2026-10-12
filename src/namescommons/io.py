@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -44,7 +45,13 @@ def write_observations(observations: list[Observation], path: Path) -> None:
     colunas = {campo: [getattr(o, campo) for o in observations] for campo in OBSERVATION_SCHEMA.names}
     tabela = pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA)
     path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(tabela, path)
+    # Grava ao lado e troca por rename: uma falha não deixa arquivo parcial nem apaga o anterior.
+    temporario = path.with_name(path.name + ".part")
+    try:
+        pq.write_table(tabela, temporario)
+        os.replace(temporario, path)
+    finally:
+        temporario.unlink(missing_ok=True)
 
 
 def _valores(coluna: pa.ChunkedArray) -> list:

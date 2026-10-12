@@ -9,7 +9,7 @@ country em ISO 3166-1 alfa-2, kind como given ou family. Valores suprimidos são
 import importlib
 import importlib.util
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -48,9 +48,20 @@ def module_name(source_id: str) -> str:
     return source_id.replace("-", "_")
 
 
+def url_http(url: object) -> bool:
+    """URL http ou https com host, sem espaços nem caracteres de controle; nunca levanta exceção."""
+    if not isinstance(url, str) or any(c.isspace() or not c.isprintable() for c in url):
+        return False
+    try:
+        partes = urlsplit(url)
+        return partes.scheme.lower() in ("http", "https") and bool(partes.netloc)
+    except ValueError:
+        return False
+
+
 def _filename_seguro(nome: object) -> bool:
     return (
-        isinstance(nome, str) and nome not in ("", ".", "..") and not nome.startswith(".")
+        isinstance(nome, str) and nome.isprintable() and nome not in ("", ".", "..") and not nome.startswith(".")
         and "/" not in nome and "\\" not in nome
         and not nome.endswith((".meta.json", ".part"))
     )
@@ -70,8 +81,7 @@ def check_adapter(mod: object, source_id: str) -> None:
         raise AdapterError(f"'{source_id}': RESOURCES deve ser uma lista não vazia de Resource")
     vistos: set[str] = set()
     for r in recursos:
-        partes = urlsplit(r.url)
-        if partes.scheme.lower() not in ("http", "https") or not partes.netloc:
+        if not url_http(r.url):
             raise AdapterError(f"'{source_id}': url {r.url!r} deve usar http ou https")
         if not _filename_seguro(r.filename):
             raise AdapterError(f"'{source_id}': filename {r.filename!r} inválido")
@@ -117,7 +127,7 @@ class SourceFiles(dict):
 _INTEIRO = re.compile(r"[0-9]+")
 
 
-def parse_count(value: str, missing: Iterable[str] = (), field: str = "contagem") -> int | None:
+def parse_count(value: str, missing: Collection[str] = (), field: str = "contagem") -> int | None:
     """Inteiro publicado (contagem ou ano); um marcador de `missing` (valor suprimido ou ausente) vira None.
 
     Qualquer outro texto levanta FormatError, para que um marcador novo da fonte não passe calado.
