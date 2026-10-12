@@ -390,7 +390,7 @@ def test_r1_4_prologo_gigante_e_recusado(tmp_path):
     base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
     conteudo = '<?xml version="1.0"?><!--' + "x" * 70_000 + f'--><worksheet {NS}/>'
     arq = _regravar(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", conteudo)
-    with pytest.raises(FormatError, match=r"a\.xlsx: membro xl/worksheets/sheet1\.xml: prólogo acima de 65536 bytes"):
+    with pytest.raises(FormatError, match=r"a\.xlsx: membro xl/worksheets/sheet1\.xml tem prólogo acima de 65536 bytes"):
         list(rows(arq, "X"))
 
 
