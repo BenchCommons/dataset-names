@@ -419,3 +419,22 @@ def test_r1_4_300_mil_linhas_em_fluxo_com_memoria_plana(tmp_path):
         tracemalloc.stop()
     assert (total, ultimo) == (n, n)
     assert pico < 5 * 1024 * 1024, f"pico de {pico} bytes: a aba não está sendo lida em fluxo"
+
+
+@pytest.mark.parametrize("membro, operacao", [
+    ("xl/workbook.xml", lambda a: sheet_names(a)),
+    ("xl/_rels/workbook.xml.rels", lambda a: sheet_names(a)),
+    ("xl/sharedStrings.xml", lambda a: list(rows(a, "X"))),
+    ("xl/worksheets/sheet1.xml", lambda a: list(rows(a, "X"))),
+])
+@pytest.mark.parametrize("prolog", [
+    '<!DOCTYPE l [<!ENTITY a "AAAA"><!ENTITY b "&a;&a;">]>',
+    '<!-- c --><!DOCTYPE l [<!ENTITY a "AAAA">]>',
+])
+def test_r1_4_dtd_depois_de_bom_utf8_e_recusado(tmp_path, membro, operacao, prolog):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    raiz = {"xl/workbook.xml": f"<workbook {NS} {NS_R}/>", "xl/_rels/workbook.xml.rels": "<Relationships/>",
+            "xl/sharedStrings.xml": f"<sst {NS}/>", "xl/worksheets/sheet1.xml": f"<worksheet {NS}/>"}[membro]
+    arq = _regravar(base, tmp_path / "a.xlsx", membro, f'﻿<?xml version="1.0"?>{prolog}{raiz}')
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
+        operacao(arq)
