@@ -43,7 +43,7 @@ SHA256SUMS                SHA-256 of every asset
 
 Counts of different types (`births`, `population`, `attested`) are never added together. The schema is defined in [spec 001](docs/specs/001-esquema/spec.md); the release files in [spec 006](docs/specs/006-publicacao/spec.md).
 
-Verify a download with `sha256sum -c SHA256SUMS` in the directory with the assets. Cite a release as written in its `DATASET_CARD.md`:
+Verify a download with `sha256sum -c SHA256SUMS` in the directory with the assets, or with `sha256sum -c --ignore-missing SHA256SUMS` if you downloaded only some of them. Cite a release as written in its `DATASET_CARD.md`:
 
 > Names Commons Dataset, release YYYY.MM, BenchCommons (https://github.com/BenchCommons/dataset-names), licensed under CC BY 4.0. Upstream sources and notices: see ATTRIBUTION.txt.
 

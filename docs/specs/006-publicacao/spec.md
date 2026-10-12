@@ -1,6 +1,6 @@
 # 006. Publicação
 
-Parte do [roadmap](../ROADMAP.md). Depende da [spec 005](../005-variantes/spec.md) e da [spec 007](../007-tools-dataset/spec.md). Esquema e versionamento: [spec 001](../001-esquema/spec.md) (R4, R5 e R6). Decisões: [ADR 0001](../../adr/0001-licenca-dos-dados.md) (licença dos dados), [ADR 0004](../../adr/0004-licenca-statistics-canada.md) (Statistics Canada), [ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md) (nomes corrompidos), [ADR 0014](../../adr/0014-processo-de-release.md) (processo de release) e [ADR 0015](../../adr/0015-retirada-do-legado.md) (retirada do legado). Contrato de entradas de benchmark (dono: tools-dataset): [spec 001 do tools-dataset](https://github.com/BenchCommons/tools-dataset/blob/main/docs/specs/001-input-contract/spec.md). Issues: #5, #22 e #32.
+Parte do [roadmap](../ROADMAP.md). Depende da [spec 005](../005-variantes/spec.md) e da [spec 007](../007-tools-dataset/spec.md). Esquema e versionamento: [spec 001](../001-esquema/spec.md) (R4, R5 e R6). Decisões: [ADR 0001](../../adr/0001-licenca-dos-dados.md) (licença dos dados), [ADR 0004](../../adr/0004-licenca-statistics-canada.md) (Statistics Canada), [ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md) (nomes corrompidos), [ADR 0014](../../adr/0014-processo-de-release.md) (processo de release) e [ADR 0015](../../adr/0015-legado-congelado.md) (legado congelado). Contrato de entradas de benchmark (dono: tools-dataset): [spec 001 do tools-dataset](https://github.com/BenchCommons/tools-dataset/blob/main/docs/specs/001-input-contract/spec.md). Issues: #5, #22 e #32.
 
 Status: Em implementação.
 
@@ -89,7 +89,7 @@ Pendências da issue #5: tirar a linha em branco dupla, tirar `.venv/` da seçã
 
 ### R10. Legado
 
-Decisão no [ADR 0015](../../adr/0015-retirada-do-legado.md): `legacy/` sai da árvore do repositório (continua no histórico do git). A remoção apaga arquivos versionados e por isso só acontece com aprovação explícita do dono sobre a lista exata dos arquivos; até lá `legacy/` fica como está, congelado, e o README continua dizendo que ele não faz parte do dataset.
+Decisão do dono no [ADR 0015](../../adr/0015-legado-congelado.md): `legacy/` fica no repositório como arquivo histórico congelado, sem nenhuma alteração. Não é ingerido, não entra em nenhum arquivo das releases e está fora do contrato de entradas do tools-dataset (R1.3 de lá). O README, `legacy/README.md` e o preâmbulo de `DATA_LICENSE` dizem que ele não faz parte do dataset.
 
 ## Critérios de aceite
 
@@ -102,12 +102,12 @@ Decisão no [ADR 0015](../../adr/0015-retirada-do-legado.md): `legacy/` sai da �
 7. `tools/release.sh build` roda localmente sobre as amostras das fontes e produz a release verificada; o passo de envio, testado com um `gh` falso, recusa release fora de CalVer, release publicada e ausência de rascunho, envia sem `--clobber` só os assets de R5.4 e remove `source-cache.tar.gz` depois do envio; nenhum teste chama o `gh` real.
 8. O workflow de release não contém publicação de release nem push de tag; o disparo manual é ensaio; a CI roda o ensaio em todo PR.
 9. `.gitignore` sem as sobras da issue #5, e um Parquet em `tests/fixtures/` não é ignorado.
-10. A decisão sobre `legacy/` está no ADR 0015, e a lista exata dos arquivos a remover está na descrição do PR, aguardando aprovação.
+10. A decisão sobre `legacy/` (manter congelado) está no ADR 0015; nenhum arquivo de `legacy/` muda, `tests/test_legacy.py` continua verde e nenhum arquivo da release vem de `legacy/`.
 
 ## Fora de escopo
 
 - Publicar uma release ou criar uma tag: a primeira release real precisa da aprovação explícita do dono e do download manual da SSA e da Nova Zelândia.
 - Entradas de benchmark (`*.input.json`, amostras por tamanho): issue #24, sobre o contrato da spec 001 do tools-dataset.
 - Versionar `data/by_country/*.csv` no git (spec 001, R4): depende da primeira release real e vira issue própria.
-- Remover `legacy/` sem a aprovação do dono (R10).
+- Remover ou alterar `legacy/` (R10).
 - `CITATION.cff` e DOI (Zenodo).

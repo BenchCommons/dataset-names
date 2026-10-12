@@ -6,7 +6,7 @@
 
 **Stack:** a mesma; nenhuma dependência nova (`zipfile`, `hashlib` e `json` da biblioteca padrão; `datasettool.files.sha256_file` do kit).
 
-**Spec:** [`spec.md`](spec.md). ADRs: [0014](../../adr/0014-processo-de-release.md), [0015](../../adr/0015-retirada-do-legado.md).
+**Spec:** [`spec.md`](spec.md). ADRs: [0014](../../adr/0014-processo-de-release.md), [0015](../../adr/0015-legado-congelado.md).
 
 ## Restrições globais
 
@@ -15,7 +15,7 @@
 - Textos da release (`ATTRIBUTION.txt`, `DATASET_CARD.md`, preâmbulo de `DATA_LICENSE`) em inglês, como o README; mensagens da CLI e do script em português.
 - Nenhum teste chama o `gh` real nem a rede; o script de release é testado com um `gh` falso no `PATH`.
 - Nenhuma tag, release ou rascunho é criado no GitHub por esta spec.
-- `legacy/` não é tocado (R10).
+- `legacy/` não é tocado: fica congelado (R10, ADR 0015).
 
 ## Decisões de implementação
 
@@ -70,7 +70,7 @@
 | R7 | 6 |
 | R9 | 7 |
 | R8 | 8 |
-| R10 | 9 (aguarda aprovação do dono) |
+| R10 | 9 |
 | Critérios 1 e 2 | 1, 2 |
 | Critérios 3 e 4 | 3 |
 | Critério 5 | 4 |

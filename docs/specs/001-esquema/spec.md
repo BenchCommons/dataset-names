@@ -105,7 +105,7 @@ Nota (spec 006, R2 e R5): o manifesto ganha `data_license` e, por fonte, `name`,
 
 ### R6. Legado
 
-`first_names.all.txt`, `last_names.all.txt` e `generate/` vão para `legacy/` sem alteração de conteúdo e não são ingeridos no dataset novo (ADR 0001). A retirada é decidida na spec 006. Decisão: [ADR 0015](../../adr/0015-retirada-do-legado.md) (sair da árvore, com aprovação do dono sobre a lista dos arquivos).
+`first_names.all.txt`, `last_names.all.txt` e `generate/` vão para `legacy/` sem alteração de conteúdo e não são ingeridos no dataset novo (ADR 0001). A retirada é decidida na spec 006. Decisão: [ADR 0015](../../adr/0015-legado-congelado.md) (fica congelado no repositório).
 
 ## Critérios de aceite
 

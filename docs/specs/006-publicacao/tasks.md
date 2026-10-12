@@ -70,11 +70,11 @@ Cada tarefa segue TDD: escrever os testes, ver falhar com `uv run pytest -q <arq
 - [x] Verificar: `uv sync --locked`, `uv run pytest -q`, os passos offline da CI, `tools/release.sh build` sobre as amostras com `sha256sum -c`, e dois builds com `SHA256SUMS` iguais.
 - [x] Commit `docs(release): document the release procedure`.
 
-### Task 9: retirada de `legacy/` (aguarda aprovação)
+### Task 9: decisão sobre `legacy/`
 
-Bloqueada: apaga arquivos versionados (ADR 0015). Não executar sem a aprovação explícita do dono sobre a lista da descrição do PR. Acompanhamento: issue #42.
+**Arquivos:** `docs/adr/0015-legado-congelado.md`.
 
-- [ ] `git rm -r legacy/`; `tests/test_legacy.py` confere a ausência; README e spec 001 atualizados.
+- [x] ADR 0015 com a decisão do dono: manter congelado; nenhum arquivo de `legacy/` muda (issue #42).
 
 ## Verificação (2026-10-12)
 
@@ -89,6 +89,6 @@ Bloqueada: apaga arquivos versionados (ADR 0015). Não executar sem a aprovaçã
 | 7 | `tests/test_release.py` com `gh` falso: CalVer, rascunho ausente, release publicada, envio sem sobrescrever e remoção do cache depois do envio, saída adulterada recusada |
 | 8 | `test_workflow_nao_publica_nem_cria_tag`, `test_dispatch_e_ensaio`, `test_release_passa_ao_shell_so_por_variavel`, `test_ci_roda_o_ensaio`; `shellcheck tools/release.sh` sem avisos |
 | 9 | `test_gitignore_*` e `test_parquet_*` em `tests/test_ci.py` |
-| 10 | ADR 0015; lista exata dos 22 arquivos (2.091.482 bytes) na issue #42 e na descrição do PR |
+| 10 | ADR 0015 (Aceito, manter congelado); `git diff origin/master -- legacy/` vazio; `tests/test_legacy.py` verde |
 
 `uv sync --locked` e `uv run pytest -q`: 653 testes verdes, sem rede.

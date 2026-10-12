@@ -18,14 +18,14 @@ O contrato do kit é do tools-dataset ([spec 004 de lá](https://github.com/Benc
 uv sync --locked             # instala as dependências do uv.lock
 uv run pytest -q             # testes (nunca usam a rede)
 uv run namescommons --help        # CLI do pipeline
-tools/release.sh build <AAAA.MM> <cache> <saida>   # release local, sem publicar (spec 006)
+tools/release.sh build <AAAA.MM> <cache> <saída>   # release local, sem publicar (spec 006)
 ```
 
 A CI também roda o pipeline offline sobre as amostras de `tests/fixtures/`:
 
 ```sh
 PYTHONPATH=tests uv run namescommons run --offline --sources tests/fixtures/sources.yaml \
-  --adapters adaptadores --cache <cache> --out <saida> --release 2026.10
+  --adapters adaptadores --cache <cache> --out <saída> --release 2026.10
 ```
 
 ## Atualizar o kit de fontes
