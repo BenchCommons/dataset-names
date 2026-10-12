@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 002](../002-pipeline/spec.md) e segue o contrato do adaptador da [spec 003](../003-fontes-oficiais/spec.md) (R2). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Acesso aos dados: [ADR 0008](../../adr/0008-acesso-ao-wikidata.md). Ligações entre variantes: [ADR 0009](../../adr/0009-ligacoes-entre-variantes.md). Pendências herdadas: issue #3.
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #34, 2026-10-12).
 
 ## Por quê
 

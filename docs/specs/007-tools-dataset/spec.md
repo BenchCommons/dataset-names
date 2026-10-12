@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Contrato adotado (dono: tools-dataset): [spec 004 do tools-dataset, o kit de fontes](https://github.com/BenchCommons/tools-dataset/blob/v0.1.0/docs/specs/004-source-toolkit/spec.md), na tag `v0.1.0`. Acompanhamento: [BenchCommons/tools-dataset#5](https://github.com/BenchCommons/tools-dataset/issues/5). Dependência: [ADR 0013](../../adr/0013-dependencia-do-tools-dataset.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md), ampliado pelo [ADR 0004](../../adr/0004-licenca-statistics-canada.md).
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #41, 2026-10-12).
 
 ## Por quê
 

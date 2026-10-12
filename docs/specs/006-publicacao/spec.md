@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 005](../005-variantes/spec.md) e da [spec 007](../007-tools-dataset/spec.md). Esquema e versionamento: [spec 001](../001-esquema/spec.md) (R4, R5 e R6). Decisões: [ADR 0001](../../adr/0001-licenca-dos-dados.md) (licença dos dados), [ADR 0004](../../adr/0004-licenca-statistics-canada.md) (Statistics Canada), [ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md) (nomes corrompidos), [ADR 0014](../../adr/0014-processo-de-release.md) (processo de release) e [ADR 0015](../../adr/0015-legado-congelado.md) (legado congelado). Contrato de entradas de benchmark (dono: tools-dataset): [spec 001 do tools-dataset](https://github.com/BenchCommons/tools-dataset/blob/main/docs/specs/001-input-contract/spec.md). Issues: #5, #22 e #32.
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #45, 2026-10-12).
 
 ## Por quê
 

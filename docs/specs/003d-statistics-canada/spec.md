@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md). Licença: [ADR 0001](../../adr/0001-licenca-dos-dados.md), ampliado por [`0004-licenca-statistics-canada.md`](../../adr/0004-licenca-statistics-canada.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Issue: #15.
 
-Status: Em implementação.
+Status: Implementada e mesclada (PR #23, 2026-10-12).
 
 ## Por quê
 

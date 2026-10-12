@@ -2,7 +2,7 @@
 
 Parte do [roadmap](../ROADMAP.md). Depende da [spec 003](../003-fontes-oficiais/spec.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md). Valores suprimidos: [ADR 0002](../../adr/0002-valores-suprimidos.md). Nomes corrompidos na fonte: [ADR 0007](../../adr/0007-nomes-corrompidos-na-fonte.md). Pendências herdadas: issue #10.
 
-Status: Em PR (#28).
+Status: Implementada e mesclada (PR #28, 2026-10-12).
 
 ## Por quê
 
