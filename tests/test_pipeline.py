@@ -223,3 +223,30 @@ def test_ingest_sem_offline_baixa_o_que_falta(fontes_exemplo, exemplo_no_servido
     obs = ingest_sources(select_sources(fontes_exemplo, []), fontes_exemplo, tmp_path, adapters="adaptadores")
     assert len(obs) == 8
     assert sorted(exemplo_no_servidor.caminhos()) == ["/exemplo/primeiros.csv", "/exemplo/sobrenomes.csv"]
+
+
+@pytest.mark.parametrize("campo, valor, tipo", [
+    ("year", 2020.7, "float"), ("count", 5.9, "float"),
+    ("year", True, "bool"), ("count", True, "bool"),
+    ("year", "2020", "str"), ("count", "5", "str"),
+])
+def test_r1_tipo_errado_em_year_ou_count_nomeia_campo_valor_e_posicao(campo, valor, tipo):
+    ok = RawRecord("Ana", "given", "PT", "F", 2020, 1)
+    ruim = replace(ok, name="Maria", **{campo: valor})
+    with pytest.raises(RecordError) as e:
+        to_observations([ok, ruim], _fonte())
+    assert str(e.value) == f"registro 2: '{campo}' deve ser inteiro, recebeu {tipo} {valor!r}"
+
+
+def test_r1_name_que_nao_e_texto_nomeia_campo_e_posicao():
+    with pytest.raises(RecordError, match=r"registro 1: 'name' deve ser texto, recebeu int 7"):
+        to_observations([RawRecord(7, "given", "PT", "F", 2020, 1)], _fonte())
+
+
+def test_r1_tipo_errado_aparece_com_o_id_da_fonte_no_ingest(tmp_path, monkeypatch):
+    import adaptadores.exemplo
+    monkeypatch.setattr(adaptadores.exemplo, "parse", lambda arquivos: [RawRecord("Ana", "given", "PT", "F", 2020, 5.9)])
+    cache = _cache_das_fixtures(tmp_path)
+    fontes = load_sources(FIXTURES / "sources.yaml")
+    with pytest.raises(PipelineError, match=r"fonte 'exemplo': registro 1: 'count' deve ser inteiro, recebeu float 5.9"):
+        ingest_sources([fontes["exemplo"]], fontes, cache, offline=True, adapters="adaptadores")

@@ -50,7 +50,7 @@ def test_criterio_1_fetch_ingest_build(exemplo_no_servidor, tmp_path, capsys):
     assert main(["fetch", "--cache", cache, *ADAPTADORES]) == 0
     assert sorted(exemplo_no_servidor.caminhos()) == ["/exemplo/primeiros.csv", "/exemplo/sobrenomes.csv"]
     assert main(["ingest", "--out", str(obs), "--offline", "--cache", cache, *ADAPTADORES]) == 0
-    assert "OK: 8 observações de 1 fonte(s)" in capsys.readouterr().out
+    assert "OK: 8 observações de 1 fonte" in capsys.readouterr().out
     dist = tmp_path / "dist"
     assert main(["build", str(obs), "--sources", FONTES, "--out", str(dist), "--release", "2026.10"]) == 0
     assert (dist / "by_country" / "PT.csv").read_text(encoding="utf-8") == PT_CSV
@@ -109,7 +109,7 @@ def test_run_com_rede_baixa_e_gera_a_release(exemplo_no_servidor, tmp_path, caps
     args = ["run", "--out", str(out), "--release", "2026.10", "--cache", str(tmp_path / "cache")]
     assert main([*args, *ADAPTADORES]) == 0
     assert (out / "by_country" / "PT.csv").read_text(encoding="utf-8") == PT_CSV
-    assert "OK: 8 observações, 1 países" in capsys.readouterr().out
+    assert "OK: 8 observações, 1 país" in capsys.readouterr().out
     assert len(exemplo_no_servidor.requisicoes) == 2
 
 

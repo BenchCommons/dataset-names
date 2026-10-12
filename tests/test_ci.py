@@ -46,4 +46,4 @@ def test_passo_offline_da_ci_roda_localmente(tmp_path):
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
     assert (tmp_path / "dist" / "by_country" / "PT.csv").is_file()
-    assert "OK: 8 observações, 1 países" in r.stdout
+    assert "OK: 8 observações, 1 país" in r.stdout

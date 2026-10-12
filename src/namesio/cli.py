@@ -16,22 +16,44 @@ from namesio.schema import Observation, ValidationError, validate
 from namesio.sources import Source, SourceError, load_sources
 
 
+def _n(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
 def _opcoes_de_fonte(p: argparse.ArgumentParser, com_ids: bool = True) -> None:
     if com_ids:
         p.add_argument("ids", nargs="*", metavar="ID", help="fontes de sources.yaml (padrão: todas com adaptador)")
-    p.add_argument("--cache", type=Path, default=Path("cache"), help="diretório do cache de downloads")
-    p.add_argument("--adapters", default=DEFAULT_PACKAGE, help="pacote Python dos adaptadores")
+    p.add_argument("--cache", type=Path, default=Path("cache"), help="diretório do cache de downloads (padrão: %(default)s)")
+    p.add_argument("--adapters", default=DEFAULT_PACKAGE, help="pacote Python dos adaptadores; precisa ser importável, ex.: PYTHONPATH=tests para o adaptador de teste (padrão: %(default)s)")
+
+
+class _Ajuda(argparse.ArgumentDefaultsHelpFormatter):
+    """Mostra o padrão só quando ele diz algo (nem None nem flags desligadas)."""
+
+    def _get_help_string(self, action):
+        if action.default in (None, False, argparse.SUPPRESS) or action.default == []:
+            return action.help
+        return super()._get_help_string(action)
+
+
+def _com_padroes(add):
+    """Faz os subcomandos mostrarem os valores padrão no --help."""
+    def novo(*a, **kw):
+        kw.setdefault("formatter_class", _Ajuda)
+        return add(*a, **kw)
+    return novo
 
 
 def _parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="namesio")
+    ap = argparse.ArgumentParser(prog="namesio", formatter_class=_Ajuda)
     sub = ap.add_subparsers(dest="cmd", required=True, metavar="{fetch,ingest,validate,build,run}")
+    sub.add_parser = _com_padroes(sub.add_parser)
     p = sub.add_parser("fetch", help="baixa os recursos das fontes para o cache")
     _opcoes_de_fonte(p)
     p.add_argument("--refresh", action="store_true", help="baixa de novo mesmo com o arquivo no cache")
     p = sub.add_parser("ingest", help="roda os adaptadores sobre o cache e grava observations.parquet")
     _opcoes_de_fonte(p)
-    p.add_argument("--out", type=Path, required=True, help="observations.parquet")
+    p.add_argument("--out", type=Path, required=True, help="arquivo observations.parquet a gravar")
     p.add_argument("--offline", action="store_true", help="não acessa a rede; arquivo ausente do cache é erro")
     ajuda = {
         "validate": "valida um observations.parquet (spec 001)",
@@ -41,16 +63,18 @@ def _parser() -> argparse.ArgumentParser:
         p = sub.add_parser(nome, help=ajuda[nome])
         p.add_argument("observations", type=Path, help="observations.parquet")
         if nome == "build":
-            p.add_argument("--out", type=Path, required=True)
+            p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
             p.add_argument("--release", required=True, help="AAAA.MM[.N]")
     p = sub.add_parser("run", help="fetch, ingest e build em sequência")
     _opcoes_de_fonte(p, com_ids=False)
-    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
     p.add_argument("--release", required=True, help="AAAA.MM[.N]")
     p.add_argument("--offline", action="store_true", help="pula o fetch e não acessa a rede")
     p.add_argument("--refresh", action="store_true", help="baixa de novo mesmo com o arquivo no cache")
     for p in sub.choices.values():
-        p.add_argument("--sources", type=Path, default=Path("sources.yaml"))
+        p.add_argument(
+            "--sources", type=Path, default=Path("sources.yaml"), help="arquivo de catálogo de fontes (padrão: %(default)s)"
+        )
     return ap
 
 
@@ -95,26 +119,28 @@ def main(argv: list[str] | None = None) -> int:
             if args.cmd == "fetch" or (args.cmd == "run" and not args.offline):
                 fetch_sources(selecionadas, args.cache, refresh=args.refresh, adapters=args.adapters)
             if args.cmd == "fetch":
-                print(f"OK: {len(selecionadas)} fonte(s) em {args.cache}.")
+                print(f"OK: {_n(len(selecionadas), 'fonte', 'fontes')} em {args.cache}.")
                 return 0
             obs = ingest_sources(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
             if args.cmd == "ingest":
                 write_observations(obs, args.out)
-                print(f"OK: {len(obs)} observações de {len(selecionadas)} fonte(s) em {args.out}.")
+                print(f"OK: {_n(len(obs), 'observação', 'observações')} de {_n(len(selecionadas), 'fonte', 'fontes')} em {args.out}.")
                 return 0
         else:
+            if not args.observations.exists():
+                return _erro(f"arquivo não encontrado: {args.observations}")
             try:
                 obs = read_observations(args.observations)
             except (OSError, ArrowException, TypeError, KeyError) as e:
                 return _erro(f"não foi possível ler {args.observations}: {e}")
             validate(obs, fontes)
             if args.cmd == "validate":
-                print(f"OK: {len(obs)} observações válidas.")
+                print(f"OK: {_n(len(obs), 'observação válida', 'observações válidas')}.")
                 return 0
         paises = _build(obs, fontes, args.out, args.release)
     except (
         PipelineError, SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException,
     ) as e:
         return _erro(str(e))
-    print(f"OK: {len(obs)} observações, {paises} países em {args.out}.")
+    print(f"OK: {_n(len(obs), 'observação', 'observações')}, {_n(paises, 'país', 'países')} em {args.out}.")
     return 0

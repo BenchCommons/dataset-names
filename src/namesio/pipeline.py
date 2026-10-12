@@ -58,11 +58,28 @@ def _checar_genero(observacoes: Iterable[Observation]) -> None:
         )
 
 
+def _checar_tipos(r: RawRecord, posicao: int) -> None:
+    """Rejeita tipos errados nos campos do registro, nomeando campo, valor e posição (1 = primeiro)."""
+    for campo in ("year", "count"):
+        v = getattr(r, campo)
+        if v is not None and (type(v) is not int):
+            raise RecordError(
+                f"registro {posicao}: '{campo}' deve ser inteiro, recebeu {type(v).__name__} {v!r}"
+            )
+    for campo in ("name", "kind", "country", "gender"):
+        v = getattr(r, campo)
+        if v is not None and not isinstance(v, str):
+            raise RecordError(
+                f"registro {posicao}: '{campo}' deve ser texto, recebeu {type(v).__name__} {v!r}"
+            )
+
+
 def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observation]:
     """Aplica R1.1 a R1.5 aos registros brutos de uma fonte."""
     derivados: dict[str, tuple[str, str, str, str]] = {}
     unicas: dict[tuple, Observation] = {}
-    for r in records:
+    for posicao, r in enumerate(records, start=1):
+        _checar_tipos(r, posicao)
         campos = derivados.get(r.name)
         if campos is None:
             campos = derivados[r.name] = derive_name_fields(r.name, source.uniform_case)
