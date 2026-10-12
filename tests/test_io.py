@@ -51,11 +51,34 @@ def test_manifest(observacoes, fontes, tmp_path):
     write_by_country(by_country(observacoes, fontes), tmp_path / "by_country")
     write_observations(observacoes, tmp_path / "observations.parquet")
     m = build_manifest("2026.10", tmp_path, fontes, {o.source_id for o in observacoes})
-    assert m["schema_version"] == "1.2.0"
+    assert m["schema_version"] == "1.3.0"
     assert [s["id"] for s in m["sources"]] == ["br-ibge-censo", "us-births-b", "us-ssa", "wikidata"]
     assert m["files"]["observations.parquet"]["rows"] == len(observacoes)
     assert m["files"]["by_country/US.csv"]["rows"] == 4
     assert len(m["files"]["by_country/BR.csv"]["sha256"]) == 64
+
+
+def test_manifest_traz_nome_observacoes_e_descartes(observacoes, fontes, tmp_path):
+    """Spec 006, R2.1: name, observations e dropped por fonte; dropped desconhecido é null."""
+    write_observations(observacoes, tmp_path / "observations.parquet")
+    usadas = {o.source_id for o in observacoes}
+    contagem = {i: sum(o.source_id == i for o in observacoes) for i in usadas}
+    m = build_manifest("2026.10", tmp_path, fontes, usadas, observations=contagem,
+                       dropped={"us-ssa": {"lines": 2, "records": 30}})
+    por_id = {s["id"]: s for s in m["sources"]}
+    assert por_id["us-ssa"] == {
+        "id": "us-ssa", "name": "SSA", "license": "public-domain", "retrieved": "2026-10-01",
+        "observations": contagem["us-ssa"], "dropped": {"lines": 2, "records": 30},
+    }
+    assert por_id["wikidata"]["dropped"] is None
+    assert por_id["wikidata"]["observations"] == 3
+
+
+def test_manifest_traz_data_license(fontes, tmp_path):
+    """Spec 006, R2.2 e R2.4."""
+    m = build_manifest("2026.10", tmp_path, fontes, set())
+    assert m["data_license"] == "CC-BY-4.0"
+    assert list(m) == ["release", "schema_version", "data_license", "sources", "files"]
 
 
 @pytest.mark.parametrize("release", ["2026-10", "2026.13", "26.10", "2026.10.0", "2026.1"])

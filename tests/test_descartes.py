@@ -1,15 +1,17 @@
 """Spec 006, R1: canal de descarte do adaptador (RawDrop), contado por fonte e guardado no Parquet."""
 
+import json
 import logging
 import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 
 import namescommons.adapters.nz_dia_births as nz
 from namescommons.adapters import RawDrop, RawRecord
 from namescommons.cli import main
-from namescommons.io import read_dropped, write_observations
+from namescommons.io import read_dropped, read_observations, write_observations
 from namescommons.pipeline import Drops, PipelineError, ingest_sources, select_sources
 from namescommons.sources import load_sources
 
@@ -93,3 +95,46 @@ def test_ingest_grava_descartes_no_parquet(tmp_path):
 def test_parquet_sem_metadados_da_descartes_desconhecidos(observacoes, tmp_path):
     write_observations(observacoes, tmp_path / "o.parquet")
     assert read_dropped(tmp_path / "o.parquet") is None
+
+
+def _build(obs, out):
+    return main(["build", str(obs), "--out", str(out), "--release", "2026.10"])
+
+
+def _manifesto(out: Path) -> dict:
+    return json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+
+
+def test_build_le_descartes_do_parquet(tmp_path):
+    """Spec 006, R1.4 e R2.1: ingest grava, build lê e o manifesto mostra."""
+    cache = _cache(tmp_path, "nz-dia-births")
+    obs = tmp_path / "observations.parquet"
+    assert main(["ingest", "nz-dia-births", "--offline", "--cache", str(cache), "--out", str(obs)]) == 0
+    assert _build(obs, tmp_path / "dist") == 0
+    (nz_,) = _manifesto(tmp_path / "dist")["sources"]
+    assert nz_["dropped"] == {"lines": 3, "records": 49}
+    assert nz_["observations"] == 15
+    assert read_dropped(tmp_path / "dist" / "observations.parquet") == {"nz-dia-births": {"lines": 3, "records": 49}}
+
+
+def test_build_sem_metadados_deixa_dropped_nulo(tmp_path):
+    cache = _cache(tmp_path, "nz-dia-births")
+    obs = tmp_path / "observations.parquet"
+    assert main(["ingest", "nz-dia-births", "--offline", "--cache", str(cache), "--out", str(obs)]) == 0
+    write_observations(read_observations(obs), obs)  # regrava sem metadados, como antes da spec 006
+    assert _build(obs, tmp_path / "dist") == 0
+    assert _manifesto(tmp_path / "dist")["sources"][0]["dropped"] is None
+
+
+def test_run_grava_descartes_no_manifesto(tmp_path):
+    cache = _cache(tmp_path, "nz-dia-births", "ie-cso-births")
+    dados = yaml.safe_load((RAIZ / "sources.yaml").read_text(encoding="utf-8"))
+    dados["sources"] = [f for f in dados["sources"] if f["id"] in ("nz-dia-births", "ie-cso-births")]
+    sources = tmp_path / "sources.yaml"
+    sources.write_text(yaml.safe_dump(dados), encoding="utf-8")
+    out = tmp_path / "dist"
+    assert main(["run", "--offline", "--cache", str(cache), "--sources", str(sources), "--out", str(out),
+                 "--release", "2026.10"]) == 0
+    assert {s["id"]: s["dropped"] for s in _manifesto(out)["sources"]} == {
+        "ie-cso-births": {"lines": 0, "records": 0}, "nz-dia-births": {"lines": 3, "records": 49},
+    }

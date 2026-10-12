@@ -12,7 +12,9 @@ from namescommons.sources import COUNT_TYPES, Source, is_country
 # Jpan, Hrkt e Kore; partículas e nova forma de exibição. ingest e build de uma release devem usar
 # a mesma versão: validate confere script por igualdade com detect_script(name) e ascii só como
 # ASCII em minúsculas (não recalcula a transliteração).
-SCHEMA_VERSION = "1.2.0"
+# 1.3.0 (spec 006, R2.4): data_license e, por fonte, name, observations e dropped no manifesto;
+# arquivos de publicação (DATA_LICENSE, ATTRIBUTION.txt, DATASET_CARD.md, by_country.zip, SHA256SUMS).
+SCHEMA_VERSION = "1.3.0"
 KINDS = ("given", "family")
 GENDERS = ("F", "M")
 ANO_MINIMO = 1800

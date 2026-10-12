@@ -2,6 +2,7 @@
 
 import argparse
 import json
+from collections import Counter
 import os
 import shutil
 import sys
@@ -125,7 +126,8 @@ def _build(
             write_links(links, temporario / "variant_links.parquet")
         # Spec 005, R7.4: fontes das observações e das ligações.
         usadas = {o.source_id for o in obs} | {v.source_id for v in links or ()}
-        manifest = build_manifest(release, temporario, fontes, usadas)
+        por_fonte = Counter(o.source_id for o in obs)
+        manifest = build_manifest(release, temporario, fontes, usadas, observations=por_fonte, dropped=dropped)
         (temporario / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )

@@ -65,7 +65,10 @@ def test_criterio_1_fetch_ingest_build(exemplo_no_servidor, tmp_path, capsys):
         ("Santos", "", "0"), ("Silva", "", "0"),
     ]
     manifest = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["sources"] == [{"id": "exemplo", "license": "CC0-1.0", "retrieved": "2026-10-01"}]
+    assert manifest["sources"] == [{
+        "id": "exemplo", "name": "Fonte de exemplo para testes", "license": "CC0-1.0", "retrieved": "2026-10-01",
+        "observations": 8, "dropped": {"lines": 0, "records": 0},
+    }]
 
 
 def test_criterio_3_fetch_sem_refresh_nao_repete_requisicao(exemplo_no_servidor, tmp_path):

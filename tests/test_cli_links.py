@@ -33,7 +33,7 @@ def test_ingest_links_e_build_links(cache, tmp_path, capsys):
                  "--out", str(dist), "--release", "2026.10"]) == 0
     assert read_links(dist / "variant_links.parquet") == links
     manifest = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["schema_version"] == "1.2.0"
+    assert manifest["schema_version"] == "1.3.0"
     assert manifest["files"]["variant_links.parquet"]["rows"] == 47
 
 
