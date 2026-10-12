@@ -10,8 +10,8 @@ from namescommons.pipeline import to_observations
 from namescommons.sources import load_sources
 
 RAIZ = Path(__file__).resolve().parent.parent
-FIXTURE = RAIZ / "tests" / "fixtures" / "fr-insee-births" / "prenoms-2025-nat_csv.zip"
-ARQUIVO = "prenoms-2025-nat_csv.zip"
+ARQUIVO = load_adapter("fr-insee-births").ARQUIVO
+FIXTURE = RAIZ / "tests" / "fixtures" / "fr-insee-births" / ARQUIVO
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def insee():
     return load_adapter("fr-insee-births")
 
 
-def _zip(tmp_path, texto: str, membro: str = "prenoms-2025-nat.csv") -> dict[str, Path]:
+def _zip(tmp_path, texto: str, membro: str = ARQUIVO.replace("_csv.zip", ".csv")) -> dict[str, Path]:
     caminho = tmp_path / ARQUIVO
     with zipfile.ZipFile(caminho, "w") as z:
         z.writestr(membro, texto.encode("utf-8"))

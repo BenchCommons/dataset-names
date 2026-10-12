@@ -35,7 +35,7 @@
 | `ingest --out` grava num `.part` ao lado e renomeia, avisando em stderr quando substitui um arquivo; `build` e `run` montam a release num diretório temporário ao lado de `--out` e o renomeiam no fim | Uma falha (disco, agregação) não deixa arquivo nem release parciais. Adicionada na manutenção da issue #6 |
 | Observações de `ingest` ordenadas por (`source_id`, `kind`, `country`, `name_key`, `year`, `gender`) | R6: duas execuções produzem Parquet com as mesmas linhas na mesma ordem, independente da ordem do arquivo da fonte |
 | `run` não aceita IDs; `fetch` e `ingest` aceitam; nenhuma fonte com adaptador é erro | Segue a tabela de R5; uma release sempre usa todas as fontes com adaptador |
-| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB (após a Task 10; a issue #8 mediu antes da otimização), sem dicionário por linha |
+| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB (após a Task 10; a issue #8 mediu antes da otimização), sem dicionário por linha. Com a medição realista da manutenção da issue #6 (12.500 nomes distintos por país, 25 mil no total, em vez de 5 mil), ingest 57 s, build 30 s e pico de 3,4 GB: dentro do limite de 4 GB, mas perto dele |
 | O script de R8 roda `ingest` e `build` pela CLI, com um adaptador sintético gerado num diretório temporário | Mede os comandos reais, inclusive leitura do CSV, validação e escrita, e não só a agregação |
 
 ## Foco de revisão
