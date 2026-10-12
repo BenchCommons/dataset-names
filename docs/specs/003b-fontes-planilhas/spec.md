@@ -66,7 +66,7 @@ O passo da CI das fontes oficiais (spec 003, R5) passa a conferir também `by_co
 
 ### R5. Desempenho
 
-A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB, a medição e o pico de memória vão para a descrição do pull request. Como o XLS é carregado inteiro pelo `xlrd`, o pico de memória da leitura de `apellidos_frecuencia.xls` também é registrado.
+A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB, com os arquivos baixados do INE em 2026-10-12: 149.952 observações, `run --offline` em 15,4 s com pico de 330 MB. Só a leitura, que o `xlrd` faz carregando o XLS inteiro: `apellidos_frecuencia.xls` em 1,6 s com pico de 67 MB, e `nombres_por_edad_media.xlsx` em 1,2 s com pico de 33 MB. Somadas ao lote da spec 003 (R6: 3.077.139 observações, 68 s, 1,63 GB), as 150 mil observações da Espanha deixam a margem de R8 folgada.
 
 ### R6. Outras fontes avaliadas
 
@@ -74,8 +74,8 @@ A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` 
 |---|---|---|
 | ONS (Inglaterra e País de Gales) | Spec 003c | OGL v3. Cobre só parte do Reino Unido; a regra para fonte subnacional é da 003c (issue #14). O leitor desta spec abre os arquivos de 2018 (XLS) e 2025 (XLSX). |
 | INE, nomes de recém-nascidos (`nomnac24.xlsx`) | Fora | Só os 100 nomes mais frequentes do país por ano (desde 2002), não a distribuição completa. Uma fonte `births` truncada no topo distorceria `rank` e `female_share`. |
-| DVV (Finlândia), nomes no sistema de informação populacional | Adiada | XLSX no avoindata.fi com primeiros nomes (5 ou mais) e sobrenomes (20 ou mais) de cidadãos vivos. Licença não declarada no recurso; precisa ser conferida antes do adaptador. |
-| Statbel (Bélgica), primeiros nomes da população e de recém-nascidos | Adiada | Dados abertos por município; formato e licença do arquivo nacional não conferidos. |
+| DVV (Finlândia), nomes no sistema de informação populacional | Adiada (#25) | XLSX no avoindata.fi com primeiros nomes (5 ou mais) e sobrenomes (20 ou mais) de cidadãos vivos. Licença não declarada no recurso; precisa ser conferida antes do adaptador. |
+| Statbel (Bélgica), primeiros nomes da população e de recém-nascidos | Adiada (#26) | Dados abertos por município; formato e licença do arquivo nacional não conferidos. |
 
 ## Critérios de aceite
 
