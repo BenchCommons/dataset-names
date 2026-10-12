@@ -1,6 +1,6 @@
 # Names Commons Dataset
 
-[![CI](https://github.com/OpenSoftwareAlliance/names-commons-dataset/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenSoftwareAlliance/names-commons-dataset/actions/workflows/ci.yml)
+[![CI](https://github.com/BenchCommons/dataset-names/actions/workflows/ci.yml/badge.svg)](https://github.com/BenchCommons/dataset-names/actions/workflows/ci.yml)
 
 <img src='assets/names-commons-logo.png' alt='Names Commons Dataset logo' width='200'/>
 

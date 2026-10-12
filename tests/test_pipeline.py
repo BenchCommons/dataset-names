@@ -251,3 +251,60 @@ def test_r1_tipo_errado_aparece_com_o_id_da_fonte_no_ingest(tmp_path, monkeypatc
     fontes = load_sources(FIXTURES / "sources.yaml")
     with pytest.raises(PipelineError, match=r"fonte 'exemplo': registro 1: 'count' deve ser inteiro, recebeu float 5.9"):
         ingest_sources([fontes["exemplo"]], fontes, cache, offline=True, adapters="adaptadores")
+
+
+# Forma de exibição de registros repetidos --------------------------------------------------------
+
+def test_r1_4_repetidos_mantem_a_forma_de_maior_peso():
+    obs = to_observations([
+        RawRecord("MARIA", "given", "PT", "F", 2020, 10),
+        RawRecord("Maria", "given", "PT", "F", 2020, 90),
+        RawRecord("MARIA", "given", "PT", "F", 2021, 5),
+        RawRecord("Maria", "given", "PT", "F", 2021, 1),
+    ], _fonte(uniform_case=False))
+    assert _campos(obs) == [("Maria", "given", "PT", "F", 2020, 100), ("MARIA", "given", "PT", "F", 2021, 6)]
+
+
+def test_r1_4_empate_de_peso_fica_com_o_primeiro_registro():
+    registros = [RawRecord("MARIA", "given", "PT", "F", 2020, 10), RawRecord("Maria", "given", "PT", "F", 2020, 10)]
+    assert to_observations(registros, _fonte())[0].name == "MARIA"
+    assert to_observations(registros[::-1], _fonte())[0].name == "Maria"
+
+
+def test_r1_4_forma_de_maior_peso_atualiza_os_campos_derivados():
+    [o] = to_observations([
+        RawRecord("ÁLVARO", "given", "PT", "M", 2020, 1),
+        RawRecord("Álvaro", "given", "PT", "M", 2020, 9),
+    ], _fonte())
+    assert (o.name, o.name_key, o.ascii, o.count) == ("Álvaro", "álvaro", "alvaro", 10)
+
+
+def test_kind_invalido_e_o_primeiro_erro_mesmo_com_nome_que_quebraria_a_derivacao():
+    with pytest.raises(RecordError, match="registro 1: kind 'middle' inválido"):
+        to_observations([RawRecord(None, "middle", "PT", "F", 2020, 1)], _fonte())
+
+
+# Recusas no nível do pipeline -----------------------------------------------------------------------
+
+def _ingest_com_registros(registros, fonte, monkeypatch, tmp_path):
+    import types
+    mod = types.SimpleNamespace(
+        SOURCE_ID=fonte.id, RESOURCES=[Resource("https://example.org/a.csv", "a.csv")],
+        parse=lambda files: iter(registros),
+    )
+    monkeypatch.setattr("namescommons.pipeline.load_adapter", lambda *a, **k: mod)
+    (tmp_path / fonte.id).mkdir()
+    (tmp_path / fonte.id / "a.csv").write_text("x", encoding="utf-8")
+    return ingest_sources([fonte], {fonte.id: fonte}, tmp_path, offline=True)
+
+
+def test_ingest_recusa_year_fora_do_intervalo(monkeypatch, tmp_path):
+    with pytest.raises(PipelineError, match="(?s)fonte 'pt-x': .*year 1500 fora de 1800"):
+        _ingest_com_registros([RawRecord("Ana", "given", "PT", "F", 1500, 1)], _fonte(), monkeypatch, tmp_path)
+
+
+def test_ingest_recusa_count_type_fora_do_dominio_com_uma_so_causa(monkeypatch, tmp_path):
+    fonte = replace(_fonte(), count_type="deaths")
+    with pytest.raises(PipelineError) as e:
+        _ingest_com_registros([RawRecord("Ana", "given", "PT", "F", 2020, 1)], fonte, monkeypatch, tmp_path)
+    assert "count_type 'deaths' inválido" in str(e.value) and "diverge" not in str(e.value)

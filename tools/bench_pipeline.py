@@ -24,7 +24,8 @@ LIMITE_MB = 4096
 PAISES = ("AR", "BR", "CA", "DE", "ES", "FR", "IT", "MX", "PT", "US")
 ANOS = range(1990, 2020)
 GENEROS = ("F", "M")
-BLOCO = len(PAISES) * len(ANOS) * len(GENEROS)  # observações por nome
+PAISES_POR_NOME = 2
+BLOCO = PAISES_POR_NOME * len(ANOS) * len(GENEROS)  # observações por nome
 SILABAS = ("ma", "ri", "an", "jo", "se", "lu", "ca", "el", "in", "ra",
            "to", "ne", "li", "sa", "be", "do", "vi", "ga", "ru", "te")
 
@@ -63,15 +64,22 @@ def total_de_observacoes(pedidas: int) -> int:
     return max(1, pedidas // BLOCO) * BLOCO
 
 
+SILABAS_POR_NOME = 5
+NOMES_POSSIVEIS = len(SILABAS) ** SILABAS_POR_NOME
+
+
 def _nome(i: int) -> str:
+    """Nome distinto para cada i abaixo de NOMES_POSSIVEIS (3,2 milhões)."""
     silabas = []
-    for _ in range(3):
+    for _ in range(SILABAS_POR_NOME):
         i, resto = divmod(i, len(SILABAS))
         silabas.append(SILABAS[resto])
     return "".join(silabas).upper()
 
 
 def _gerar(base: Path, total: int) -> None:
+    if total // BLOCO > NOMES_POSSIVEIS:
+        raise ValueError(f"{total} observações pedem mais de {NOMES_POSSIVEIS} nomes distintos")
     (base / "cache" / "sintetica").mkdir(parents=True)
     (base / "bench_adaptadores").mkdir()
     (base / "bench_adaptadores" / "__init__.py").write_text("", encoding="utf-8")
@@ -81,7 +89,8 @@ def _gerar(base: Path, total: int) -> None:
         w = csv.writer(fh, lineterminator="\n")
         for i in range(total // BLOCO):
             nome = _nome(i)
-            for pais in PAISES:
+            for d in range(PAISES_POR_NOME):
+                pais = PAISES[(i + d) % len(PAISES)]
                 for ano in ANOS:
                     for g, genero in enumerate(GENEROS):
                         w.writerow((nome, pais, genero, ano, (i * 7919 + ano * 31 + g) % 5000 + 5))
@@ -90,6 +99,12 @@ def _gerar(base: Path, total: int) -> None:
 def _memoria_pico_mb() -> float:
     pico = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return pico / (1024 * 1024) if sys.platform == "darwin" else pico / 1024
+
+
+def _falha(etapa: str, codigo: int, base: Path) -> int:
+    """Mesmo formato da linha R8 de sucesso, para o registro da medição nunca ficar sem ela."""
+    print(f"R8: FALHA no {etapa} (código {codigo}); dados mantidos em {base}")
+    return codigo
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -101,6 +116,9 @@ def main(argv: list[str] | None = None) -> int:
     total = total_de_observacoes(args.observacoes)
     base = args.dir or Path(tempfile.mkdtemp(prefix="namescommons-r8-"))
     base.mkdir(parents=True, exist_ok=True)
+    if any(base.iterdir()):
+        print(f"{base} já contém arquivos; use um diretório novo ou vazio", file=sys.stderr)
+        return 2
 
     inicio = time.perf_counter()
     _gerar(base, total)
@@ -113,13 +131,13 @@ def main(argv: list[str] | None = None) -> int:
                           "--cache", str(base / "cache"), "--adapters", "bench_adaptadores", *comum])
         ingest = time.perf_counter() - inicio
         if codigo != 0:
-            return codigo
+            return _falha("ingest", codigo, base)
         inicio = time.perf_counter()
         codigo = namescommons(["build", str(base / "observations.parquet"), "--out", str(base / "dist"),
                           "--release", "2026.10", *comum])
         build = time.perf_counter() - inicio
         if codigo != 0:
-            return codigo
+            return _falha("build", codigo, base)
     finally:
         sys.path.remove(str(base))
         for modulo in [m for m in sys.modules if m.split(".")[0] == "bench_adaptadores"]:

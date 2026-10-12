@@ -40,11 +40,14 @@ def _ordem(o: Observation) -> tuple:
     return (o.source_id, o.kind, o.country or "", o.name_key, -1 if o.year is None else o.year, o.gender or "")
 
 
-def _somar(a: Observation, b: Observation) -> Observation:
-    """R1.4: soma duas observações com a mesma chave; mantém a forma do primeiro registro."""
-    if (a.count is None) != (b.count is None):
-        raise RecordError(f"R1.4: registros repetidos com e sem count para {a.key()}")
-    return a if a.count is None else replace(a, count=a.count + b.count)
+def _resolver_formas(formas: dict[str, list]) -> Observation:
+    """R1.4: soma as contagens das formas de um mesmo nome e fica com a de maior peso.
+
+    Mesmo critério de `display_name` na agregação; no empate vale a forma do primeiro registro.
+    """
+    pesos = [c for _, c in formas.values()]
+    melhor = max(formas.values(), key=lambda f: -1 if f[1] is None else f[1])[0]
+    return replace(melhor, count=None if pesos[0] is None else sum(pesos))
 
 
 def _checar_genero(observacoes: Iterable[Observation]) -> None:
@@ -76,10 +79,14 @@ def _checar_tipos(r: RawRecord, posicao: int) -> None:
             )
 
 
+def _checar_kind(kind: str, posicao: int) -> None:
+    """Spec 003, R2.1: kind é conferido antes de derivar o nome, para ser o primeiro erro do registro."""
+    if kind not in KINDS:
+        raise RecordError(f"registro {posicao}: kind {kind!r} inválido; use 'given' ou 'family'")
+
+
 def _checar_valores(o: Observation, posicao: int, paises: dict[str, bool]) -> None:
     """Spec 003, R2.1 e R2.3: valores convertidos pelo adaptador, conferidos na ordem do arquivo."""
-    if o.kind not in KINDS:
-        raise RecordError(f"registro {posicao}: kind {o.kind!r} inválido; use 'given' ou 'family'")
     if o.gender is not None and o.gender not in GENDERS:
         raise RecordError(f"registro {posicao}: gender {o.gender!r} inválido; use 'F', 'M' ou vazio")
     if o.country is not None:
@@ -102,8 +109,10 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
     derivados: dict[str, tuple[str, str, str, str]] = {}
     paises: dict[str, bool] = {}
     unicas: dict[tuple, Observation] = {}
+    formas: dict[tuple, dict[str, list]] = {}  # só chaves com mais de uma forma de escrita
     for posicao, r in enumerate(records, start=1):
         _checar_tipos(r, posicao)
+        _checar_kind(r.kind, posicao)
         campos = derivados.get(r.name)
         if campos is None:
             campos = derivados[r.name] = derive_name_fields(r.name, source.uniform_case)
@@ -114,8 +123,26 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
             count_type=source.count_type, source_id=source.id,
         )
         _checar_valores(o, posicao, paises)
-        anterior = unicas.get(o.key())
-        unicas[o.key()] = o if anterior is None else _somar(anterior, o)
+        chave_o = o.key()
+        anterior = unicas.get(chave_o)
+        if anterior is None:
+            unicas[chave_o] = o
+            continue
+        if (anterior.count is None) != (o.count is None):
+            raise RecordError(f"R1.4: registros repetidos com e sem count para {chave_o}")
+        por_forma = formas.get(chave_o)
+        if por_forma is not None:  # caminho lento: a chave já tem duas formas de escrita
+            visto = por_forma.get(o.name)
+            if visto is None:
+                por_forma[o.name] = [o, o.count]
+            elif o.count is not None:
+                visto[1] += o.count
+        elif anterior.name != o.name:
+            formas[chave_o] = {anterior.name: [anterior, anterior.count], o.name: [o, o.count]}
+        elif o.count is not None:  # caminho rápido: mesma forma, soma no lugar
+            unicas[chave_o] = replace(anterior, count=anterior.count + o.count)
+    for chave_o, por_forma in formas.items():
+        unicas[chave_o] = _resolver_formas(por_forma)
     _checar_genero(unicas.values())
     return sorted(unicas.values(), key=_ordem)
 

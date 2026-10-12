@@ -67,3 +67,36 @@ def test_campos_derivados_contradizem_r1(fontes, campos, trecho):
     ok = make_observation("Ana Clara", kind="given", source_id="wikidata", count_type="attested")
     with pytest.raises(ValidationError, match=trecho):
         validate([replace(ok, **campos)], fontes)
+
+
+def test_count_type_invalido_gera_um_so_erro(observacoes, fontes):
+    with pytest.raises(ValidationError) as e:
+        validate([replace(observacoes[0], count_type="deaths")], fontes)
+    assert len(e.value.erros) == 1 and "count_type 'deaths' inválido" in e.value.erros[0]
+
+
+def test_source_id_desconhecido_nao_gera_erro_de_divergencia(observacoes, fontes):
+    ruim = replace(observacoes[0], source_id="inexistente", country="BR", count_type="population")
+    with pytest.raises(ValidationError) as e:
+        validate([ruim], fontes)
+    assert len(e.value.erros) == 1 and "ausente de sources.yaml" in e.value.erros[0]
+
+
+def test_make_observation_com_uniform_case():
+    maiuscula = make_observation("DJ", kind="given", source_id="x", count_type="attested", uniform_case=True)
+    mista = make_observation("DJ", kind="given", source_id="x", count_type="attested", uniform_case=False)
+    assert (maiuscula.name, maiuscula.name_key) == ("Dj", "dj")
+    assert (mista.name, mista.name_key) == ("DJ", "dj")
+
+
+def test_limite_superior_de_year_usa_utc(observacoes, fontes, monkeypatch):
+    from datetime import datetime, timezone
+
+    def agora(tz):
+        assert tz is timezone.utc, "o limite de year não pode depender do fuso local"
+        return datetime(2030, 12, 31, 23, 0, tzinfo=tz)
+
+    monkeypatch.setattr("namescommons.schema._agora", agora)
+    validate([replace(observacoes[0], year=2031)], fontes)
+    with pytest.raises(ValidationError, match="year 2032 fora de 1800 a 2031"):
+        validate([replace(observacoes[0], year=2032)], fontes)

@@ -17,7 +17,7 @@ from pathlib import Path
 
 from namescommons.adapters import Resource
 
-REPOSITORIO = "https://github.com/OpenSoftwareAlliance/names-commons-dataset"
+REPOSITORIO = "https://github.com/BenchCommons/dataset-names"
 USER_AGENT = f"namescommons/{version('names-commons-dataset')} (+{REPOSITORIO})"
 BLOCO = 1 << 16
 ESPERA = 2.0  # segundos antes da segunda tentativa; dobra a cada nova tentativa
@@ -50,22 +50,36 @@ def _baixar(url: str, destino: Path, timeout: float) -> dict:
                 fh.write(bloco)
                 h.update(bloco)
                 tamanho += len(bloco)
-        if anunciado is not None and tamanho != int(anunciado):
-            raise FetchError(f"download incompleto de {url}: {tamanho} de {anunciado} bytes")
+        if anunciado is not None:
+            try:
+                esperado = int(anunciado)
+            except ValueError:
+                raise FetchError(f"Content-Length {anunciado!r} inválido em {url}") from None
+            if tamanho != esperado:
+                raise FetchError(f"download incompleto de {url}: {tamanho} de {anunciado} bytes")
         meta = {
             "url": url,
             "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "sha256": h.hexdigest(),
             "size": tamanho,
         }
+        # O meta antigo sai antes do arquivo novo entrar: uma falha no meio deixa o arquivo sem meta
+        # (o mesmo estado de um arquivo gravado à mão), nunca um meta descrevendo outro arquivo.
+        arquivo_meta = destino.with_name(destino.name + ".meta.json")
+        arquivo_meta.unlink(missing_ok=True)
+        os.replace(temporario, destino)
         _gravar_atomico(
-            destino.with_name(destino.name + ".meta.json"),
+            arquivo_meta,
             (json.dumps(meta, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
         )
-        os.replace(temporario, destino)
         return meta
     finally:
         temporario.unlink(missing_ok=True)
+
+
+def _definitivo(e: Exception) -> bool:
+    """4xx (exceto 408 e 429) é resposta definitiva do servidor: tentar de novo não muda nada."""
+    return isinstance(e, urllib.error.HTTPError) and 400 <= e.code < 500 and e.code not in (408, 429)
 
 
 def fetch_resource(
@@ -81,6 +95,8 @@ def fetch_resource(
     dormir: Callable[[float], None] = time.sleep,
 ) -> Path:
     """Caminho do recurso no cache, baixando-o se preciso (R4)."""
+    if tentativas < 1:
+        raise ValueError(f"tentativas deve ser pelo menos 1, recebeu {tentativas}")
     espera = ESPERA if espera is None else espera
     if offline and refresh:
         raise ValueError("--offline e --refresh são incompatíveis")
@@ -97,12 +113,15 @@ def fetch_resource(
             return destino
         except (OSError, HTTPException, FetchError) as e:
             ultimo = e
-            if i + 1 < tentativas:
+            feitas = i + 1
+            if _definitivo(e):
+                break
+            if feitas < tentativas:
                 dormir(espera * 2**i)
-    mensagem = f"falha ao baixar {resource.url} após {tentativas} tentativa(s): {ultimo}"
+    mensagem = f"falha ao baixar {resource.url} após {feitas} tentativa(s): {ultimo}"
     if isinstance(ultimo, urllib.error.HTTPError) and ultimo.code == 403:
         mensagem += (
-            f"; o servidor recusou o download automático: baixe o arquivo pelo navegador, "
+            "; o servidor recusou o download automático: baixe o arquivo pelo navegador, "
             f"grave-o em {destino} e rode com --offline"
         )
     raise FetchError(mensagem)

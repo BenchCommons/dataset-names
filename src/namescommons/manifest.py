@@ -25,7 +25,8 @@ def _linhas(path: Path) -> int:
     if path.suffix == ".parquet":
         return pq.ParquetFile(path).metadata.num_rows
     with open(path, encoding="utf-8", newline="") as fh:
-        return max(sum(1 for _ in csv.reader(fh)) - 1, 0)  # desconta o cabeçalho
+        registros = sum(1 for linha in csv.reader(fh) if linha)  # ignora linhas em branco
+        return max(registros - 1, 0)  # desconta o cabeçalho
 
 
 def build_manifest(release: str, out_dir: Path, sources: dict[str, Source], used: set[str]) -> dict:
