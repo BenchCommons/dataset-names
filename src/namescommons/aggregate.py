@@ -1,11 +1,14 @@
 """Saídas agregadas (spec 001, R3): listas por país e índice mundial."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
+from namescommons.links import VariantLink
 from namescommons.normalize import ascii_form, detect_script
 from namescommons.schema import Observation
 from namescommons.sources import Source
+from namescommons.variants import group_ids
 
 # Ordem de preferência quando o mesmo nome tem contagens de tipos diferentes no país.
 PRECEDENCIA = ("population", "births")
@@ -192,7 +195,9 @@ def name_index(
     country_rows: dict[str, list[CountryRow]],
     kind: str,
     sources: dict[str, Source] | None = None,
+    links: Iterable[VariantLink] | None = None,
 ) -> list[IndexRow]:
+    """Índice mundial de um kind (spec 001, R3.2), com forma de exibição e group_id da spec 005."""
     obs_por_chave: dict[str, list[Observation]] = defaultdict(list)
     for o in observations:
         if o.kind == kind:
@@ -203,6 +208,7 @@ def name_index(
             if r.kind == kind:
                 linhas_por_chave[r.name_key].append(r)
     indice = []
+    sem_acento = []
     for chave in sorted(obs_por_chave):
         obs = obs_por_chave[chave]
         rows = sorted(linhas_por_chave.get(chave, []), key=lambda r: r.country)
@@ -217,4 +223,12 @@ def name_index(
             female_share=female / base if base else None, gender_basis=base,
             group_id=None, sources=tuple(sorted({o.source_id for o in obs})),
         ))
+        sem_acento.append(sources is not None and any(sources[f].strips_accents for f in indice[-1].sources))
+    # Spec 005, R5: grupos sobre as chaves do índice (já em ordem), com o ascii das latinas.
+    ids = group_ids(
+        [r.name_key for r in indice], [r.ascii if r.script == "Latn" else "" for r in indice],
+        sem_acento, links, kind,
+    )
+    for i, grupo in enumerate(ids):
+        indice[i] = replace(indice[i], group_id=grupo)
     return indice

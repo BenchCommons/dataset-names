@@ -113,7 +113,7 @@ def test_indice_given(observacoes, fontes):
     assert maria.female_share == pytest.approx(12150 / 12155)
     assert maria.gender_basis == 12155
     assert maria.sources == ("br-ibge-censo", "us-births-b", "us-ssa", "wikidata")
-    assert maria.group_id is None
+    assert maria.group_id == "maria"  # spec 005, R5.7: sem ligações, o grupo é a própria chave
 
 
 def test_indice_nome_so_atestado(observacoes, fontes):
@@ -235,3 +235,14 @@ def test_forma_publicada_vence_a_capitalizacao_gerada():
 def test_indice_sem_fontes_mantem_todas_as_formas_candidatas(observacoes, fontes):
     indice = name_index(observacoes, by_country(observacoes, fontes), "given")
     assert indice[1].name == "Deshawn"
+
+
+def test_indice_preenche_group_id_com_fontes_e_ligacoes(observacoes, fontes):
+    """Spec 005, R5: group_id em todas as linhas; same_item junta pela chave."""
+    from namescommons.links import VariantLink
+    ligacao = VariantLink("wikidata", "same_item", "Q1", "Maria", "maria", "given",
+                          "Q1", "Мария", "мария", "given")
+    indice = name_index(observacoes, by_country(observacoes, fontes), "given", sources=fontes, links=[ligacao])
+    assert {r.name_key: r.group_id for r in indice} == {
+        "ana clara": "ana clara", "deshawn": "deshawn", "james": "james", "maria": "maria", "мария": "maria",
+    }

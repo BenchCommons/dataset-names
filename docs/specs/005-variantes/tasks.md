@@ -58,9 +58,9 @@ Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar os comandos na ra
 
 **Arquivos:** `src/namescommons/aggregate.py`, `src/namescommons/cli.py`, `tests/test_cli_links.py`, `tests/test_aggregate.py`.
 
-- [ ] Testes que falham: `name_index` com ligações e fontes preenche `group_id` em todas as linhas; `build --links` com uma ligação `same_item` grava o mesmo `group_id` nas duas linhas de `given_names.csv`; o `manifest.json` lista a fonte de uma ligação mesmo sem observação dela.
-- [ ] `name_index` monta `keys`, `ascii` e a marca de sem acento e chama `group_ids`; `_build` passa fontes e ligações e usa a união das fontes.
-- [ ] `uv run pytest -q` e commit.
+- [x] Testes que falham: `name_index` com ligações e fontes preenche `group_id` em todas as linhas; `build --links` com uma ligação `same_item` grava o mesmo `group_id` nas duas linhas de `given_names.csv`; o `manifest.json` lista a fonte de uma ligação mesmo sem observação dela.
+- [x] `name_index` monta `keys`, `ascii` e a marca de sem acento e chama `group_ids`; `_build` passa fontes e ligações e usa a união das fontes.
+- [x] `uv run pytest -q` e commit.
 
 ### Task 8: versão, notas de contrato e CI (R7.1, R7.2, R8, R10)
 
