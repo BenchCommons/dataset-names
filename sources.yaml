@@ -10,3 +10,14 @@ sources:
     primary: true
     suppression: 5
     retrieved: 2026-10-12
+  - id: fr-insee-births
+    name: INSEE, Fichier des prénoms (France, nível nacional)
+    url: https://www.insee.fr/fr/statistiques/8595130
+    license: etalab-2.0
+    attribution: "Source : Insee, Fichier des prénoms, édition 2025"
+    country: FR
+    count_type: births
+    primary: true
+    suppression: 3
+    retrieved: 2026-10-12
+    uniform_case: true
