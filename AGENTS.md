@@ -8,7 +8,7 @@ Dataset mundial de nomes: primeiros nomes e sobrenomes com país, frequência, g
 
 ## Stack
 
-Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`. Build com `hatchling`.
+Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`, `xlrd` (XLS, [ADR 0005](docs/adr/0005-leitor-de-planilhas.md)). Build com `hatchling`.
 
 ## Comandos
 

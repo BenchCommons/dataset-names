@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 RAIZ = Path(__file__).resolve().parent.parent
-FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births")
+FONTES_OFICIAIS = ("fr-insee-births", "ca-statcan-births", "es-ine-residentes", "ie-cso-births", "no-ssb-etternavn", "no-ssb-fornavn", "us-ssa-births")
 WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 
@@ -95,6 +95,31 @@ given,Åse,åse,ase,Latn,93,births,4,1.000000,93,1990,2025
 """
 
 
+ES_CSV = """\
+kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
+family,Garcia,garcia,garcia,Latn,1446937,population,1,,0,2025,2025
+family,Muñoz,muñoz,munoz,Latn,284951,population,2,,0,2025,2025
+family,Gonçalves,gonçalves,goncalves,Latn,3020,population,3,,0,2025,2025
+family,O'Brien,o'brien,o'brien,Latn,573,population,4,,0,2025,2025
+family,Lyu,lyu,lyu,Latn,208,population,5,,0,2025,2025
+family,Tudorica,tudorica,tudorica,Latn,100,population,6,,0,2025,2025
+family,Anchustegui,anchustegui,anchustegui,Latn,99,population,7,,0,2025,2025
+family,Nel·lo,nel·lo,nello,Latn,26,population,8,,0,2025,2025
+family,Zrhaida,zrhaida,zrhaida,Latn,20,population,9,,0,2025,2025
+given,Maria Carmen,maria carmen,maria carmen,Latn,618622,population,1,1.000000,618622,2025,2025
+given,Antonio,antonio,antonio,Latn,590938,population,2,0.000000,590938,2025,2025
+given,Andrea,andrea,andrea,Latn,113054,population,3,0.973084,113054,2025,2025
+given,Begoña,begoña,begona,Latn,36293,population,4,1.000000,36293,2025,2025
+given,Iñigo,iñigo,inigo,Latn,22083,population,5,0.000000,22083,2025,2025
+given,Llorenç,llorenç,llorenc,Latn,2513,population,6,0.000000,2513,2025,2025
+given,Françoise,françoise,francoise,Latn,338,population,7,1.000000,338,2025,2025
+given,Francesc D'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
+given,Joana D'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
+given,Zulma Patricia,zulma patricia,zulma patricia,Latn,20,population,10,1.000000,20,2025,2025
+given,Zunair,zunair,zunair,Latn,20,population,10,0.000000,20,2025,2025
+"""
+
+
 # Spec 003d: Noah 36 F de 2301 (0,015645); Riley 35 + 261 F de 762 (0,388451).
 CA_CSV = """\
 kind,name,name_key,ascii,script,count,count_type,rank,female_share,gender_basis,first_year,last_year
@@ -115,15 +140,17 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr
-    resumo = re.search(r"OK: (\d+) observações, 5 países", r.stdout)
+    resumo = re.search(r"OK: (\d+) observações, 6 países", r.stdout)
     assert resumo, r.stdout
     assert int(resumo.group(1)) == pq.ParquetFile(tmp_path / "dist-oficiais" / "observations.parquet").metadata.num_rows > 0
     assert sorted(p.name for p in (tmp_path / "cache-oficiais").iterdir()) == sorted(FONTES_OFICIAIS)
     assert (tmp_path / "dist-oficiais" / "by_country" / "NO.csv").read_text(encoding="utf-8") == NO_CSV
     assert (tmp_path / "dist-oficiais" / "by_country" / "CA.csv").read_text(encoding="utf-8") == CA_CSV
+    # Spec 003b, R4: Espanha com nomes e sobrenomes population de 2025; ANDREA dos dois sexos
+    assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
 
 
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():
-    """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA."""
+    """Spec 003d, R5: o passo confere by_country/ de cada país de sources.yaml, inclusive CA e ES."""
     passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
-    assert "for pais in CA FR IE NO US;" in passo["run"]
+    assert "for pais in CA ES FR IE NO US;" in passo["run"]
