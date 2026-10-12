@@ -328,3 +328,113 @@ def test_linhas_lidas_saem_da_arvore(tmp_path):
     finally:
         monkeypatch.undo()
     assert vistos == [0]
+
+
+# Defesa em profundidade contra DTD (ADR 0005) -----------------------------------------------------
+
+def _regravar(origem: Path, destino: Path, membro: str, conteudo: str) -> Path:
+    with zipfile.ZipFile(origem) as zin, zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            zout.writestr(info.filename, conteudo if info.filename == membro else zin.read(info.filename))
+    return destino
+
+
+BILLION_LAUGHS = (
+    '<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol">'
+    '<!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">'
+    '<!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">]>'
+    f'<worksheet {NS}><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>&lol3;</t></is></c></row></sheetData></worksheet>'
+)
+
+
+@pytest.mark.parametrize("membro, operacao", [
+    ("xl/workbook.xml", lambda a: sheet_names(a)),
+    ("xl/_rels/workbook.xml.rels", lambda a: sheet_names(a)),
+    ("xl/sharedStrings.xml", lambda a: list(rows(a, "X"))),
+    ("xl/worksheets/sheet1.xml", lambda a: list(rows(a, "X"))),
+])
+@pytest.mark.parametrize("prolog", [
+    '<!DOCTYPE x [<!ENTITY a "b">]>',
+    '<!doctype x>',
+    '<!-- c --><!ENTITY a "b">',
+])
+def test_r1_4_dtd_no_prologo_e_recusado(tmp_path, membro, operacao, prolog):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    raiz = {"xl/workbook.xml": f"<workbook {NS} {NS_R}/>", "xl/_rels/workbook.xml.rels": "<Relationships/>",
+            "xl/sharedStrings.xml": f"<sst {NS}/>", "xl/worksheets/sheet1.xml": f"<worksheet {NS}/>"}[membro]
+    arq = _regravar(base, tmp_path / "a.xlsx", membro, f'<?xml version="1.0"?>{prolog}{raiz}')
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
+        operacao(arq)
+
+
+def test_r1_4_billion_laughs_falha_pela_checagem_de_dtd(tmp_path):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    arq = _regravar(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", BILLION_LAUGHS)
+    with pytest.raises(FormatError, match=r"a\.xlsx: membro xl/worksheets/sheet1\.xml tem DTD"):
+        list(rows(arq, "X"))
+
+
+def test_r1_4_doctype_dentro_de_comentario_nao_e_dtd(tmp_path):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    conteudo = f'<?xml version="1.0"?><!-- <!DOCTYPE x> --><worksheet {NS}><sheetData><row r="1"><c r="A1"><v>7</v></c></row></sheetData></worksheet>'
+    arq = _regravar(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", conteudo)
+    assert list(rows(arq, "X")) == [(1, [7])]
+
+
+def test_r1_4_texto_com_doctype_depois_da_raiz_nao_e_dtd(tmp_path):
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", '<row r="1"><c r="A1" t="inlineStr"><is><t>&lt;!DOCTYPE</t></is></c></row>')])
+    assert list(rows(arq, "X")) == [(1, ["<!DOCTYPE"])]
+
+
+def test_r1_4_prologo_gigante_e_recusado(tmp_path):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    conteudo = '<?xml version="1.0"?><!--' + "x" * 70_000 + f'--><worksheet {NS}/>'
+    arq = _regravar(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", conteudo)
+    with pytest.raises(FormatError, match=r"a\.xlsx: membro xl/worksheets/sheet1\.xml tem prólogo acima de 65536 bytes"):
+        list(rows(arq, "X"))
+
+
+def test_r1_4_xlsx_normal_com_bom_continua_lido(tmp_path):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", "")])
+    conteudo = '﻿<?xml version="1.0" encoding="UTF-8"?>\n' + f'<worksheet {NS}><sheetData><row r="1"><c r="A1"><v>3</v></c></row></sheetData></worksheet>'
+    arq = _regravar(base, tmp_path / "a.xlsx", "xl/worksheets/sheet1.xml", conteudo)
+    assert list(rows(arq, "X")) == [(1, [3])]
+
+
+def test_r1_4_300_mil_linhas_em_fluxo_com_memoria_plana(tmp_path):
+    import tracemalloc
+    n = 300_000
+    dados = "".join(f'<row r="{i}"><c r="A{i}"><v>{i}</v></c><c r="B{i}" t="inlineStr"><is><t>NOME{i}</t></is></c></row>'
+                    for i in range(1, n + 1))
+    arq = _xlsx(tmp_path / "a.xlsx", [("X", dados)])
+    del dados
+    tracemalloc.start()
+    try:
+        total = ultimo = 0
+        for numero, valores in rows(arq, "X"):
+            total += 1
+            ultimo = valores[0]
+        _, pico = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert (total, ultimo) == (n, n)
+    assert pico < 5 * 1024 * 1024, f"pico de {pico} bytes: a aba não está sendo lida em fluxo"
+
+
+@pytest.mark.parametrize("membro, operacao", [
+    ("xl/workbook.xml", lambda a: sheet_names(a)),
+    ("xl/_rels/workbook.xml.rels", lambda a: sheet_names(a)),
+    ("xl/sharedStrings.xml", lambda a: list(rows(a, "X"))),
+    ("xl/worksheets/sheet1.xml", lambda a: list(rows(a, "X"))),
+])
+@pytest.mark.parametrize("prolog", [
+    '<!DOCTYPE l [<!ENTITY a "AAAA"><!ENTITY b "&a;&a;">]>',
+    '<!-- c --><!DOCTYPE l [<!ENTITY a "AAAA">]>',
+])
+def test_r1_4_dtd_depois_de_bom_utf8_e_recusado(tmp_path, membro, operacao, prolog):
+    base = _xlsx(tmp_path / "base.xlsx", [("X", '<row r="1"><c r="A1"><v>1</v></c></row>')])
+    raiz = {"xl/workbook.xml": f"<workbook {NS} {NS_R}/>", "xl/_rels/workbook.xml.rels": "<Relationships/>",
+            "xl/sharedStrings.xml": f"<sst {NS}/>", "xl/worksheets/sheet1.xml": f"<worksheet {NS}/>"}[membro]
+    arq = _regravar(base, tmp_path / "a.xlsx", membro, f'﻿<?xml version="1.0"?>{prolog}{raiz}')
+    with pytest.raises(FormatError, match=rf"a\.xlsx: membro {membro} tem DTD"):
+        operacao(arq)

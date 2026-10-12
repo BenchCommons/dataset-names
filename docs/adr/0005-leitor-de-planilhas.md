@@ -33,7 +33,7 @@ Opções avaliadas:
 ## Consequências
 
 - XLSX não depende de terceiros, e o pico de memória é o de uma linha mais os textos compartilhados.
-- O `ElementTree` da biblioteca padrão não busca entidades externas, e o expat do Python 3.12 limita a expansão de entidades; por isso `defusedxml` não entra.
+- O `ElementTree` da biblioteca padrão não busca entidades externas, e o expat do Python 3.12 limita a expansão de entidades; por isso `defusedxml` não entra. Como defesa em profundidade, o leitor recusa com `FormatError` qualquer membro XML cujo prólogo contenha `<!DOCTYPE` ou `<!ENTITY`, inspecionando só os primeiros 64 KiB antes de repassar o fluxo ao parser.
 - `xlrd` carrega o XLS inteiro na memória. Para o maior arquivo do INE (14,9 MB) o pico medido foi de 67 MB, muito abaixo do limite de 4 GB da spec 002 (R8).
 - `xlrd` está em manutenção mínima: a 2.0.2 saiu quatro anos e meio depois da 2.0.1. A versão fixada evita mudança de comportamento silenciosa; se o projeto for abandonado, o XLS é um formato congelado, e trocar a implementação fica restrito a `namescommons.spreadsheet`.
 - Só XLS gravado em documento composto (Excel 5 em diante) é reconhecido; XLS mais antigo, ODS e XLSB aparecem como erro de formato.
