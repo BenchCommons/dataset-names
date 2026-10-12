@@ -117,3 +117,26 @@ def test_esquema_de_nomes_sobre_o_kit():
         "country": (True, None), "count_type": (True, None), "primary": (True, None), "suppression": (True, None),
         "uniform_case": (False, False), "strips_accents": (False, False),
     }
+
+
+# R3.4: manifesto com os auxiliares de arquivo do kit ----------------------------------------------
+
+def test_manifesto_usa_describe_files(tmp_path):
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    import pytest
+    from datasettool.files import sha256_file
+
+    from namescommons.manifest import build_manifest
+    (tmp_path / "x.csv").write_text('name,nota\n"Ana","linha 1\nlinha 2"\n\nBia,ok\n', encoding="utf-8")
+    (tmp_path / "sub").mkdir()
+    pq.write_table(pa.table({"n": [1, 2, 3]}), tmp_path / "sub" / "y.parquet")
+    (tmp_path / "manifest.json").write_text("{}", encoding="utf-8")
+    arquivos = build_manifest("2026.10", tmp_path, {}, set())["files"]
+    assert arquivos == {
+        "sub/y.parquet": {"sha256": sha256_file(tmp_path / "sub" / "y.parquet"), "rows": 3},
+        "x.csv": {"sha256": sha256_file(tmp_path / "x.csv"), "rows": 2},
+    }
+    (tmp_path / "z.txt").write_text("a\nb\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="z.txt"):
+        build_manifest("2026.10", tmp_path, {}, set())

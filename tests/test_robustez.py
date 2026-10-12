@@ -43,12 +43,6 @@ def test_escritas_criam_o_diretorio_pai(observacoes, fontes, tmp_path):
     assert (tmp_path / "d" / "g.parquet").is_file()
 
 
-def test_manifesto_conta_registros_csv_e_nao_linhas_fisicas(tmp_path):
-    (tmp_path / "x.csv").write_text('name,nota\n"Ana","linha 1\nlinha 2"\nBia,ok\n', encoding="utf-8")
-    m = build_manifest("2026.10", tmp_path, {}, set())
-    assert m["files"]["x.csv"]["rows"] == 2
-
-
 def test_manifesto_conta_linhas_dos_indices(observacoes, fontes, tmp_path):
     paises = by_country(observacoes, fontes)
     write_index(name_index(observacoes, paises, "given"), tmp_path / "given_names.csv",
