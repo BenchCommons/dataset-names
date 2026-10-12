@@ -35,4 +35,4 @@ jobs:
           find tests/fixtures -mindepth 1 -maxdepth 1 -type d ! -name exemplo -exec cp -R {} "$RUNNER_TEMP/cache-oficiais/" \;
           uv run namescommons run --offline --cache "$RUNNER_TEMP/cache-oficiais" \
             --out "$RUNNER_TEMP/dist-oficiais" --release "$(date -u +%Y.%m)"
-          for pais in FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done
+          for pais in CA FR IE NO US; do test -s "$RUNNER_TEMP/dist-oficiais/by_country/$pais.csv"; done

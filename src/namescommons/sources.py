@@ -1,4 +1,4 @@
-"""Registro de fontes (sources.yaml), regras de licença do ADR 0001 e campos da spec 002 (R2)."""
+"""Registro de fontes (sources.yaml), regras de licença do ADR 0001 (ampliado pelo 0004) e campos da spec 002 (R2)."""
 
 import re
 from dataclasses import dataclass
@@ -13,6 +13,7 @@ from namescommons.adapters import url_http
 LICENCAS_COMPATIVEIS = frozenset({
     "public-domain", "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0",
     "ODC-By-1.0", "OGL-UK-3.0", "etalab-2.0",
+    "statcan-open-licence",  # ADR 0004 (docs/adr/0004-licenca-statistics-canada.md)
 })
 ID_FORMATO = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 COUNT_TYPES = ("births", "population", "attested")
