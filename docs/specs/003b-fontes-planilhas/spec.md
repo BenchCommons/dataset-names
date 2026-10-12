@@ -68,7 +68,7 @@ O passo da CI das fontes oficiais (spec 003, R5) passa a conferir também `by_co
 
 ### R5. Desempenho
 
-A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB, com os arquivos baixados do INE em 2026-10-12: 149.952 observações, `run --offline` em 15,4 s com pico de 330 MB. Só a leitura, que o `xlrd` faz carregando o XLS inteiro: `apellidos_frecuencia.xls` em 1,6 s com pico de 67 MB, e `nombres_por_edad_media.xlsx` em 1,2 s com pico de 33 MB. Somadas ao lote da spec 003 (R6: 3.077.139 observações, 68 s, 1,63 GB), as 150 mil observações da Espanha deixam a margem de R8 folgada.
+A fonte do INE com os arquivos reais no cache roda `namescommons run --offline` dentro dos limites de R8 da spec 002 (menos de 10 minutos e menos de 4 GB). Medido num Apple M4 com 24 GB, com os arquivos baixados do INE em 2026-10-12: 149.952 observações, `run --offline` em 16,6 s com pico de 332 MB (com a conferência de edição de R2.3). Só a leitura, que o `xlrd` faz carregando o XLS inteiro: `apellidos_frecuencia.xls` em 1,6 s com pico de 67 MB, e `nombres_por_edad_media.xlsx` em 1,2 s com pico de 33 MB. Somadas ao lote da spec 003 (R6: 3.077.139 observações, 68 s, 1,63 GB), as 150 mil observações da Espanha deixam a margem de R8 folgada.
 
 ### R6. Outras fontes avaliadas
 
