@@ -18,7 +18,7 @@ Os arquivos de `src/` que já existem aparecem inteiros: substituir o conteúdo 
 - Consome: `parse_sources`, `load_sources`, `Source` (spec 001).
 - Produz: `Source.uniform_case: bool = False` e `Source.adapter: bool = True` (campos opcionais no fim da dataclass), `OPCIONAIS`; `parse_sources` recusa `retrieved` com hora, `url` sem esquema `http`/`https` e opcionais não booleanos.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_sources_extensoes.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_sources_extensoes.py`
 
 ```python
 """Spec 002, R2 (campos opcionais) e a última recusa de R3 (retrieved e url)."""
@@ -95,12 +95,12 @@ def test_url_http_e_https_aceitas(url):
     assert parse_sources([fonte(url=url)])["pt-exemplo"].url == url
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_sources_extensoes.py`
 Esperado: `15 failed, 2 passed` (os campos opcionais são recusados como desconhecidos; `datetime` e URLs sem `http` são aceitos)
 
-- [ ] **Passo 3: substituir o conteúdo de** `src/namesio/sources.py`
+- [x] **Passo 3: substituir o conteúdo de** `src/namesio/sources.py`
 
 **Mudanças:** importa `datetime` e `urlsplit`; `OPCIONAIS`; dois campos com padrão em `Source`; `_url_http`; recusas de `url`, `retrieved` com hora e opcionais não booleanos; `Source` recebe os opcionais com o padrão.
 
@@ -241,12 +241,12 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
     return fontes
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `114 passed`
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_sources_extensoes.py src/namesio/sources.py
@@ -265,7 +265,7 @@ git commit -m "Adiciona uniform_case e adapter ao sources.yaml e valida retrieve
 - Consome: `normalize_name`, `make_observation` (spec 001).
 - Produz: `normalize_name(raw, uniform_case: bool | None = None)`; `derive_name_fields(raw_name, uniform_case=None) -> (name, name_key, ascii, script)`; `make_observation(..., uniform_case=None)`. `None` mantém a regra da spec 001.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_caixa_da_fonte.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_caixa_da_fonte.py`
 
 ```python
 """Spec 002, R1.3: a capitalização segue uniform_case da fonte, não a caixa de cada nome."""
@@ -317,12 +317,12 @@ def test_make_observation_aceita_uniform_case():
     assert (o.name, o.name_key) == ("DJ", "dj")
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_caixa_da_fonte.py`
 Esperado: FALHA na coleta com `ImportError: cannot import name 'derive_name_fields' from 'namesio.schema'`
 
-- [ ] **Passo 3: substituir o conteúdo de** `src/namesio/normalize.py`
+- [x] **Passo 3: substituir o conteúdo de** `src/namesio/normalize.py`
 
 **Mudanças:** `normalize_name` ganha `uniform_case`; a heurística da 001 só roda quando ele é `None`.
 
@@ -397,7 +397,7 @@ def ascii_form(name: str, script: str) -> str:
     return "".join(c for c in base if not unicodedata.combining(c) and c.isascii())
 ```
 
-- [ ] **Passo 4: substituir o conteúdo de** `src/namesio/schema.py`
+- [x] **Passo 4: substituir o conteúdo de** `src/namesio/schema.py`
 
 **Mudanças:** nova `derive_name_fields`; `make_observation` aceita `uniform_case` e usa `derive_name_fields`.
 
@@ -506,12 +506,12 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         raise ValidationError(erros)
 ```
 
-- [ ] **Passo 5: rodar e ver passar**
+- [x] **Passo 5: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `130 passed`
 
-- [ ] **Passo 6: commit**
+- [x] **Passo 6: commit**
 
 ```bash
 git add tests/test_caixa_da_fonte.py src/namesio/normalize.py src/namesio/schema.py
@@ -530,7 +530,7 @@ git commit -m "Decide a capitalização pela caixa declarada da fonte" -m "Co-Au
 - Consome: `Source.country`, `Source.count_type`; `validate` (spec 001).
 - Produz: `validate` recusa `count_type` e `country` divergentes da fonte e `year` fora de `ANO_MINIMO = 1800` até o ano corrente mais um. País ou `count_type` inválidos não geram também o erro de divergência.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_validacao_cruzada.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_validacao_cruzada.py`
 
 ```python
 """Spec 002, R3: validate confere a observação contra a fonte registrada e a faixa de year."""
@@ -587,12 +587,12 @@ def test_pais_invalido_nao_gera_erro_duplicado(observacoes, fontes):
     assert len(e.value.erros) == 1
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_validacao_cruzada.py`
 Esperado: `5 failed, 5 passed`
 
-- [ ] **Passo 3: substituir o conteúdo de** `src/namesio/schema.py`
+- [x] **Passo 3: substituir o conteúdo de** `src/namesio/schema.py`
 
 **Mudanças:** importa `date`; `ANO_MINIMO`; em `validate`, a fonte da observação é consultada para as divergências de país e `count_type`, e `year` é conferido contra a faixa.
 
@@ -713,12 +713,12 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         raise ValidationError(erros)
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `140 passed`
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_validacao_cruzada.py src/namesio/schema.py
@@ -737,7 +737,7 @@ git commit -m "Valida observações contra a fonte registrada e a faixa de anos"
 - Consome: `by_country`, `name_index`, `write_observations`, `write_index`, `build_manifest` (spec 001).
 - Produz: `AggregationError` e `ValueError` com `source_id desconhecido` em vez de `KeyError`; escritas criam o diretório pai; `rows` do manifesto conta registros CSV.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_robustez.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_robustez.py`
 
 ```python
 """Spec 002, R9: robustez herdada da revisão da spec 001 (issue #2)."""
@@ -852,12 +852,12 @@ def test_csv_por_pais_sem_contagem(observacoes, fontes, tmp_path):
     assert linhas[-1] == "given,Ana Clara,ana clara,ana clara,Latn,,attested,,,0,,"
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_robustez.py`
 Esperado: `4 failed, 7 passed` (`KeyError: 'outra'` na agregação e no manifesto, `FileNotFoundError` no diretório pai e `rows == 3` no CSV com quebra de linha)
 
-- [ ] **Passo 3: substituir o conteúdo de** `src/namesio/aggregate.py`
+- [x] **Passo 3: substituir o conteúdo de** `src/namesio/aggregate.py`
 
 **Mudanças:** `_fontes_oficiais` recusa `source_id` ausente de `sources` antes de qualquer consulta.
 
@@ -1055,7 +1055,7 @@ def name_index(
     return indice
 ```
 
-- [ ] **Passo 4: substituir o conteúdo de** `src/namesio/io.py`
+- [x] **Passo 4: substituir o conteúdo de** `src/namesio/io.py`
 
 **Mudanças:** `write_observations` e `write_index` criam o diretório pai.
 
@@ -1151,7 +1151,7 @@ def write_by_country(rows_by_country: dict[str, list[CountryRow]], directory: Pa
                 w.writerow([_celula(getattr(r, c)) for c in COUNTRY_CSV_COLUMNS])
 ```
 
-- [ ] **Passo 5: substituir o conteúdo de** `src/namesio/manifest.py`
+- [x] **Passo 5: substituir o conteúdo de** `src/namesio/manifest.py`
 
 **Mudanças:** `_linhas` usa `csv.reader`; `build_manifest` recusa `source_id` desconhecido.
 
@@ -1207,12 +1207,12 @@ def build_manifest(release: str, out_dir: Path, sources: dict[str, Source], used
     }
 ```
 
-- [ ] **Passo 6: rodar e ver passar**
+- [x] **Passo 6: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `151 passed`
 
-- [ ] **Passo 7: commit**
+- [x] **Passo 7: commit**
 
 ```bash
 git add tests/test_robustez.py src/namesio/aggregate.py src/namesio/io.py src/namesio/manifest.py
@@ -1232,7 +1232,7 @@ git commit -m "Trata fonte desconhecida, cria diretórios e conta registros CSV 
 - Consome: nada novo.
 - Produz: `namesio.adapters`: `Resource(url, filename)`, `RawRecord(name, kind, country=None, gender=None, year=None, count=None)`, `AdapterError`, `DEFAULT_PACKAGE = "namesio.adapters"`, `module_name(source_id)`, `check_adapter(mod, source_id)`, `load_adapter(source_id, package=DEFAULT_PACKAGE)`. Pacote de teste `adaptadores` (importável porque o pytest põe `tests/` no `sys.path`) com o adaptador `exemplo`; `tests/fixtures/sources.yaml` com `exemplo` (`uniform_case: true`) e `manual` (`adapter: false`).
 
-- [ ] **Passo 1: criar** `tests/fixtures/exemplo/primeiros.csv`
+- [x] **Passo 1: criar** `tests/fixtures/exemplo/primeiros.csv`
 
 ```csv
 nome,sexo,ano,quantidade
@@ -1245,7 +1245,7 @@ ANA CLARA,F,2021,15
 JOSÉ,M,2021,15
 ```
 
-- [ ] **Passo 2: criar** `tests/fixtures/exemplo/sobrenomes.csv`
+- [x] **Passo 2: criar** `tests/fixtures/exemplo/sobrenomes.csv`
 
 ```csv
 nome,sexo,ano,quantidade
@@ -1253,7 +1253,7 @@ SILVA,,2020,500
 SANTOS, ,2020,300
 ```
 
-- [ ] **Passo 3: criar** `tests/fixtures/sources.yaml`
+- [x] **Passo 3: criar** `tests/fixtures/sources.yaml`
 
 ```yaml
 sources:
@@ -1281,13 +1281,13 @@ sources:
     adapter: false
 ```
 
-- [ ] **Passo 4: criar** `tests/adaptadores/__init__.py`
+- [x] **Passo 4: criar** `tests/adaptadores/__init__.py`
 
 ```python
 """Adaptadores escritos só para teste (spec 002, critério de aceite 1)."""
 ```
 
-- [ ] **Passo 5: criar** `tests/adaptadores/exemplo.py`
+- [x] **Passo 5: criar** `tests/adaptadores/exemplo.py`
 
 ```python
 """Adaptador de exemplo, escrito só para teste (spec 002, critério de aceite 1).
@@ -1323,7 +1323,7 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
     yield from _ler(files["sobrenomes.csv"], "family")
 ```
 
-- [ ] **Passo 6: escrever o teste que falha** em `tests/test_adapters.py`
+- [x] **Passo 6: escrever o teste que falha** em `tests/test_adapters.py`
 
 ```python
 """Spec 002, R1 e R7: contrato do adaptador e parse do adaptador de exemplo sobre a fixture."""
@@ -1409,12 +1409,12 @@ def test_adaptador_sem_atributo():
         check_adapter(SimpleNamespace(RESOURCES=[], parse=_parse), "x")
 ```
 
-- [ ] **Passo 7: rodar e ver falhar**
+- [x] **Passo 7: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_adapters.py`
 Esperado: FALHA na coleta com `ModuleNotFoundError: No module named 'namesio.adapters'`
 
-- [ ] **Passo 8: implementar** `src/namesio/adapters/__init__.py`
+- [x] **Passo 8: implementar** `src/namesio/adapters/__init__.py`
 
 ```python
 """Contrato do adaptador de fonte (spec 002, R1).
@@ -1501,12 +1501,12 @@ def load_adapter(source_id: str, package: str = DEFAULT_PACKAGE) -> ModuleType:
     return mod
 ```
 
-- [ ] **Passo 9: rodar e ver passar**
+- [x] **Passo 9: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `166 passed`
 
-- [ ] **Passo 10: commit**
+- [x] **Passo 10: commit**
 
 ```bash
 git add tests/fixtures/exemplo/primeiros.csv tests/fixtures/exemplo/sobrenomes.csv tests/fixtures/sources.yaml tests/adaptadores/__init__.py tests/adaptadores/exemplo.py tests/test_adapters.py src/namesio/adapters/__init__.py
@@ -1526,7 +1526,7 @@ git commit -m "Define o contrato do adaptador e o adaptador de exemplo dos teste
 - Consome: `Resource` (Task 5).
 - Produz: `namesio.cache`: `FetchError`, `USER_AGENT`, `ESPERA = 2.0`, `cached_path(cache_dir, source_id, filename)`, `fetch_resource(cache_dir, source_id, resource, *, refresh=False, offline=False, timeout=60.0, tentativas=3, espera=None, dormir=time.sleep) -> Path`. Fixture `servidor` (`ServidorLocal` com `arquivos`, `falhas`, `truncados`, `lentos`, `requisicoes`, `url()`, `caminhos()`).
 
-- [ ] **Passo 1: substituir o conteúdo de `tests/conftest.py` (mantém as fontes e observações da 001 e acrescenta `ServidorLocal` e a fixture `servidor`)**
+- [x] **Passo 1: substituir o conteúdo de `tests/conftest.py` (mantém as fontes e observações da 001 e acrescenta `ServidorLocal` e a fixture `servidor`)**
 
 ```python
 """Fixture do critério de aceite 3 da spec 001: duas fontes births no mesmo país (uma primary),
@@ -1645,7 +1645,7 @@ def servidor():
     s.httpd.server_close()
 ```
 
-- [ ] **Passo 2: escrever o teste que falha** em `tests/test_cache.py`
+- [x] **Passo 2: escrever o teste que falha** em `tests/test_cache.py`
 
 ```python
 """Spec 002, R4: cache de downloads, testado contra um servidor HTTP local."""
@@ -1770,12 +1770,12 @@ def test_timeout(servidor, tmp_path):
     assert not (tmp_path / "exemplo" / "a.csv").exists()
 ```
 
-- [ ] **Passo 3: rodar e ver falhar**
+- [x] **Passo 3: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_cache.py`
 Esperado: FALHA na coleta com `ModuleNotFoundError: No module named 'namesio.cache'`
 
-- [ ] **Passo 4: implementar** `src/namesio/cache.py`
+- [x] **Passo 4: implementar** `src/namesio/cache.py`
 
 ```python
 """Cache de downloads das fontes (spec 002, R4).
@@ -1881,12 +1881,12 @@ def fetch_resource(
     raise FetchError(f"falha ao baixar {resource.url} após {tentativas} tentativa(s): {ultimo}")
 ```
 
-- [ ] **Passo 5: rodar e ver passar**
+- [x] **Passo 5: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `178 passed`
 
-- [ ] **Passo 6: commit**
+- [x] **Passo 6: commit**
 
 ```bash
 git add tests/conftest.py tests/test_cache.py src/namesio/cache.py
@@ -1905,7 +1905,7 @@ git commit -m "Adiciona cache de downloads com metadados, tentativas e escrita a
 - Consome: `derive_name_fields` (Task 2), `validate` (Task 3), `load_adapter` e `RawRecord` (Task 5), `fetch_resource` e `FetchError` (Task 6), fixture `servidor` (Task 6).
 - Produz: `namesio.pipeline`: `PipelineError` (mensagem `fonte '<id>': <causa>`), `RecordError`, `to_observations(records, source) -> list[Observation]`, `select_sources(sources, ids) -> list[Source]`, `fetch_sources(selected, cache_dir, *, refresh=False, adapters=DEFAULT_PACKAGE, **opcoes)`, `ingest_sources(selected, sources, cache_dir, *, offline=False, adapters=DEFAULT_PACKAGE, **opcoes) -> list[Observation]`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_pipeline.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_pipeline.py`
 
 ```python
 """Spec 002, R1 e R5: transformação de RawRecord em Observation, fetch e ingest por fonte."""
@@ -2126,12 +2126,12 @@ def test_ingest_sem_offline_baixa_o_que_falta(fontes_exemplo, exemplo_no_servido
     assert sorted(exemplo_no_servidor.caminhos()) == ["/exemplo/primeiros.csv", "/exemplo/sobrenomes.csv"]
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_pipeline.py`
 Esperado: FALHA na coleta com `ModuleNotFoundError: No module named 'namesio.pipeline'`
 
-- [ ] **Passo 3: implementar** `src/namesio/pipeline.py`
+- [x] **Passo 3: implementar** `src/namesio/pipeline.py`
 
 ```python
 """Pipeline de ingestão (spec 002, R1 e R5): fontes -> cache -> parse -> observações."""
@@ -2275,12 +2275,12 @@ def ingest_sources(
     return observacoes
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `203 passed`
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_pipeline.py src/namesio/pipeline.py
@@ -2299,7 +2299,7 @@ git commit -m "Adiciona pipeline que transforma registros brutos em observaçõe
 - Consome: `select_sources`, `fetch_sources`, `ingest_sources`, `PipelineError` (Task 7); `DEFAULT_PACKAGE` (Task 5).
 - Produz: `namesio fetch [ID ...] [--refresh]`, `namesio ingest [ID ...] --out ARQ [--offline]`, `namesio run --out DIR --release AAAA.MM [--offline] [--refresh]`; todos com `--sources`, `--cache` (padrão `cache`) e `--adapters` (padrão `namesio.adapters`). `validate` e `build` como na 001.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_cli_pipeline.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_cli_pipeline.py`
 
 ```python
 """Spec 002, R5 e R6, critérios de aceite 1, 3 e 4: fetch, ingest, build e run pela CLI."""
@@ -2481,12 +2481,12 @@ def test_ajuda_lista_os_comandos(capsys):
         assert comando in saida
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_cli_pipeline.py`
 Esperado: `13 failed` (o argparse recusa `fetch`, `ingest` e `run` com `SystemExit: 2`)
 
-- [ ] **Passo 3: substituir o conteúdo de** `src/namesio/cli.py`
+- [x] **Passo 3: substituir o conteúdo de** `src/namesio/cli.py`
 
 **Mudanças:** subcomandos `fetch`, `ingest` e `run`; opções `--cache` e `--adapters`; `_saida_invalida` e `_build` compartilhados por `build` e `run`; `PipelineError` tratado como os demais erros do domínio.
 
@@ -2613,19 +2613,19 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 ```
 
-- [ ] **Passo 4: rodar e ver passar**
+- [x] **Passo 4: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `216 passed`
 
-- [ ] **Passo 5: commit**
+- [x] **Passo 5: commit**
 
 ```bash
 git add tests/test_cli_pipeline.py src/namesio/cli.py
 git commit -m "Adiciona comandos fetch, ingest e run à CLI" -m "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-- [ ] **Passo 6: conferir**
+- [x] **Passo 6: conferir**
 
 Rodar: `uv run namesio --help`
 Esperado: uso com os subcomandos `fetch`, `ingest`, `validate`, `build` e `run`.
@@ -2643,7 +2643,7 @@ Esperado: uso com os subcomandos `fetch`, `ingest`, `validate`, `build` e `run`.
 - Consome: CLI da Task 8, adaptador e fixtures da Task 5.
 - Produz: workflow `CI` em todo push e pull request: `uv sync`, `uv run pytest -q` e `namesio run --offline` sobre um cache copiado de `tests/fixtures/exemplo/`.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_ci.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_ci.py`
 
 ```python
 """Spec 002, R7: o workflow da CI roda uv sync, pytest e namesio run --offline sobre as fixtures."""
@@ -2697,12 +2697,12 @@ def test_passo_offline_da_ci_roda_localmente(tmp_path):
     assert "OK: 8 observações, 1 países" in r.stdout
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_ci.py`
 Esperado: `4 failed` (`FileNotFoundError` em `.github/workflows/ci.yml` e `/cache/` ausente do `.gitignore`)
 
-- [ ] **Passo 3: acrescentar o cache ao `.gitignore`**
+- [x] **Passo 3: acrescentar o cache ao `.gitignore`**
 
 ```bash
 cat >> .gitignore <<'EOF'
@@ -2712,7 +2712,7 @@ cat >> .gitignore <<'EOF'
 EOF
 ```
 
-- [ ] **Passo 4: implementar** `.github/workflows/ci.yml`
+- [x] **Passo 4: implementar** `.github/workflows/ci.yml`
 
 ```yaml
 name: CI
@@ -2742,12 +2742,12 @@ jobs:
           test -s "$RUNNER_TEMP/dist/by_country/PT.csv"
 ```
 
-- [ ] **Passo 5: rodar e ver passar**
+- [x] **Passo 5: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `220 passed`
 
-- [ ] **Passo 6: commit**
+- [x] **Passo 6: commit**
 
 ```bash
 git add .gitignore .github/workflows/ci.yml tests/test_ci.py
@@ -2767,7 +2767,7 @@ git commit -m "Adiciona CI com testes e run offline sobre as fixtures" -m "Co-Au
 - Consome: CLI da Task 8 (`ingest --offline` e `build`), contrato de adaptador da Task 5.
 - Produz: `tools/bench_pipeline.py` (`main(argv)`, `total_de_observacoes(n)`), que gera N observações sintéticas, roda `ingest` e `build` pela CLI e registra tempo e pico de memória; `Observation` com `slots=True`; `write_observations` e `read_observations` colunares, com textos repetidos compartilhados.
 
-- [ ] **Passo 1: escrever o teste que falha** em `tests/test_benchmark.py`
+- [x] **Passo 1: escrever o teste que falha** em `tests/test_benchmark.py`
 
 ```python
 """Spec 002, R8: o script de medição roda de ponta a ponta, e as observações ocupam pouca memória."""
@@ -2817,12 +2817,12 @@ def test_leitura_compartilha_textos_repetidos(observacoes, tmp_path):
     assert lidas[0].name is lidas[1].name
 ```
 
-- [ ] **Passo 2: rodar e ver falhar**
+- [x] **Passo 2: rodar e ver falhar**
 
 Rodar: `uv run pytest -q tests/test_benchmark.py`
 Esperado: `4 failed` (`FileNotFoundError` em `tools/bench_pipeline.py`, `Observation` com `__dict__` e textos lidos sem compartilhamento)
 
-- [ ] **Passo 3: implementar** `tools/bench_pipeline.py`
+- [x] **Passo 3: implementar** `tools/bench_pipeline.py`
 
 ```python
 """Medição de R8 (spec 002): namesio ingest e build sobre observações sintéticas.
@@ -2973,7 +2973,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Passo 4: substituir o conteúdo de** `src/namesio/io.py`
+- [x] **Passo 4: substituir o conteúdo de** `src/namesio/io.py`
 
 **Mudanças:** `write_observations` monta a tabela por colunas; `_valores` decodifica colunas de texto por dicionário; `read_observations` monta as observações a partir das colunas.
 
@@ -3081,7 +3081,7 @@ def write_by_country(rows_by_country: dict[str, list[CountryRow]], directory: Pa
                 w.writerow([_celula(getattr(r, c)) for c in COUNTRY_CSV_COLUMNS])
 ```
 
-- [ ] **Passo 5: substituir o conteúdo de** `src/namesio/schema.py`
+- [x] **Passo 5: substituir o conteúdo de** `src/namesio/schema.py`
 
 **Mudanças:** `Observation` passa a `@dataclass(frozen=True, slots=True)`.
 
@@ -3202,19 +3202,19 @@ def validate(observations: list[Observation], sources: dict[str, Source]) -> Non
         raise ValidationError(erros)
 ```
 
-- [ ] **Passo 6: rodar e ver passar**
+- [x] **Passo 6: rodar e ver passar**
 
 Rodar: `uv run pytest -q`
 Esperado: `224 passed`
 
-- [ ] **Passo 7: commit**
+- [x] **Passo 7: commit**
 
 ```bash
 git add tests/test_benchmark.py tools/bench_pipeline.py src/namesio/io.py src/namesio/schema.py
 git commit -m "Adiciona medição de R8 e leitura e escrita colunares de observações" -m "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-- [ ] **Passo 8: conferir**
+- [x] **Passo 8: conferir**
 
 Rodar: `uv run python tools/bench_pipeline.py`
 Esperado: em alguns minutos, a linha `R8: 3000000 observações; ingest ... s, build ... s, pico de memória ... MB; dentro dos limites` e código de saída 0 (no protótipo, num Apple M4 com 24 GB: ingest 80 s, build 59 s, pico de 1400 MB). Copiar a linha `R8:` para a descrição do pull request (critério de aceite 6).
@@ -3223,5 +3223,5 @@ Esperado: em alguns minutos, a linha `R8: 3000000 observações; ingest ... s, b
 
 ### Fechamento
 
-- [ ] Rodar `uv run pytest -q` e ver `224 passed`.
-- [ ] Abrir o pull request com `Closes #2` na descrição e a linha `R8:` da Task 10; conferir a CI verde no pull request (critério de aceite 5).
+- [x] Rodar `uv run pytest -q` e ver `224 passed`.
+- [x] Abrir o pull request com `Closes #2` na descrição e a linha `R8:` da Task 10; conferir a CI verde no pull request (critério de aceite 5).
