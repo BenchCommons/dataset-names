@@ -12,9 +12,12 @@ from pyarrow import ArrowException
 
 from namescommons.adapters import DEFAULT_PACKAGE
 from namescommons.aggregate import AggregationError, by_country, name_index
-from namescommons.io import read_observations, write_by_country, write_index, write_observations
+from namescommons.io import (
+    read_links, read_observations, write_by_country, write_index, write_links, write_observations,
+)
+from namescommons.links import VariantLink, validate_links
 from namescommons.manifest import RELEASE, build_manifest
-from namescommons.pipeline import PipelineError, fetch_sources, ingest_sources, select_sources
+from namescommons.pipeline import PipelineError, fetch_sources, ingest_links, ingest_sources, select_sources
 from namescommons.schema import Observation, ValidationError, validate
 from namescommons.sources import Source, SourceError, load_sources
 
@@ -58,6 +61,7 @@ def _parser() -> argparse.ArgumentParser:
     _opcoes_de_fonte(p)
     p.add_argument("--out", type=Path, required=True, help="arquivo observations.parquet a gravar")
     p.add_argument("--offline", action="store_true", help="não acessa a rede; arquivo ausente do cache é erro")
+    p.add_argument("--links", type=Path, help="arquivo variant_links.parquet a gravar com as ligações entre variantes (spec 004)")
     ajuda = {
         "validate": "valida um observations.parquet (spec 001)",
         "build": "gera as saídas da release a partir de um observations.parquet (spec 001)",
@@ -68,6 +72,7 @@ def _parser() -> argparse.ArgumentParser:
         if nome == "build":
             p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
             p.add_argument("--release", required=True, help="AAAA.MM[.N]")
+            p.add_argument("--links", type=Path, help="variant_links.parquet gravado por ingest --links, copiado para a release")
     p = sub.add_parser("run", help="fetch, ingest e build em sequência")
     _opcoes_de_fonte(p, com_ids=False)
     p.add_argument("--out", type=Path, required=True, help="diretório novo ou vazio para as saídas da release")
@@ -94,8 +99,12 @@ def _saida_invalida(release: str, out: Path) -> str | None:
     return None
 
 
-def _build(obs: list[Observation], fontes: dict[str, Source], out: Path, release: str) -> int:
-    """Grava as saídas da spec 001 em out, tudo ou nada; devolve o número de países.
+def _build(
+    obs: list[Observation], fontes: dict[str, Source], out: Path, release: str,
+    links: list[VariantLink] | None = None,
+) -> int:
+    """Grava as saídas da spec 001 (e variant_links da spec 004, se houver) em out, tudo ou nada;
+    devolve o número de países.
 
     As saídas são montadas num diretório temporário ao lado de out e só então renomeadas:
     uma falha em qualquer etapa não deixa saída parcial.
@@ -111,6 +120,8 @@ def _build(obs: list[Observation], fontes: dict[str, Source], out: Path, release
         for kind, base in (("given", "given_names"), ("family", "family_names")):
             write_index(name_index(obs, paises, kind), temporario / f"{base}.csv", temporario / f"{base}.parquet")
         write_by_country(paises, temporario / "by_country")
+        if links is not None:
+            write_links(links, temporario / "variant_links.parquet")
         manifest = build_manifest(release, temporario, fontes, {o.source_id for o in obs})
         (temporario / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -142,11 +153,18 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"OK: {_n(len(selecionadas), 'fonte', 'fontes')} em {args.cache}.")
                 return 0
             obs = ingest_sources(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
+            links = None
+            if args.cmd == "run" or args.links is not None:
+                links = ingest_links(selecionadas, fontes, args.cache, offline=args.offline, adapters=args.adapters)
             if args.cmd == "ingest":
                 if args.out.exists():
                     print(f"aviso: {args.out} já existe e será substituído", file=sys.stderr)
                 write_observations(obs, args.out)
-                print(f"OK: {_n(len(obs), 'observação', 'observações')} de {_n(len(selecionadas), 'fonte', 'fontes')} em {args.out}.")
+                mensagem = f"OK: {_n(len(obs), 'observação', 'observações')} de {_n(len(selecionadas), 'fonte', 'fontes')} em {args.out}"
+                if args.links is not None:
+                    write_links(links or [], args.links)
+                    mensagem += f"; {_n(len(links or []), 'ligação', 'ligações')} em {args.links}"
+                print(mensagem + ".")
                 return 0
         else:
             if not args.observations.exists():
@@ -156,10 +174,19 @@ def main(argv: list[str] | None = None) -> int:
             except (OSError, ArrowException, TypeError, KeyError) as e:
                 return _erro(f"não foi possível ler {args.observations}: {e}")
             validate(obs, fontes)
+            links = None
+            if getattr(args, "links", None) is not None:
+                if not args.links.exists():
+                    return _erro(f"arquivo não encontrado: {args.links}")
+                try:
+                    links = read_links(args.links)
+                except (OSError, ArrowException, TypeError, KeyError) as e:
+                    return _erro(f"não foi possível ler {args.links}: {e}")
+                validate_links(links, fontes)
             if args.cmd == "validate":
                 print(f"OK: {_n(len(obs), 'observação válida', 'observações válidas')}.")
                 return 0
-        paises = _build(obs, fontes, args.out, args.release)
+        paises = _build(obs, fontes, args.out, args.release, links)
     except (
         PipelineError, SourceError, ValidationError, AggregationError, ValueError, OSError, ArrowException,
     ) as e:

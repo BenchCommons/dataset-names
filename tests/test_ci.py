@@ -134,7 +134,7 @@ given,D'Arcy,d'arcy,d'arcy,Latn,13,births,6,0.000000,13,1991,1991
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv fora do PATH")
 def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
-    """Spec 003, R5: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
+    """Spec 003, R5, e spec 004, R7: a CI roda as fontes de sources.yaml sobre um cache montado com as amostras."""
     passo = next(p for p in _workflow()["jobs"]["testes"]["steps"] if "cache-oficiais" in p.get("run", ""))
     ambiente = {**os.environ, **passo.get("env", {}), "RUNNER_TEMP": str(tmp_path)}
     r = subprocess.run(["bash", "-e", "-c", passo["run"]], cwd=RAIZ, env=ambiente,
@@ -148,6 +148,9 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     assert (tmp_path / "dist-oficiais" / "by_country" / "CA.csv").read_text(encoding="utf-8") == CA_CSV
     # Spec 003b, R4: Espanha com nomes e sobrenomes population de 2025; ANDREA dos dois sexos
     assert (tmp_path / "dist-oficiais" / "by_country" / "ES.csv").read_text(encoding="utf-8") == ES_CSV
+    # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
+    assert "variant_links.parquet" in passo["run"]
+    assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
 
 
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():
