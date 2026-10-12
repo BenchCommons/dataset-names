@@ -47,7 +47,8 @@ Esta spec troca as cópias locais pelo pacote e deixa aqui só o que é de nomes
   1. mensagens que vêm do kit ficam em inglês (cache, leitor de planilhas, contrato do adaptador, `parse_count`, `parse_code`, campos genéricos do registro); as mensagens de nomes continuam em português;
   2. a ordem das linhas numa mensagem do registro com vários erros: o kit confere `retrieved` e `adapter` antes dos campos de nomes (plano da spec 004 do tools-dataset, seção 2.4); o conjunto de mensagens é o mesmo;
   3. o cache recusa com `ValueError` id de fonte fora de `[a-z0-9]+(-[a-z0-9]+)*` e nome de arquivo inseguro antes de qualquer acesso; pela CLI isso não é alcançável, porque o registro e `check_adapter` já recusam os dois;
-  4. o manifesto recusa arquivo de saída sem contador registrado em vez de contá-lo como CSV; as saídas daqui só têm `.csv` e `.parquet`.
+  4. o manifesto recusa arquivo de saída sem contador registrado em vez de contá-lo como CSV; as saídas daqui só têm `.csv` e `.parquet`;
+  5. o cache recusa com `ValueError` uma entrada que resolve fora do diretório do cache, o que inclui um link simbólico para um arquivo ou diretório em outro lugar, mesmo com `--offline` e o arquivo presente; antes o arquivo era lido. Encontrado na implementação: `tools/bench_pipeline.py --wikidata` passa a pôr os arquivos no cache por link físico ou cópia, e a decisão sobre aceitar links simbólicos é do tools-dataset ([tools-dataset#9](https://github.com/BenchCommons/tools-dataset/issues/9)).
 
 ### R5. Testes
 

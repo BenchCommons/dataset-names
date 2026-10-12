@@ -68,3 +68,29 @@ def test_check_adapter_confere_links():
 def test_namescommons_spreadsheet_nao_existe():
     import importlib.util
     assert importlib.util.find_spec("namescommons.spreadsheet") is None
+
+
+def test_namescommons_cache_nao_existe():
+    import importlib.util
+    assert importlib.util.find_spec("namescommons.cache") is None
+
+
+# R3.3: downloads pelo kit com o User-Agent deste projeto ------------------------------------------
+
+def test_user_agent_igual_ao_anterior():
+    from importlib.metadata import version
+
+    from namescommons import USER_AGENT
+    assert USER_AGENT == f"namescommons/{version('names-commons-dataset')} (+https://github.com/BenchCommons/dataset-names)"
+
+
+def test_pipeline_envia_o_user_agent_do_projeto(servir_fixtures, tmp_path):
+    import adaptadores.exemplo
+
+    from namescommons import USER_AGENT
+    from namescommons.pipeline import fetch_sources, select_sources
+    from namescommons.sources import load_sources
+    servidor = servir_fixtures(adaptadores.exemplo)
+    fontes = load_sources(RAIZ / "tests" / "fixtures" / "sources.yaml")
+    fetch_sources(select_sources(fontes, ["exemplo"]), tmp_path, adapters="adaptadores")
+    assert [agente for _, agente in servidor.requisicoes] == [USER_AGENT, USER_AGENT]

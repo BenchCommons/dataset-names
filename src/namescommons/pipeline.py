@@ -4,10 +4,12 @@ from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
 
+from datasettool.sources.cache import FetchError, fetch_resource
+
+from namescommons import USER_AGENT
 from namescommons.adapters import (
-    DEFAULT_PACKAGE, AdapterError, FormatError, RawLink, RawRecord, SourceFiles, load_adapter,
+    DEFAULT_PACKAGE, AdapterError, FormatError, RawLink, RawRecord, Resource, SourceFiles, load_adapter,
 )
-from namescommons.cache import FetchError, fetch_resource
 from namescommons.links import VariantLink, link_problems, validate_links
 from namescommons.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
 from namescommons.sources import Source, is_country
@@ -182,6 +184,11 @@ def to_links(records: Iterable[RawLink], source: Source) -> list[VariantLink]:
     return sorted(unicas, key=VariantLink.ordem)
 
 
+def _baixar(cache_dir: Path, fonte: Source, recurso: Resource, **opcoes) -> Path:
+    """fetch_resource do kit com o User-Agent deste projeto (spec 007, R3.3)."""
+    return fetch_resource(cache_dir, fonte.id, recurso, user_agent=USER_AGENT, **opcoes)
+
+
 def select_sources(sources: dict[str, Source], ids: list[str]) -> list[Source]:
     """Fontes indicadas, ou todas com adaptador se nenhuma for indicada."""
     if not ids:
@@ -212,7 +219,7 @@ def fetch_sources(
         try:
             mod = load_adapter(fonte.id, adapters)
             for recurso in mod.RESOURCES:
-                fetch_resource(cache_dir, fonte.id, recurso, refresh=refresh, **opcoes)
+                _baixar(cache_dir, fonte, recurso, refresh=refresh, **opcoes)
         except Exception as e:
             raise _falha(fonte, e) from e
 
@@ -232,7 +239,7 @@ def ingest_sources(
         try:
             mod = load_adapter(fonte.id, adapters)
             arquivos = SourceFiles(
-                (r.filename, fetch_resource(cache_dir, fonte.id, r, offline=offline, **opcoes))
+                (r.filename, _baixar(cache_dir, fonte, r, offline=offline, **opcoes))
                 for r in mod.RESOURCES
             )
             obs = to_observations(mod.parse(arquivos), fonte)
@@ -262,7 +269,7 @@ def ingest_links(
             if getattr(mod, "links", None) is None:
                 continue
             arquivos = SourceFiles(
-                (r.filename, fetch_resource(cache_dir, fonte.id, r, offline=offline, **opcoes))
+                (r.filename, _baixar(cache_dir, fonte, r, offline=offline, **opcoes))
                 for r in mod.RESOURCES
             )
             daqui = to_links(mod.links(arquivos), fonte)
