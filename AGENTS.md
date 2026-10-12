@@ -31,9 +31,12 @@ PYTHONPATH=tests uv run namescommons run --offline --sources tests/fixtures/sour
 
 Procedimento completo no [ADR 0013](docs/adr/0013-dependencia-do-tools-dataset.md):
 
-1. Troque juntas, em `pyproject.toml`, a versão (`benchcommons-tools-dataset==X.Y.Z`) e a tag (`tag = "vX.Y.Z"` em `[tool.uv.sources]`), e a constante `VERSAO` de `tests/test_tools_dataset.py`.
-2. `uv lock --upgrade-package benchcommons-tools-dataset && uv sync`.
-3. `uv run pytest -q` e os dois passos offline da CI; compare as saídas com as da versão anterior (`diff -r`).
+1. Troque juntas, em `pyproject.toml`, a versão (`benchcommons-tools-dataset==X.Y.Z`) e a tag (`tag = "vX.Y.Z"` em `[tool.uv.sources]`), e as constantes `VERSAO` e `COMMIT` de `tests/test_tools_dataset.py`.
+2. `uv lock --upgrade-package benchcommons-tools-dataset && uv sync --locked`.
+3. Confira a integridade: `git ls-remote https://github.com/BenchCommons/tools-dataset 'refs/tags/vX.Y.Z^{}'` dá o mesmo commit do `uv.lock` e de `COMMIT`, e `git tag -v vX.Y.Z` num clone do tools-dataset mostra assinatura válida.
+4. `uv run pytest -q` e os dois passos offline da CI; compare as saídas com as da versão anterior (`diff -r`).
+
+Só o `uv` lê a origem git fixada; não instale o projeto com `pip install .` ([tools-dataset#10](https://github.com/BenchCommons/tools-dataset/issues/10)).
 
 O cache do kit recusa entradas que resolvem fora do diretório do cache, inclusive links simbólicos ([tools-dataset#9](https://github.com/BenchCommons/tools-dataset/issues/9)): ponha arquivos baixados à mão no cache por cópia ou link físico.
 
