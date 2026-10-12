@@ -16,12 +16,12 @@ Cada tarefa segue TDD: escrever os testes, ver que falham pelo motivo certo, esc
 - Consome: `fetch_resource`, `_baixar`, `FetchError` (spec 002); servidor local (spec 002, R7).
 - Produz: `namescommons.cache.BlockedError(FetchError)`; `ServidorLocal.tipos: dict[str, str]` (caminho -> `Content-Type`).
 
-- [ ] **Passo 1: testes que falham** em `tests/test_cache.py`
+- [x] **Passo 1: testes que falham** em `tests/test_cache.py`
   - `test_pagina_html_no_lugar_do_arquivo_nao_entra_no_cache`: o servidor responde 200 com `text/html; charset=UTF-8` e a página "Pardon Our Interruption" para `/a.csv`; `fetch_resource` levanta `BlockedError` cuja mensagem tem "página HTML", a URL, o caminho `tmp_path/exemplo/a.csv` e `--offline`; o servidor recebeu uma única requisição; nem `a.csv`, nem `a.csv.part`, nem `a.csv.meta.json` existem.
   - `test_html_e_aceito_quando_o_recurso_e_html`: recurso `pagina.html` servido como `text/html` é gravado.
   - `test_csv_servido_como_text_csv_continua_aceito`: `text/csv` não muda nada.
-- [ ] **Passo 2: código.** `ServidorLocal` envia `Content-Type` quando o caminho está em `tipos`. Em `_baixar`, depois de abrir a resposta e antes de gravar, se o tipo de mídia (antes do `;`, sem caixa) for `text/html` e o `destino` não terminar em `.html` ou `.htm`, levantar `BlockedError`. Em `fetch_resource`, `BlockedError` sai do laço sem nova tentativa e a mensagem final é `falha ao baixar <url>: o servidor devolveu uma página HTML (text/html) no lugar de <filename>, provável bloqueio de download automático: baixe o arquivo pelo navegador, grave-o em <destino> e rode com --offline`.
-- [ ] **Passo 3:** `uv run pytest -q` verde; commit.
+- [x] **Passo 2: código.** `ServidorLocal` envia `Content-Type` quando o caminho está em `tipos`. Em `_baixar`, depois de abrir a resposta e antes de gravar, se o tipo de mídia (antes do `;`, sem caixa) for `text/html` e o `destino` não terminar em `.html` ou `.htm`, levantar `BlockedError`. Em `fetch_resource`, `BlockedError` sai do laço sem nova tentativa e a mensagem final é `falha ao baixar <url>: o servidor devolveu uma página HTML (text/html) no lugar de <filename>, provável bloqueio de download automático: baixe o arquivo pelo navegador, grave-o em <destino> e rode com --offline`.
+- [x] **Passo 3:** `uv run pytest -q` verde; commit.
 
 ### Task 2: adaptador `nz-dia-births` (R1 a R3, R4.2, R5)
 

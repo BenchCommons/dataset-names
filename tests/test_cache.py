@@ -7,7 +7,7 @@ from datetime import datetime
 import pytest
 
 from namescommons.adapters import Resource
-from namescommons.cache import FetchError, cached_path, fetch_resource
+from namescommons.cache import BlockedError, FetchError, cached_path, fetch_resource
 
 CORPO = "nome,sexo,ano,quantidade\nMARIA,F,2020,100\n".encode()
 
@@ -118,3 +118,33 @@ def test_timeout(servidor, tmp_path):
     with pytest.raises(FetchError, match="após 1 tentativa"):
         fetch_resource(tmp_path, "exemplo", r, timeout=0.2, tentativas=1)
     assert not (tmp_path / "exemplo" / "a.csv").exists()
+
+
+# Spec 003e, R4.1: servidor que responde 200 com uma página HTML de bloqueio no lugar do arquivo -----
+
+DESAFIO = b"<!DOCTYPE html>\n<html><head><title>Pardon Our Interruption</title></head><body></body></html>\n"
+
+
+def test_pagina_html_no_lugar_do_arquivo_nao_entra_no_cache(servidor, tmp_path):
+    recurso = _recurso(servidor, corpo=DESAFIO)
+    servidor.tipos["/a.csv"] = "text/html; charset=UTF-8"
+    with pytest.raises(BlockedError) as e:
+        fetch_resource(tmp_path, "exemplo", recurso, espera=0)
+    mensagem = str(e.value)
+    assert "página HTML (text/html) no lugar de a.csv" in mensagem
+    assert servidor.url("/a.csv") in mensagem
+    assert f"grave-o em {tmp_path / 'exemplo' / 'a.csv'} e rode com --offline" in mensagem
+    assert servidor.caminhos() == ["/a.csv"]
+    assert sorted(p.name for p in (tmp_path / "exemplo").iterdir()) == []
+
+
+def test_html_e_aceito_quando_o_recurso_e_html(servidor, tmp_path):
+    recurso = _recurso(servidor, caminho="/pagina.html", corpo=DESAFIO)
+    servidor.tipos["/pagina.html"] = "Text/HTML"
+    assert fetch_resource(tmp_path, "exemplo", recurso).read_bytes() == DESAFIO
+
+
+def test_csv_servido_como_text_csv_continua_aceito(servidor, tmp_path):
+    recurso = _recurso(servidor)
+    servidor.tipos["/a.csv"] = "text/csv; charset=utf-8"
+    assert fetch_resource(tmp_path, "exemplo", recurso).read_bytes() == CORPO
