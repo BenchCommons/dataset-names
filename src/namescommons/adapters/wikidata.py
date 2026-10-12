@@ -8,11 +8,12 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterator
+from itertools import combinations
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlencode
 
-from namescommons.adapters import FormatError, RawRecord, Resource
+from namescommons.adapters import FormatError, RawLink, RawRecord, Resource
 from namescommons.normalize import name_key, normalize_name
 
 SOURCE_ID = "wikidata"
@@ -197,3 +198,37 @@ def parse(files: dict[str, Path]) -> Iterator[RawRecord]:
     for (_, kind), (nome, generos) in grupos.items():
         for genero in sorted(g for g in generos if g) or [None]:
             yield RawRecord(name=nome, kind=kind, gender=genero)
+
+
+def _alvo(linha: dict, consulta: Consulta) -> str | None:
+    """QID do alvo; None para valor desconhecido (genid); termo que não é URI é FormatError (R2.4)."""
+    termo = linha.get("target")
+    if not isinstance(termo, dict) or termo.get("type") not in ("uri", "bnode"):
+        raise FormatError(f"{consulta.nome}: target {termo!r} não é URI")
+    return _entidade(termo)
+
+
+def links(files: dict[str, Path]) -> Iterator[RawLink]:
+    """Ligações entre rótulos aceitos (R4.3); o pipeline descarta auto-ligações e repetidas."""
+    por_item: dict[str, dict[tuple[str, str], str]] = {}
+    for qid, kind, nome, _ in rotulos(files):
+        por_item.setdefault(qid, {}).setdefault(_chave(nome, kind), nome)
+    for qid, nomes in por_item.items():
+        for ((_, ka), a), ((_, kb), b) in combinations(nomes.items(), 2):
+            if ka == kb:
+                yield RawLink("same_item", qid, a, ka, qid, b, kb)
+    for propriedade, (relacao, _) in PROPRIEDADES.items():
+        consulta = LIGACOES[propriedade]
+        for linha in linhas(files, consulta):
+            origem, destino = _item(linha, consulta), _alvo(linha, consulta)
+            alvos = por_item.get(destino, {}) if destino else {}
+            for (_, ka), a in por_item.get(origem, {}).items():
+                for (_, kb), b in alvos.items():
+                    yield RawLink(relacao, origem, a, ka, destino, b, kb)
+    for linha in linhas(files, TRANSLITERACOES):
+        origem = _item(linha, TRANSLITERACOES)
+        texto = _literal(linha.get("transliteration"), "transliteration", TRANSLITERACOES)
+        if texto is None or not nome_aceito(texto):
+            continue
+        for (_, kind), nome in por_item.get(origem, {}).items():
+            yield RawLink("transliteration", origem, nome, kind, origem, texto, kind)

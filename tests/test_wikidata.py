@@ -183,3 +183,85 @@ def test_nome_que_nao_e_literal_nem_desconhecido_falha(tmp_path):
     _pagina(pasta, wd.PRENOMES, 1, [{**_rotulo("Q1", "Ana"), "name": {"type": "typed-literal"}}])
     with pytest.raises(FormatError, match="given-names: name .* não é literal"):
         list(wd.parse(_arquivos(pasta)))
+
+
+# R4.3: ligações entre variantes -----------------------------------------------------------------
+
+def _ligacoes(pasta: Path = AMOSTRA):
+    from namescommons.pipeline import to_links
+    fonte = load_sources(RAIZ / "sources.yaml")["wikidata"]
+    return to_links(wd.links(_arquivos(pasta)), fonte)
+
+
+def test_links_da_amostra_real():
+    """Ligações entre itens com rótulo aceito; alvos de fora da amostra e auto-ligações somem."""
+    obtidas = {(v.relation, v.qid, v.name, v.kind, v.target_qid, v.target_name, v.target_kind)
+               for v in _ligacoes() if v.relation != "transliteration"}
+    g, f = "given", "family"
+    s, fn, og = "said_to_be_the_same", "family_name_identical", "other_gender"
+    assert obtidas == {
+        (s, "Q16654835", "Иванов", f, "Q40711158", "Ivanov", f),
+        (s, "Q40711158", "Ivanov", f, "Q16654835", "Иванов", f),
+        (s, "Q21447935", "Иванова", f, "Q37456871", "Ivanova", f),
+        (s, "Q37456871", "Ivanova", f, "Q21447935", "Иванова", f),
+        (s, "Q21104340", "Иван", g, "Q4925477", "John", g),
+        (s, "Q21104340", "Иван", g, "Q830350", "Ivan", g),
+        (s, "Q4925477", "John", g, "Q21104340", "Иван", g),
+        (s, "Q4925477", "John", g, "Q830350", "Ivan", g),
+        (s, "Q830350", "Ivan", g, "Q21104340", "Иван", g),
+        (s, "Q830350", "Ivan", g, "Q4925477", "John", g),
+        (s, "Q325872", "Maria", g, "Q39897333", "Мария", g),
+        (s, "Q39897333", "Мария", g, "Q325872", "Maria", g),
+        (fn, "Q4925477", "John", g, "Q5281981", "John", f),
+        (fn, "Q637123", "Kim", g, "Q157414", "Kim", f),
+        (fn, "Q96209920", "李", g, "Q686223", "李", f),
+        (og, "Q25413386", "Maria", g, "Q39897333", "Мария", g),
+        (og, "Q39897333", "Мария", g, "Q25413386", "Maria", g),
+        (og, "Q16654835", "Иванов", f, "Q21447935", "Иванова", f),
+        (og, "Q21447935", "Иванова", f, "Q16654835", "Иванов", f),
+    }
+
+
+def test_transliteracoes_da_amostra_real():
+    """R3.2 vale para transliterações: tom numérico e crase somem; destino é o próprio item."""
+    por_item: dict[str, list[str]] = {}
+    for v in _ligacoes():
+        if v.relation == "transliteration":
+            assert (v.target_qid, v.target_kind) == (v.qid, v.kind)
+            por_item.setdefault(f"{v.qid} {v.name}", []).append(v.target_name)
+    assert {k: sorted(v) for k, v in por_item.items()} == {
+        "Q16654835 Иванов": ["Ivanov", "Iwanow", "伊万诺夫"],
+        "Q21447935 Иванова": ["Ivanova", "Ivanovová", "Iwanowa"],
+        "Q39897333 Мария": ["Maria", "Mariia", "Marija", "Mariya", "Masha"],
+        "Q4925477 John": ["Джон"],
+        "Q493293 Andrea": ["Αντρέα", "Андреа"],
+        "Q686223 李": sorted(["Lee", "Léih", "Ley", "Li", "Lí", "Lǐ", "Lii", "Lý", "Ли", "Лі", "리", "이", "り", "ㄌㄧˇ"]),
+    }
+
+
+def _ligacao(qid: str, alvo: dict) -> dict:
+    return {"item": {"type": "uri", "value": f"http://www.wikidata.org/entity/{qid}"}, "target": alvo}
+
+
+def test_same_item_e_alvo_desconhecido(tmp_path):
+    """Rótulos diferentes do mesmo item viram same_item; alvo genid (valor desconhecido) é pulado."""
+    pasta = _copia(tmp_path)
+    _pagina(pasta, wd.PRENOMES, 1, [_rotulo("Q1", "Мария"), _rotulo("Q1", "Maria"), _rotulo("Q1", "MARIA"),
+                                    _rotulo("Q2", "Marie")])
+    _pagina(pasta, wd.LIGACOES["P460"], 1, [
+        _ligacao("Q1", {"type": "uri", "value": "http://www.wikidata.org/.well-known/genid/abc"}),
+        _ligacao("Q2", {"type": "uri", "value": "http://www.wikidata.org/entity/Q1"}),
+    ])
+    brutas = [l for l in wd.links(_arquivos(pasta)) if l.kind == "given" and l.relation != "transliteration"]
+    assert [(l.relation, l.qid, l.name, l.target_qid, l.target_name) for l in brutas] == [
+        ("same_item", "Q1", "Мария", "Q1", "Maria"),
+        ("said_to_be_the_same", "Q2", "Marie", "Q1", "Мария"),
+        ("said_to_be_the_same", "Q2", "Marie", "Q1", "Maria"),
+    ]
+
+
+def test_alvo_que_nao_e_uri_falha(tmp_path):
+    pasta = _copia(tmp_path)
+    _pagina(pasta, wd.LIGACOES["P1889"], 1, [_ligacao("Q1", {"type": "literal", "value": "Q2"})])
+    with pytest.raises(FormatError, match="links-P1889: target .* não é URI"):
+        list(wd.links(_arquivos(pasta)))
