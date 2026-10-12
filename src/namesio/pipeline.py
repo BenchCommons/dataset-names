@@ -132,6 +132,8 @@ def ingest_sources(
                 for r in mod.RESOURCES
             }
             obs = to_observations(mod.parse(arquivos), fonte)
+            if not obs:
+                raise RecordError("nenhum registro produzido por parse")
             validate(obs, sources)
         except Exception as e:
             raise _falha(fonte, e) from e

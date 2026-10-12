@@ -178,6 +178,15 @@ def test_ingest_recusa_violacao_de_r1_5(fontes_exemplo, tmp_path):
                        offline=True, adapters="adaptadores")
 
 
+def test_ingest_recusa_fonte_sem_registros(fontes_exemplo, tmp_path):
+    for nome in ("primeiros.csv", "sobrenomes.csv"):
+        (tmp_path / "exemplo").mkdir(exist_ok=True)
+        (tmp_path / "exemplo" / nome).write_text("nome,sexo,ano,quantidade\n", encoding="utf-8")
+    with pytest.raises(PipelineError, match="^fonte 'exemplo': nenhum registro produzido por parse$"):
+        ingest_sources(select_sources(fontes_exemplo, []), fontes_exemplo, tmp_path,
+                       offline=True, adapters="adaptadores")
+
+
 def test_ingest_valida_contra_a_fonte(fontes_exemplo, tmp_path):
     cache = _cache_das_fixtures(tmp_path)
     fontes = {**fontes_exemplo, "exemplo": replace(fontes_exemplo["exemplo"], country="BR")}

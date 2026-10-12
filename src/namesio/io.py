@@ -2,7 +2,7 @@
 
 import csv
 import json
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 
 import pyarrow as pa
@@ -17,6 +17,9 @@ OBSERVATION_SCHEMA = pa.schema([
     ("gender", pa.string()), ("year", pa.int32()), ("count", pa.int64()),
     ("count_type", pa.string()), ("source_id", pa.string()),
 ])
+
+# read_observations constrói Observation por posição (R8): a ordem precisa coincidir.
+assert [f.name for f in fields(Observation)] == OBSERVATION_SCHEMA.names, "OBSERVATION_SCHEMA fora de ordem"
 
 INDEX_SCHEMA = pa.schema([
     ("name", pa.string()), ("name_key", pa.string()), ("ascii", pa.string()),

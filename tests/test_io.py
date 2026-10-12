@@ -1,12 +1,18 @@
 import csv
 import json
+from dataclasses import fields
 
 import pyarrow.parquet as pq
 import pytest
 
 from namesio.aggregate import by_country, name_index
-from namesio.io import read_observations, write_by_country, write_index, write_observations
+from namesio.io import OBSERVATION_SCHEMA, read_observations, write_by_country, write_index, write_observations
 from namesio.manifest import build_manifest
+from namesio.schema import Observation
+
+
+def test_schema_de_observacoes_acompanha_a_dataclass():
+    assert [f.name for f in fields(Observation)] == OBSERVATION_SCHEMA.names
 
 
 def test_observacoes_ida_e_volta(observacoes, tmp_path):

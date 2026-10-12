@@ -2,6 +2,7 @@
 uma population, uma attested; escritas latina, cirílica e chinesa; nome com espaço.
 Servidor HTTP local da spec 002 (R7): downloads testados sem rede."""
 
+import sys
 import threading
 import time
 from datetime import date
@@ -95,7 +96,14 @@ class ServidorLocal:
             def log_message(self, *args):
                 pass
 
-        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        class Servidor(ThreadingHTTPServer):
+            def handle_error(self, request, client_address):
+                # Cliente que desiste (timeout) fecha a conexão; isso não é falha do teste.
+                if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+                    return
+                super().handle_error(request, client_address)
+
+        self.httpd = Servidor(("127.0.0.1", 0), Handler)
 
     def url(self, caminho: str) -> str:
         return f"http://127.0.0.1:{self.httpd.server_port}{caminho}"

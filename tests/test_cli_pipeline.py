@@ -161,6 +161,18 @@ def test_ingest_com_arquivo_corrompido_falha_sem_saida(cache_das_fixtures, tmp_p
     assert not obs.exists()
 
 
+def test_ingest_com_fonte_sem_registros_falha_sem_saida(tmp_path, capsys):
+    cache = tmp_path / "cache"
+    (cache / "exemplo").mkdir(parents=True)
+    for nome in ("primeiros.csv", "sobrenomes.csv"):
+        (cache / "exemplo" / nome).write_text("nome,sexo,ano,quantidade\n", encoding="utf-8")
+    obs = tmp_path / "observations.parquet"
+    assert main(["ingest", "--out", str(obs), "--offline", "--cache", str(cache), *ADAPTADORES]) == 1
+    err = capsys.readouterr().err
+    assert "fonte 'exemplo': nenhum registro produzido por parse" in err
+    assert not obs.exists()
+
+
 def test_fonte_desconhecida_ou_manual(tmp_path, capsys):
     assert main(["fetch", "nao-existe", "--cache", str(tmp_path), *ADAPTADORES]) == 1
     assert "fonte 'nao-existe' ausente de sources.yaml" in capsys.readouterr().err

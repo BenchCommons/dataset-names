@@ -1,5 +1,6 @@
 """Registro de fontes (sources.yaml), regras de licença do ADR 0001 e campos da spec 002 (R2)."""
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -13,6 +14,7 @@ LICENCAS_COMPATIVEIS = frozenset({
     "public-domain", "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0",
     "ODC-By-1.0", "OGL-UK-3.0", "etalab-2.0",
 })
+ID_FORMATO = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 COUNT_TYPES = ("births", "population", "attested")
 CAMPOS = (
     "id", "name", "url", "license", "attribution", "country",
@@ -95,6 +97,8 @@ def parse_sources(entradas: list[dict]) -> dict[str, Source]:
         for campo in ("id", "name", "url", "attribution"):
             if not isinstance(e[campo], str) or not e[campo].strip():
                 erros.append(f"{rotulo}: '{campo}' vazio")
+        if isinstance(e["id"], str) and e["id"].strip() and not ID_FORMATO.fullmatch(e["id"]):
+            erros.append(f"{rotulo}: 'id' com formato inválido (use [a-z0-9]+(-[a-z0-9]+)*)")
         if isinstance(e["url"], str) and e["url"].strip() and not _url_http(e["url"]):
             erros.append(f"{rotulo}: 'url' deve usar o esquema http ou https")
         if not isinstance(e["license"], str) or e["license"] not in LICENCAS_COMPATIVEIS:
