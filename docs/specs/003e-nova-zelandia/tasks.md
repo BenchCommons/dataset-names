@@ -34,8 +34,8 @@ Cada tarefa segue TDD: escrever os testes, ver que falham pelo motivo certo, esc
 - Consome: `FormatError`, `RawRecord`, `Resource`, `parse_code`, `parse_count` (spec 003); `servir_fixtures` e `tests/test_fontes_oficiais.py` (spec 003).
 - Produz: fonte `nz-dia-births` (`country: NZ`, `count_type: births`, `suppression: 10`, `license: CC-BY-4.0`); `parse(files)` que avisa os descartes no logger `namescommons.adapters.nz_dia_births`.
 
-- [ ] **Passo 1: gerar a amostra** com um script que copia do arquivo real, sem alteração e na ordem original, o cabeçalho e as linhas: `2022,F,Aadhya,13` (primeira), `2003,M,Andr\x82,20`, `1967,F,Anne-Marie,24`, `2025,F,Aroha,22`, `2025,M,Bj\xf6rn,10`, `2022,F,Esm\x82,25`, `2025,F,Esm\xe9,20`, `1900,M,John,636`, `2023,F,K\x8fwhai,11`, `2025,F,M?ia,25`, `1900,F,Mary,410`, `2023,M,N\x8dkau,13`, `2025,M,Nikau,36`, `2024,F,Te Ao,15`, `2024,M,Te Ao,12`, `2025,M,Te Ariki,34`, `2007,F,Zo\xe9,26` e `2015,F,Zoya,11` (última), cada uma terminada em CRLF.
-- [ ] **Passo 2: testes que falham** em `tests/test_nz_dia_births.py`
+- [x] **Passo 1: gerar a amostra** com um script que copia do arquivo real, sem alteração e na ordem original, o cabeçalho e as linhas: `2022,F,Aadhya,13` (primeira), `2003,M,Andr\x82,20`, `1967,F,Anne-Marie,24`, `2025,F,Aroha,22`, `2025,M,Bj\xf6rn,10`, `2022,F,Esm\x82,25`, `2025,F,Esm\xe9,20`, `1900,M,John,636`, `2023,F,K\x8fwhai,11`, `2025,F,M?ia,25`, `1900,F,Mary,410`, `2023,M,N\x8dkau,13`, `2025,M,Nikau,36`, `2024,F,Te Ao,15`, `2024,M,Te Ao,12`, `2025,M,Te Ariki,34`, `2007,F,Zo\xe9,26` e `2015,F,Zoya,11` (última), cada uma terminada em CRLF.
+- [x] **Passo 2: testes que falham** em `tests/test_nz_dia_births.py`
   - `test_parse_da_amostra_real`: os 15 registros esperados, escritos à mão, com `André`, `Björn`, `Esmé` (2022 e 2025) e `Zoé`.
   - `test_nomes_corrompidos_sao_descartados_e_avisados`: nenhum nome com `?` ou U+FFFD; um aviso com `3 linha(s)`, `49 registro(s)` e as formas `K�whai`, `M?ia`, `N�kau`.
   - `test_sem_descarte_nao_avisa`.
@@ -43,8 +43,8 @@ Cada tarefa segue TDD: escrever os testes, ver que falham pelo motivo certo, esc
   - `test_byte_fora_da_tabela_descarta_o_nome` (ex.: `0xE1`).
   - `test_formato_inesperado_falha`: cabeçalho diferente, sexo `U`, contagem `<10`, ano `20x5`, linha com três ou cinco campos, arquivo vazio, cada um com `FormatError` e número da linha quando houver.
   - `test_pagina_html_no_cache_explica_o_que_fazer`: arquivo que começa com `<!DOCTYPE html>` gera `FormatError` com "página HTML" e o caminho do arquivo.
-- [ ] **Passo 3: código.** Adaptador com `RESOURCES` apontando para a URL de download do catálogo, decodificação de R2, `csv.reader` sobre o texto decodificado, `parse_code` para o sexo e `parse_count` para ano e contagem. Acrescentar ao fim de `sources.yaml` a entrada `nz-dia-births` (`url` da página do conjunto, `attribution` "Department of Internal Affairs (Nova Zelândia), Baby Name popularity over time, CC BY 4.0", `retrieved: 2026-10-12`) e ao fim de `ATRIBUICAO.md` a linha da amostra.
-- [ ] **Passo 4:** `uv run pytest -q` verde (inclui `test_amostra_e_atribuicao` e `test_fetch_e_ingest_sobre_a_amostra` para a fonte nova); commit.
+- [x] **Passo 3: código.** Adaptador com `RESOURCES` apontando para a URL de download do catálogo, decodificação de R2, `csv.reader` sobre o texto decodificado, `parse_code` para o sexo e `parse_count` para ano e contagem. Acrescentar ao fim de `sources.yaml` a entrada `nz-dia-births` (`url` da página do conjunto, `attribution` "Department of Internal Affairs (Nova Zelândia), Baby Name popularity over time, CC BY 4.0", `retrieved: 2026-10-12`) e ao fim de `ATRIBUICAO.md` a linha da amostra.
+- [x] **Passo 4:** atualizar em `tests/test_ci.py` o total esperado do passo das fontes oficiais (`54 observações, 5 países`), consequência direta da fonte nova; `uv run pytest -q` verde (inclui `test_amostra_e_atribuicao` e `test_fetch_e_ingest_sobre_a_amostra` para a fonte nova); commit.
 
 ### Task 3: CI (R6)
 

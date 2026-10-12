@@ -51,3 +51,13 @@ sources:
     primary: true
     suppression: 200
     retrieved: 2026-10-12
+  - id: nz-dia-births
+    name: Department of Internal Affairs, Baby Name popularity over time (Nova Zelândia)
+    url: https://catalogue.data.govt.nz/dataset/baby-name-popularity-over-time
+    license: CC-BY-4.0
+    attribution: "Department of Internal Affairs (Nova Zelândia), Baby Name popularity over time, CC BY 4.0"
+    country: NZ
+    count_type: births
+    primary: true
+    suppression: 10
+    retrieved: 2026-10-12
