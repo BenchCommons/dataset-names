@@ -25,7 +25,7 @@ Opções avaliadas:
 
 ## Decisão
 
-- O módulo `namescommons.spreadsheet` lê XLSX com a biblioteca padrão (`zipfile` e `iterparse`), em fluxo.
+- O módulo `namescommons.spreadsheet` lê XLSX com a biblioteca padrão (`zipfile` e `xml.parsers.expat` com `TreeBuilder`), em fluxo.
 - XLS é lido com `xlrd`, fixado em `==2.0.2` em `pyproject.toml`. É a única dependência de runtime acrescentada.
 - O formato é reconhecido pelos primeiros bytes do arquivo, e os dois caminhos devolvem valores do mesmo tipo (texto, inteiro, fração, booleano, vazio).
 - Adaptadores não importam `xlrd` nem leem XML de planilha: usam só `namescommons.spreadsheet`.
