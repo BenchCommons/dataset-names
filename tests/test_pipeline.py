@@ -279,9 +279,9 @@ def test_r1_4_forma_de_maior_peso_atualiza_os_campos_derivados():
     assert (o.name, o.name_key, o.ascii, o.count) == ("Álvaro", "álvaro", "alvaro", 10)
 
 
-def test_kind_invalido_e_o_primeiro_erro_mesmo_com_nome_estranho():
+def test_kind_invalido_e_o_primeiro_erro_mesmo_com_nome_que_quebraria_a_derivacao():
     with pytest.raises(RecordError, match="registro 1: kind 'middle' inválido"):
-        to_observations([RawRecord("", "middle", "PT", "F", 2020, 1)], _fonte())
+        to_observations([RawRecord(None, "middle", "PT", "F", 2020, 1)], _fonte())
 
 
 # Recusas no nível do pipeline -----------------------------------------------------------------------
