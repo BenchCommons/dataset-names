@@ -2,7 +2,7 @@ from namescommons.normalize import ascii_form, detect_script, name_key, normaliz
 
 
 def test_caixa_uniforme_vira_capitalizada_por_palavra():
-    assert normalize_name("  MARIA   DA  SILVA ") == "Maria Da Silva"
+    assert normalize_name("  MARIA   DA  SILVA ") == "Maria da Silva"  # spec 005, R3.1
     assert normalize_name("jean-luc") == "Jean-Luc"
     assert normalize_name("o'neil") == "O'Neil"
 
@@ -56,10 +56,136 @@ def test_forma_ascii_latina():
     assert ascii_form("Maria Da Silva", "Latn") == "maria da silva"
 
 
-def test_forma_ascii_vazia_fora_da_escrita_latina():
-    assert ascii_form("Мария", "Cyrl") == ""
+def test_forma_ascii_vazia_fora_das_escritas_transliteradas():
     assert ascii_form("李", "Hani") == ""
+    assert ascii_form("Μαρία", "Grek") == ""
 
 
 def test_georgiano_nao_recebe_capital_errada():
     assert normalize_name("ნინო") == "ნინო"
+
+
+# Spec 005, R1 (issue #4): escrita.
+import pytest
+
+
+@pytest.mark.parametrize("nome, escrita", [
+    ("佐々木", "Hani"),        # 々 conta como han (R1.2)
+    ("ユーリ", "Kana"),        # ー não conta (R1.2)
+    ("Ａｎｎａ", "Latn"),      # latim de largura total (R1.1)
+    ("ｱｲ", "Kana"),            # katakana de meia largura (R1.1)
+    ("さくら子", "Jpan"),      # kanji e hiragana (R1.3)
+    ("ゆかりユカリ", "Hrkt"),  # hiragana e katakana sem han: Hrkt da ISO 15924 (R1.3)
+    ("ユｰリ", "Kana"),         # ｰ de meia largura também não conta (R1.2)
+    ("〆子", "Hani"),          # 〆 tem Script=Han no Unicode (R1.2)
+    ("ゆかり", "Hira"),
+    ("김金", "Kore"),          # hangul e hanja (R1.3)
+    ("ଦାସ", "Orya"),            # R1.4
+    ("ܡܝܟܐܝܠ", "Syrc"),
+    ("ᏣᎳᎩ", "Cher"),
+    ("ᱥᱟᱱᱛᱟᱲ", "Olck"),       # prefixo de duas palavras
+    ("ꯃꯤꯇꯩ", "Mtei"),
+])
+def test_escrita_r1(nome, escrita):
+    assert detect_script(nome) == escrita
+
+
+def test_escrita_fora_da_tabela_continua_zzzz():
+    assert detect_script("\U00010300\U00010301") == "Zzzz"  # itálico antigo (OLD ITALIC)
+
+
+def test_empate_de_escrita_resolvido_pela_ordem_do_codigo():
+    assert detect_script("Aб") == "Cyrl"
+    assert detect_script("ーー") == "Zyyy"
+
+
+# Spec 005, R2 (issue #4; ADR 0012): forma ASCII.
+@pytest.mark.parametrize("nome, esperado", [
+    ("Ǆenana", "dzenana"),      # dígrafo de compatibilidade (NFKD)
+    ("ﬁona", "fiona"),          # ligadura
+    ("Ａｎｎａ", "anna"),        # largura total
+    ("O’Brien", "o'brien"),     # apóstrofo curvo vira reto
+    ("Hawaiʻi", "hawai'i"),     # ʻokina
+    ("Jo–Anne", "jo-anne"),     # meia-risca vira hífen
+    ("Əliyev", "eliyev"),
+    ("Ŋgozi", "ngozi"),
+    ("Kɔfi", "kofi"),
+    ("Ɛsi", "esi"),
+    ("Llorenç", "llorenc"),
+    ("Nel·lo", "nello"),
+    ("Pel·leja", "pelleja"),
+    ("Strauß", "strauss"),
+    ("Søren", "soren"),
+    ("Æsa", "aesa"),
+    ("Łukasz", "lukasz"),
+    ("Þóra", "thora"),
+    ("Ðorđe", "dorde"),
+    ("İrem", "irem"),
+    ("Mi\u200dna", "mina"),    # ZWJ omitido
+    ("Иванов", "ivanov"),
+    ("Мария", "mariia"),
+    ("Щукин", "shchukin"),
+    ("Пьер", "per"),            # ь omitido
+    ("Ђоковић", "dokovic"),
+    ("Їжак", "izhak"),
+    ("Ґанна", "ganna"),
+    ("Љиљана", "ljiljana"),
+])
+def test_forma_ascii_r2(nome, esperado):
+    assert ascii_form(nome, detect_script(nome)) == esperado
+
+
+@pytest.mark.parametrize("nome", ["Μαρία", "李", "ଦାସ", "Aʃa", "Maria李", "민준"])
+def test_forma_ascii_vazia_quando_algum_caractere_nao_tem_transliteracao(nome):
+    assert ascii_form(nome, detect_script(nome)) == ""
+
+
+def test_acento_agudo_isolado_vira_apostrofo():
+    assert ascii_form("D´Arcy", "Latn") == "d'arcy"
+    assert ascii_form("D`Arcy", "Latn") == "d'arcy"
+
+
+# Spec 005, R3 (issue #4): partículas na capitalização das fontes de caixa uniforme.
+@pytest.mark.parametrize("bruto, esperado", [
+    ("JOANA D'ARC", "Joana d'Arc"),
+    ("FRANCESC D'ASSIS", "Francesc d'Assis"),
+    ("MARIA DEL CARMEN", "Maria del Carmen"),
+    ("VAN DER BERG", "Van der Berg"),
+    ("DE LA DE LAS HERAS", "De la de las Heras"),
+    ("ABEL DE LA CRUZ", "Abel de la Cruz"),
+    ("ALVES DA SILVA", "Alves da Silva"),
+    ("GABRIEL Y GALAN", "Gabriel y Galan"),
+    ("JIA LE", "Jia Le"),
+    ("MARIA LA", "Maria La"),
+    ("D'ARCY", "D'Arcy"),
+    ("JEAN-DE-DIEU", "Jean-De-Dieu"),
+    ("MARIE L'AMOUR", "Marie l'Amour"),
+    ("O'NEIL", "O'Neil"),
+])
+def test_particulas_em_caixa_uniforme(bruto, esperado):
+    assert normalize_name(bruto, uniform_case=True) == esperado
+
+
+def test_caixa_publicada_nao_muda_particulas():
+    assert normalize_name("Da Silva", uniform_case=False) == "Da Silva"
+    assert normalize_name("Joana D'Arc", uniform_case=False) == "Joana D'Arc"
+
+
+# Revisão do PR #38: NFKD pode produzir maiúsculas; ascii_form nunca devolve maiúscula.
+@pytest.mark.parametrize("nome, esperado", [
+    ("Ali™", "alitm"),
+    ("ℳaria", "maria"),
+    ("℡", "tel"),
+    ("𝓜aria", "maria"),
+])
+def test_forma_ascii_sem_maiusculas_depois_da_nfkd(nome, esperado):
+    assert ascii_form(nome, detect_script(nome)) == esperado
+
+
+@pytest.mark.parametrize("bruto, esperado", [
+    ("JOHN VAN", "John Van"),        # partícula na última palavra não é partícula
+    ("MARIA DA", "Maria Da"),
+    ("ANA DE LA", "Ana de La"),
+])
+def test_particula_no_fim_do_nome_fica_capitalizada(bruto, esperado):
+    assert normalize_name(bruto, uniform_case=True) == esperado

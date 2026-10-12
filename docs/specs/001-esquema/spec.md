@@ -60,6 +60,8 @@ Nota (spec 004, R5): a exigência de exatamente uma `primary` vale só para `bir
 | `group_id` | Grupo de variantes, preenchido pela spec 005. Vazio até lá |
 | `sources` | Lista ordenada de `source_id` que atestam o nome |
 
+Nota (spec 005): `group_id` é preenchido pela [spec 005](../005-variantes/spec.md) (R5), a forma de exibição (`name`) segue a spec 005 (R4) e `ascii` segue o [ADR 0012](../../adr/0012-transliteracao-ascii.md). `group_id` é o menor `name_key` do grupo e identifica o grupo dentro de uma release: ele pode mudar entre releases quando entra no grupo um nome com chave menor ou quando as ligações mudam.
+
 **R3.3 `by_country/<CC>.csv`.** Uma linha por (`name_key`, `kind`) do país, com `name`, `ascii`, `script`, `count`, `count_type`, `rank`, `female_share`, `gender_basis`, `first_year`, `last_year`. Agregação:
 
 - `births`: soma de todos os anos disponíveis; `first_year` e `last_year` delimitam a série.
@@ -68,6 +70,8 @@ Nota (spec 004, R5): a exigência de exatamente uma `primary` vale só para `bir
 - O mesmo nome com contagens de tipos diferentes no país: vale `population`; sem ela, `births`. `attested` só quando não há contagem.
 - País só com `attested`: `count` e `rank` vazios.
 - `rank` é denso, por `kind` e `count_type`, em ordem decrescente de `count`.
+
+Nota (spec 004, R4.6): além das saídas acima, a release pode trazer `variant_links.parquet`, a tabela de ligações entre variantes quando alguma fonte selecionada implementa `links`.
 
 ### R4. Layout do repositório
 
@@ -94,6 +98,8 @@ docs/specs/, docs/adr/
 - Releases em CalVer (`AAAA.MM`, com sufixo `.N` para mais de uma no mês).
 - Cada release inclui `manifest.json` com `schema_version` (semver), fontes usadas com `retrieved`, número de linhas por arquivo e SHA-256 de cada arquivo.
 - Remover ou renomear campo, ou mudar o significado de um valor, incrementa a versão maior de `schema_version`.
+
+Nota: a release pode incluir `variant_links.parquet` (spec 004, R4.6), contado no `manifest.json`, cuja lista de fontes é a união das fontes das observações e das ligações (spec 005, R7.4). Versões: `1.1.0` (spec 004, R4.7) e `1.2.0` (spec 005, R8).
 
 ### R6. Legado
 

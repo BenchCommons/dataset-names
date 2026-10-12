@@ -40,10 +40,11 @@ def test_nome_so_na_fonte_secundaria_fica_sem_contagem(observacoes, fontes):
     )
 
 
-def test_forma_de_exibicao_usa_todas_as_fontes(observacoes, fontes):
+def test_forma_de_exibicao_so_pesa_as_observacoes_contadas(observacoes, fontes):
+    """Spec 005, R4.2: a fonte que não é primary não pesa na forma exibida no país."""
     deshawn = _linha(by_country(observacoes, fontes)["US"], "given", "deshawn")
-    assert deshawn.name == "DeShawn"  # 40 (us-births-b) > 30 (us-ssa)
-    assert deshawn.count == 30  # mas a contagem vem só da primary
+    assert deshawn.name == "Deshawn"  # 30 (us-ssa, contada); os 40 de us-births-b não pesam
+    assert deshawn.count == 30
 
 
 def test_br_population_usa_a_edicao_mais_recente(observacoes, fontes):
@@ -112,12 +113,13 @@ def test_indice_given(observacoes, fontes):
     assert maria.female_share == pytest.approx(12150 / 12155)
     assert maria.gender_basis == 12155
     assert maria.sources == ("br-ibge-censo", "us-births-b", "us-ssa", "wikidata")
-    assert maria.group_id is None
+    assert maria.group_id == "maria"  # spec 005, R5.7: sem ligações, o grupo é a própria chave
 
 
 def test_indice_nome_so_atestado(observacoes, fontes):
     maria_cirilico = name_index(observacoes, by_country(observacoes, fontes), "given")[4]
-    assert (maria_cirilico.name, maria_cirilico.script, maria_cirilico.ascii) == ("Мария", "Cyrl", "")
+    # Spec 005, R2.2: cirílico transliterado pelo ICAO Doc 9303.
+    assert (maria_cirilico.name, maria_cirilico.script, maria_cirilico.ascii) == ("Мария", "Cyrl", "mariia")
     assert (maria_cirilico.country_count, maria_cirilico.countries) == (0, ())
     assert (maria_cirilico.female_share, maria_cirilico.gender_basis) == (None, 0)
 
@@ -168,3 +170,79 @@ def test_population_nome_so_em_edicao_antiga_nao_e_contado(observacoes, fontes):
     )
     maria = _linha(br, "given", "maria")
     assert (maria.count, maria.rank) == (12000, 1)
+
+
+# Spec 005, R4 (issue #4): forma de exibição sem somar tipos, edições e fontes não contadas.
+def _fontes_r4(**caixa_uniforme):
+    base = {"license": "CC0-1.0", "attribution": "x", "suppression": None, "retrieved": date(2026, 1, 1)}
+    return parse_sources([
+        {**base, "id": "us", "name": "us", "url": "https://us", "country": "US", "count_type": "births",
+         "primary": True, "uniform_case": caixa_uniforme.get("us", False)},
+        {**base, "id": "es", "name": "es", "url": "https://es", "country": "ES", "count_type": "population",
+         "primary": True, "uniform_case": caixa_uniforme.get("es", False)},
+        {**base, "id": "nz", "name": "nz", "url": "https://nz", "country": "NZ", "count_type": "births",
+         "primary": True, "uniform_case": caixa_uniforme.get("nz", False)},
+        {**base, "id": "wd", "name": "wd", "url": "https://wd", "country": None, "count_type": "attested",
+         "primary": False},
+    ])
+
+
+def _o(nome, fonte, pais, tipo, ano, contagem, uniforme=False):
+    return make_observation(nome, kind="family", source_id=fonte, country=pais, count_type=tipo,
+                            year=ano, count=contagem, uniform_case=uniforme)
+
+
+def test_indice_nao_soma_births_com_population():
+    """McKenzie tem mais nascimentos somados (US); Mckenzie, mais pessoas vivas (ES) e mais países."""
+    fontes = _fontes_r4()
+    obs = [
+        _o("McKenzie", "us", "US", "births", 2000, 4000),
+        _o("McKenzie", "us", "US", "births", 2001, 4000),
+        _o("Mckenzie", "us", "US", "births", 2001, 10),
+        _o("Mckenzie", "es", "ES", "population", 2025, 500),
+        _o("Mckenzie", "nz", "NZ", "births", 2025, 30),
+    ]
+    paises = by_country(obs, fontes)
+    assert [_linha(paises[p], "family", "mckenzie").name for p in ("ES", "NZ", "US")] == [
+        "Mckenzie", "Mckenzie", "McKenzie",
+    ]
+    (linha,) = name_index(obs, paises, "family", sources=fontes)
+    assert linha.name == "Mckenzie"  # dois países contra um; a soma 8.000 + 10 + 500 + 30 não é feita
+
+
+def test_por_pais_edicao_antiga_nao_pesa():
+    fontes = _fontes_r4()
+    obs = [
+        _o("DeLuca", "es", "ES", "population", 2010, 900),
+        _o("Deluca", "es", "ES", "population", 2025, 100),
+    ]
+    assert _linha(by_country(obs, fontes)["ES"], "family", "deluca").name == "Deluca"
+
+
+def test_forma_publicada_vence_a_capitalizacao_gerada():
+    """R4.1: a forma de fonte de caixa uniforme só vale quando não há outra."""
+    fontes = _fontes_r4(es=True)
+    obs = [
+        _o("DA SILVA", "es", "ES", "population", 2025, 9000, uniforme=True),  # vira "Da Silva"
+        make_observation("da Silva", kind="family", source_id="wd", count_type="attested", uniform_case=False),
+    ]
+    paises = by_country(obs, fontes)
+    assert _linha(paises["ES"], "family", "da silva").name == "Da Silva"  # no país só há a gerada
+    (linha,) = name_index(obs, paises, "family", sources=fontes)
+    assert linha.name == "da Silva"
+
+
+def test_indice_sem_fontes_mantem_todas_as_formas_candidatas(observacoes, fontes):
+    indice = name_index(observacoes, by_country(observacoes, fontes), "given")
+    assert indice[1].name == "Deshawn"
+
+
+def test_indice_preenche_group_id_com_fontes_e_ligacoes(observacoes, fontes):
+    """Spec 005, R5: group_id em todas as linhas; same_item junta pela chave."""
+    from namescommons.links import VariantLink
+    ligacao = VariantLink("wikidata", "same_item", "Q1", "Maria", "maria", "given",
+                          "Q1", "Мария", "мария", "given")
+    indice = name_index(observacoes, by_country(observacoes, fontes), "given", sources=fontes, links=[ligacao])
+    assert {r.name_key: r.group_id for r in indice} == {
+        "ana clara": "ana clara", "deshawn": "deshawn", "james": "james", "maria": "maria", "мария": "maria",
+    }

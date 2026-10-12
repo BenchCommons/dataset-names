@@ -44,15 +44,21 @@ COUNTRY_CSV_COLUMNS = [
 ]
 
 
+# Spec 005, R9.3 (issue #31): observações gravadas em lotes, sem montar a tabela inteira.
+LOTE_DE_ESCRITA = 250_000
+
+
 def write_observations(observations: list[Observation], path: Path) -> None:
-    # Colunar: evita um dicionário por observação (R8, spec 002).
-    colunas = {campo: [getattr(o, campo) for o in observations] for campo in OBSERVATION_SCHEMA.names}
-    tabela = pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA)
     path.parent.mkdir(parents=True, exist_ok=True)
     # Grava ao lado e troca por rename: uma falha não deixa arquivo parcial nem apaga o anterior.
     temporario = path.with_name(path.name + ".part")
     try:
-        pq.write_table(tabela, temporario)
+        with pq.ParquetWriter(temporario, OBSERVATION_SCHEMA) as escritor:
+            for inicio in range(0, max(len(observations), 1), LOTE_DE_ESCRITA):
+                lote = observations[inicio:inicio + LOTE_DE_ESCRITA]
+                # Colunar: evita um dicionário por observação (R8, spec 002).
+                colunas = {campo: [getattr(o, campo) for o in lote] for campo in OBSERVATION_SCHEMA.names}
+                escritor.write_table(pa.Table.from_pydict(colunas, schema=OBSERVATION_SCHEMA))
         os.replace(temporario, path)
     finally:
         temporario.unlink(missing_ok=True)

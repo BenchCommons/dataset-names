@@ -25,7 +25,8 @@ def test_fixture_valida(observacoes, fontes):
     ({"count_type": "attested"}, "R1.1"),
     ({"count_type": "deaths"}, "count_type"),
     ({"source_id": "inexistente"}, "sources.yaml"),
-    ({"ascii": ""}, "ascii"),
+    ({"ascii": "Alvaro"}, "ascii"),
+    ({"ascii": "álvaro"}, "ascii"),
 ])
 def test_observacao_invalida(observacoes, fontes, campos, trecho):
     ruim = replace(observacoes[0], **campos)
@@ -100,3 +101,8 @@ def test_limite_superior_de_year_usa_utc(observacoes, fontes, monkeypatch):
     validate([replace(observacoes[0], year=2031)], fontes)
     with pytest.raises(ValidationError, match="year 2032 fora de 1800 a 2031"):
         validate([replace(observacoes[0], year=2032)], fontes)
+
+
+def test_ascii_vazio_em_escrita_latina_e_aceito(observacoes, fontes):
+    """Spec 005, R2.4 e R2.5: nome latino com letra sem transliteração tem ascii vazio."""
+    validate([replace(observacoes[0], ascii="")], fontes)

@@ -27,7 +27,7 @@ def test_campos_opcionais_declarados():
     assert (f.uniform_case, f.adapter) == (True, False)
 
 
-@pytest.mark.parametrize("campo", ["uniform_case", "adapter"])
+@pytest.mark.parametrize("campo", ["uniform_case", "adapter", "strips_accents"])
 @pytest.mark.parametrize("valor", ["sim", 1, None])
 def test_campo_opcional_nao_booleano(campo, valor):
     with pytest.raises(SourceError, match=f"'{campo}' deve ser true ou false"):
@@ -76,3 +76,18 @@ def test_url_http_e_https_aceitas(url):
 def test_url_malformada_nomeia_a_fonte_em_vez_de_levantar_value_error():
     with pytest.raises(SourceError, match="pt-exemplo: 'url' deve usar o esquema http ou https"):
         parse_sources([fonte(url="http://[::1")])
+
+
+def test_strips_accents_tem_padrao_false_e_aceita_true():
+    """Spec 005, R6."""
+    assert parse_sources([fonte()])["pt-exemplo"].strips_accents is False
+    assert parse_sources([fonte(strips_accents=True)])["pt-exemplo"].strips_accents is True
+
+
+def test_fontes_que_removem_acentos_em_sources_yaml():
+    """Spec 005, R6: só as fontes com evidência registrada na spec."""
+    from pathlib import Path
+    fontes = load_sources(Path(__file__).resolve().parent.parent / "sources.yaml")
+    assert sorted(f.id for f in fontes.values() if f.strips_accents) == [
+        "ca-statcan-births", "es-ine-residentes", "us-ssa-births",
+    ]

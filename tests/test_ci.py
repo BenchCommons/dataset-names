@@ -1,5 +1,6 @@
 """Spec 002, R7: o workflow da CI roda uv sync, pytest e namescommons run --offline sobre as fixtures."""
 
+import csv
 import os
 import re
 import shutil
@@ -113,8 +114,8 @@ given,Begoña,begoña,begona,Latn,36293,population,4,1.000000,36293,2025,2025
 given,Iñigo,iñigo,inigo,Latn,22083,population,5,0.000000,22083,2025,2025
 given,Llorenç,llorenç,llorenc,Latn,2513,population,6,0.000000,2513,2025,2025
 given,Françoise,françoise,francoise,Latn,338,population,7,1.000000,338,2025,2025
-given,Francesc D'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
-given,Joana D'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
+given,Francesc d'Assis,francesc d'assis,francesc d'assis,Latn,192,population,8,0.000000,192,2025,2025
+given,Joana d'Arc,joana d'arc,joana d'arc,Latn,21,population,9,1.000000,21,2025,2025
 given,Zulma Patricia,zulma patricia,zulma patricia,Latn,20,population,10,1.000000,20,2025,2025
 given,Zunair,zunair,zunair,Latn,20,population,10,0.000000,20,2025,2025
 """
@@ -172,6 +173,13 @@ def test_passo_das_fontes_oficiais_roda_localmente(tmp_path):
     # Spec 004, R7: o Wikidata entra no passo e grava a tabela de ligações.
     assert "variant_links.parquet" in passo["run"]
     assert (tmp_path / "dist-oficiais" / "variant_links.parquet").stat().st_size > 0
+    # Spec 005, R10: group_id preenchido em todas as linhas do índice.
+    assert "group_id" in passo["run"]
+    for arquivo in ("given_names.csv", "family_names.csv"):
+        with open(tmp_path / "dist-oficiais" / arquivo, encoding="utf-8", newline="") as fh:
+            grupos = {linha["name"]: linha["group_id"] for linha in csv.DictReader(fh)}
+        assert grupos and all(grupos.values())
+    assert grupos["Иванов"] == grupos["Ivanov"] == "ivanov"
 
 
 def test_passo_das_fontes_oficiais_confere_todos_os_paises():

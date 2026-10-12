@@ -22,7 +22,7 @@ CAMPOS = (
     "count_type", "primary", "suppression", "retrieved",
 )
 # Campos opcionais da spec 002 (R2) e seus valores padrão.
-OPCIONAIS = {"uniform_case": False, "adapter": True}
+OPCIONAIS = {"uniform_case": False, "adapter": True, "strips_accents": False}  # strips_accents: spec 005, R6
 
 
 class SourceError(ValueError):
@@ -43,6 +43,7 @@ class Source:
     retrieved: date
     uniform_case: bool = False
     adapter: bool = True
+    strips_accents: bool = False
 
 
 def is_country(code: object) -> bool:

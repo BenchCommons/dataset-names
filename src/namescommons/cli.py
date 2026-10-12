@@ -118,11 +118,13 @@ def _build(
         temporario.chmod(0o777 & ~umask)
         write_observations(obs, temporario / "observations.parquet")
         for kind, base in (("given", "given_names"), ("family", "family_names")):
-            write_index(name_index(obs, paises, kind), temporario / f"{base}.csv", temporario / f"{base}.parquet")
+            write_index(name_index(obs, paises, kind, fontes, links), temporario / f"{base}.csv", temporario / f"{base}.parquet")
         write_by_country(paises, temporario / "by_country")
         if links is not None:
             write_links(links, temporario / "variant_links.parquet")
-        manifest = build_manifest(release, temporario, fontes, {o.source_id for o in obs})
+        # Spec 005, R7.4: fontes das observações e das ligações.
+        usadas = {o.source_id for o in obs} | {v.source_id for v in links or ()}
+        manifest = build_manifest(release, temporario, fontes, usadas)
         (temporario / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )

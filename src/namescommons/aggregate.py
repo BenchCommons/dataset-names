@@ -1,11 +1,14 @@
 """Saídas agregadas (spec 001, R3): listas por país e índice mundial."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
+from namescommons.links import VariantLink
 from namescommons.normalize import ascii_form, detect_script
 from namescommons.schema import Observation
 from namescommons.sources import Source
+from namescommons.variants import group_ids
 
 # Ordem de preferência quando o mesmo nome tem contagens de tipos diferentes no país.
 PRECEDENCIA = ("population", "births")
@@ -31,6 +34,7 @@ class CountryRow:
     female: int  # interno: alimenta o índice mundial; não sai no CSV
     first_year: int | None
     last_year: int | None
+    published_case: bool = True  # interno (spec 005, R4.3): a forma exibida vem de fonte de caixa publicada
 
 
 @dataclass(frozen=True)
@@ -55,14 +59,27 @@ class IndexRow:
     sources: tuple[str, ...]
 
 
-def display_name(obs: list[Observation]) -> str:
-    """Forma mais frequente por soma de count; empate: mais atestada; depois ordem lexicográfica."""
-    peso: dict[str, int] = defaultdict(int)
+def display_name(obs: list[Observation], pesos: dict[str, int] | None = None) -> str:
+    """Forma de maior peso; empate: mais atestada; depois a menor em ordem de código Unicode.
+
+    Sem `pesos`, o peso é a soma de count de cada forma (spec 001, R3.2). A spec 005 (R4) passa
+    pesos que só contam o que a agregação usa.
+    """
     atestacoes: dict[str, int] = defaultdict(int)
     for o in obs:
-        peso[o.name] += o.count or 0
         atestacoes[o.name] += 1
-    return min(peso, key=lambda n: (-peso[n], -atestacoes[n], n))
+    if pesos is None:
+        pesos = defaultdict(int)
+        for o in obs:
+            pesos[o.name] += o.count or 0
+    return min(atestacoes, key=lambda n: (-pesos.get(n, 0), -atestacoes[n], n))
+
+
+def _caixa_publicada(obs: list[Observation], sources: dict[str, Source] | None) -> list[Observation]:
+    """Spec 005, R4.1: observações de fontes de caixa publicada; vazio se não houver nenhuma."""
+    if sources is None:
+        return obs
+    return [o for o in obs if not sources[o.source_id].uniform_case]
 
 
 def _fontes_oficiais(observations: list[Observation], sources: dict[str, Source]) -> dict[tuple, str]:
@@ -146,7 +163,11 @@ def by_country(observations: list[Observation], sources: dict[str, Source]) -> d
         tipo, contadas, primeiro, ultimo = _contagem(obs, oficiais, edicoes)
         f = sum(o.count for o in contadas if o.gender == "F")
         m = sum(o.count for o in contadas if o.gender == "M")
-        nome = display_name(obs)
+        publicadas = _caixa_publicada(obs, sources)
+        pesos: dict[str, int] = defaultdict(int)
+        for o in contadas:
+            pesos[o.name] += o.count
+        nome = display_name(publicadas or obs, pesos)
         escrita = detect_script(nome)
         linhas[pais].append(CountryRow(
             country=pais, kind=kind, name=nome, name_key=chave,
@@ -154,16 +175,29 @@ def by_country(observations: list[Observation], sources: dict[str, Source]) -> d
             count=sum(o.count for o in contadas) if contadas else None,
             count_type=tipo, rank=None,
             female_share=f / (f + m) if f + m else None, gender_basis=f + m, female=f,
-            first_year=primeiro, last_year=ultimo,
+            first_year=primeiro, last_year=ultimo, published_case=bool(publicadas),
         ))
     return {pais: _ranquear(rows) for pais, rows in sorted(linhas.items())}
+
+
+def _exibicao_no_indice(obs: list[Observation], rows: list[CountryRow], sources) -> str:
+    """Spec 005, R4.3: votos de países, sem somar contagens entre eles."""
+    publicadas = _caixa_publicada(obs, sources)
+    votos: dict[str, int] = defaultdict(int)
+    for r in rows:
+        if r.published_case or not publicadas:
+            votos[r.name] += 1
+    return display_name(publicadas or obs, votos)
 
 
 def name_index(
     observations: list[Observation],
     country_rows: dict[str, list[CountryRow]],
     kind: str,
+    sources: dict[str, Source] | None = None,
+    links: Iterable[VariantLink] | None = None,
 ) -> list[IndexRow]:
+    """Índice mundial de um kind (spec 001, R3.2), com forma de exibição e group_id da spec 005."""
     obs_por_chave: dict[str, list[Observation]] = defaultdict(list)
     for o in observations:
         if o.kind == kind:
@@ -174,10 +208,11 @@ def name_index(
             if r.kind == kind:
                 linhas_por_chave[r.name_key].append(r)
     indice = []
+    sem_acento = []
     for chave in sorted(obs_por_chave):
         obs = obs_por_chave[chave]
         rows = sorted(linhas_por_chave.get(chave, []), key=lambda r: r.country)
-        nome = display_name(obs)
+        nome = _exibicao_no_indice(obs, rows, sources)
         escrita = detect_script(nome)
         female = sum(r.female for r in rows)
         base = sum(r.gender_basis for r in rows)
@@ -188,4 +223,12 @@ def name_index(
             female_share=female / base if base else None, gender_basis=base,
             group_id=None, sources=tuple(sorted({o.source_id for o in obs})),
         ))
+        sem_acento.append(sources is not None and any(sources[f].strips_accents for f in indice[-1].sources))
+    # Spec 005, R5: grupos sobre as chaves do índice (já em ordem), com o ascii das latinas.
+    ids = group_ids(
+        [r.name_key for r in indice], [r.ascii if r.script == "Latn" else "" for r in indice],
+        sem_acento, links, kind, [r.script for r in indice],
+    )
+    for i, grupo in enumerate(ids):
+        indice[i] = replace(indice[i], group_id=grupo)
     return indice

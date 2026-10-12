@@ -5,6 +5,10 @@ os comandos reais da CLI. Registra tempo de cada etapa e pico de memória do pro
 Não roda na CI.
 
 Uso: uv run python tools/bench_pipeline.py [--observacoes 3000000] [--dir DIR] [--registro r8.json]
+     [--wikidata CACHE/wikidata]
+
+--wikidata inclui na mesma medição o Wikidata com os arquivos já baixados no diretório indicado
+(spec 005, R9.4; issue #31), com ingest --links e build --links.
 """
 
 import argparse
@@ -57,6 +61,30 @@ def parse(files):
         for nome, pais, genero, ano, contagem in csv.reader(fh):
             yield RawRecord(nome, "given", pais, genero, int(ano), int(contagem))
 '''
+
+
+WIKIDATA_YAML = """\
+  - id: wikidata
+    name: Wikidata
+    url: https://www.wikidata.org/wiki/Wikidata:Licensing
+    license: CC0-1.0
+    attribution: Wikidata
+    country: null
+    count_type: attested
+    primary: false
+    suppression: null
+    retrieved: 2026-10-12
+"""
+
+WIKIDATA_ADAPTADOR = "from namescommons.adapters.wikidata import SOURCE_ID, RESOURCES, parse, links  # noqa: F401\n"
+
+
+def _incluir_wikidata(base: Path, origem: Path) -> None:
+    """Fonte, adaptador e cache do Wikidata no diretório da medição (o cache é um link para origem)."""
+    with open(base / "sources.yaml", "a", encoding="utf-8") as fh:
+        fh.write(WIKIDATA_YAML)
+    (base / "bench_adaptadores" / "wikidata.py").write_text(WIKIDATA_ADAPTADOR, encoding="utf-8")
+    (base / "cache" / "wikidata").symlink_to(origem.resolve(), target_is_directory=True)
 
 
 def total_de_observacoes(pedidas: int) -> int:
@@ -112,6 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--observacoes", type=int, default=3_000_000)
     ap.add_argument("--dir", type=Path, help="diretório de trabalho (padrão: temporário)")
     ap.add_argument("--registro", type=Path, help="grava o resultado em JSON")
+    ap.add_argument("--wikidata", type=Path, help="diretório com os arquivos do Wikidata já baixados")
     args = ap.parse_args(argv)
     total = total_de_observacoes(args.observacoes)
     base = args.dir or Path(tempfile.mkdtemp(prefix="namescommons-r8-"))
@@ -122,19 +151,22 @@ def main(argv: list[str] | None = None) -> int:
 
     inicio = time.perf_counter()
     _gerar(base, total)
+    if args.wikidata:
+        _incluir_wikidata(base, args.wikidata)
+    ligacoes = ["--links", str(base / "variant_links.parquet")] if args.wikidata else []
     geracao = time.perf_counter() - inicio
     comum = ["--sources", str(base / "sources.yaml")]
     sys.path.insert(0, str(base))
     try:
         inicio = time.perf_counter()
         codigo = namescommons(["ingest", "--offline", "--out", str(base / "observations.parquet"),
-                          "--cache", str(base / "cache"), "--adapters", "bench_adaptadores", *comum])
+                          "--cache", str(base / "cache"), "--adapters", "bench_adaptadores", *ligacoes, *comum])
         ingest = time.perf_counter() - inicio
         if codigo != 0:
             return _falha("ingest", codigo, base)
         inicio = time.perf_counter()
         codigo = namescommons(["build", str(base / "observations.parquet"), "--out", str(base / "dist"),
-                          "--release", "2026.10", *comum])
+                          "--release", "2026.10", *ligacoes, *comum])
         build = time.perf_counter() - inicio
         if codigo != 0:
             return _falha("build", codigo, base)
@@ -149,9 +181,10 @@ def main(argv: list[str] | None = None) -> int:
         "observacoes": total, "geracao_s": round(geracao, 1), "ingest_s": round(ingest, 1),
         "build_s": round(build, 1), "memoria_pico_mb": round(memoria), "python": platform.python_version(),
         "maquina": f"{platform.system()} {platform.machine()}", "dentro_dos_limites": dentro,
+        "wikidata": bool(args.wikidata),
     }
     print(
-        f"R8: {total} observações; ingest {ingest:.1f} s, build {build:.1f} s, "
+        f"R8: {total} observações" + (" sintéticas mais o Wikidata" if args.wikidata else "") + f"; ingest {ingest:.1f} s, build {build:.1f} s, "
         f"pico de memória {memoria:.0f} MB; "
         + ("dentro dos limites" if dentro else f"FORA dos limites ({LIMITE_SEGUNDOS} s, {LIMITE_MB} MB)")
     )

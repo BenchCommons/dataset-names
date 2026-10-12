@@ -33,7 +33,7 @@ def test_ingest_links_e_build_links(cache, tmp_path, capsys):
                  "--out", str(dist), "--release", "2026.10"]) == 0
     assert read_links(dist / "variant_links.parquet") == links
     manifest = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["schema_version"] == "1.1.0"
+    assert manifest["schema_version"] == "1.2.0"
     assert manifest["files"]["variant_links.parquet"]["rows"] == 47
 
 
@@ -80,3 +80,55 @@ def test_run_grava_variant_links_so_com_fonte_de_ligacoes(tmp_path):
     assert main(["run", "--offline", "--cache", str(cache), "--sources", str(sem),
                  "--out", str(tmp_path / "dist2"), "--release", "2026.10"]) == 0
     assert not (tmp_path / "dist2" / "variant_links.parquet").exists()
+
+
+def _grupos(caminho: Path) -> dict[str, str]:
+    import csv
+    with open(caminho, encoding="utf-8", newline="") as fh:
+        return {linha["name"]: linha["group_id"] for linha in csv.DictReader(fh)}
+
+
+def test_build_links_preenche_group_id(cache, tmp_path):
+    """Spec 005, R5 e critério de aceite 6, sobre a amostra real do Wikidata."""
+    obs, ligacoes = tmp_path / "t" / "observations.parquet", tmp_path / "t" / "variant_links.parquet"
+    assert main(["ingest", "wikidata", "--offline", "--cache", cache, "--sources", FONTES,
+                 "--out", str(obs), "--links", str(ligacoes)]) == 0
+    dist = tmp_path / "dist"
+    assert main(["build", str(obs), "--links", str(ligacoes), "--sources", FONTES,
+                 "--out", str(dist), "--release", "2026.10"]) == 0
+    sobrenomes = _grupos(dist / "family_names.csv")
+    # other_gender em sobrenome (fase 1) e transliterações inequívocas (fase 2)
+    assert {n: sobrenomes[n] for n in ("Ivanov", "Ivanova", "Иванов", "Иванова")} == dict.fromkeys(
+        ("Ivanov", "Ivanova", "Иванов", "Иванова"), "ivanov")
+    assert sobrenomes["Silva"] == "silva" and sobrenomes["李"] == "李"
+    prenomes = _grupos(dist / "given_names.csv")
+    assert prenomes["Maria"] == prenomes["Мария"] == "maria"  # transliteração; other_gender em prenome não junta
+    # P460 não junta (Иван, Ivan e John), e prenome não se junta a sobrenome.
+    assert (prenomes["Ivan"], prenomes["Иван"], prenomes["John"]) == ("ivan", "иван", "john")
+    assert all(prenomes.values()) and all(sobrenomes.values())
+
+
+def test_build_sem_links_preenche_group_id_com_a_propria_chave(cache, tmp_path):
+    obs = tmp_path / "observations.parquet"
+    assert main(["ingest", "wikidata", "--offline", "--cache", cache, "--sources", FONTES, "--out", str(obs)]) == 0
+    dist = tmp_path / "dist"
+    assert main(["build", str(obs), "--sources", FONTES, "--out", str(dist), "--release", "2026.10"]) == 0
+    prenomes = _grupos(dist / "given_names.csv")
+    assert prenomes["Мария"] == "мария" and prenomes["Maria"] == "maria"
+
+
+def test_manifesto_lista_a_fonte_das_ligacoes(cache, tmp_path):
+    """Spec 005, R7.4: a fonte das ligações entra no manifesto mesmo sem observação dela."""
+    from namescommons.io import write_observations
+    from namescommons.schema import make_observation
+    ligacoes = tmp_path / "variant_links.parquet"
+    assert main(["ingest", "wikidata", "--offline", "--cache", cache, "--sources", FONTES,
+                 "--out", str(tmp_path / "wd.parquet"), "--links", str(ligacoes)]) == 0
+    obs = tmp_path / "observations.parquet"
+    write_observations([make_observation("Maria", kind="given", source_id="us-ssa-births", country="US",
+                                          count_type="births", gender="F", year=2020, count=10)], obs)
+    dist = tmp_path / "dist"
+    assert main(["build", str(obs), "--links", str(ligacoes), "--sources", FONTES,
+                 "--out", str(dist), "--release", "2026.10"]) == 0
+    manifest = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+    assert [f["id"] for f in manifest["sources"]] == ["us-ssa-births", "wikidata"]
