@@ -38,6 +38,7 @@ COUNTRY_CSV_COLUMNS = [
 
 def write_observations(observations: list[Observation], path: Path) -> None:
     tabela = pa.Table.from_pylist([asdict(o) for o in observations], schema=OBSERVATION_SCHEMA)
+    path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(tabela, path)
 
 
@@ -64,6 +65,8 @@ def _index_dict(r: IndexRow) -> dict:
 
 def write_index(rows: list[IndexRow], csv_path: Path, parquet_path: Path) -> None:
     dados = [_index_dict(r) for r in rows]
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(pa.Table.from_pylist(dados, schema=INDEX_SCHEMA), parquet_path)
     with open(csv_path, "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")

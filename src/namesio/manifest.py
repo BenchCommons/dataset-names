@@ -1,5 +1,6 @@
 """manifest.json de uma release (spec 001, R5)."""
 
+import csv
 import hashlib
 import re
 from pathlib import Path
@@ -23,13 +24,16 @@ def _sha256(path: Path) -> str:
 def _linhas(path: Path) -> int:
     if path.suffix == ".parquet":
         return pq.ParquetFile(path).metadata.num_rows
-    with open(path, encoding="utf-8") as fh:
-        return sum(1 for _ in fh) - 1  # desconta o cabeçalho
+    with open(path, encoding="utf-8", newline="") as fh:
+        return max(sum(1 for _ in csv.reader(fh)) - 1, 0)  # desconta o cabeçalho
 
 
 def build_manifest(release: str, out_dir: Path, sources: dict[str, Source], used: set[str]) -> dict:
     if not RELEASE.fullmatch(release):
         raise ValueError(f"release '{release}' fora do formato AAAA.MM[.N]")
+    desconhecidas = sorted(used - set(sources))
+    if desconhecidas:
+        raise ValueError(f"source_id desconhecido em sources.yaml: {desconhecidas}")
     arquivos = {}
     for p in sorted(out_dir.rglob("*")):
         if p.is_file() and p.name != "manifest.json":
