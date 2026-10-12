@@ -2,6 +2,8 @@
 
 Parte do [roadmap](../ROADMAP.md). Licença dos dados: [ADR 0001](../../adr/0001-licenca-dos-dados.md).
 
+Status: Implementada e mesclada (PR #1, 2026-10-12).
+
 ## Por quê
 
 O repositório publica duas listas planas (`first_names.all.txt`, 164.432 linhas; `last_names.all.txt`, 98.393 linhas), em minúsculas, sem país, gênero, frequência, escrita ou origem. O pipeline de geração (`generate/index.sh`) depende de diretórios que não existem no repositório, baixa de URLs de 2017 a 2020 e descarta qualquer nome com espaço, o que elimina sobrenomes compostos (`da Silva`, `van der Berg`).
@@ -18,7 +20,7 @@ Cada adaptador de fonte produz linhas de observação: "a fonte X atesta o nome 
 |---|---|---|---|---|
 | `name` | texto | sim | `Álvaro`, `Мария`, `李` | Forma publicada pela fonte, em Unicode NFC, sem espaços nas pontas e com espaços internos colapsados. Caixa preservada; se a fonte publica tudo em maiúsculas ou minúsculas, aplica-se capitalização por palavra. |
 | `name_key` | texto | sim | `álvaro` | `casefold()` de `name`. Identidade do nome; preserva acentos. |
-| `ascii` | texto | sim | `alvaro` | Transliteração para ASCII em minúsculas. O método é definido na spec 005; até lá, remoção de diacríticos via decomposição NFD para escrita latina e campo vazio para as demais. |
+| `ascii` | texto | sim | `alvaro` | Transliteração para ASCII em minúsculas. O método é definido na spec 005; até lá, remoção de diacríticos via decomposição NFD para escrita latina e campo vazio para as demais (pendências: issue #4). |
 | `script` | código | sim | `Latn` | ISO 15924 predominante entre as letras do nome. `Zyyy` quando não há letra. |
 | `kind` | enum | sim | `given` | `given` (primeiro nome) ou `family` (sobrenome). Um nome atestado nos dois papéis gera linhas separadas. |
 | `country` | código | não | `BR` | ISO 3166-1 alfa-2. Vazio quando a fonte não associa país. |
@@ -30,7 +32,7 @@ Cada adaptador de fonte produz linhas de observação: "a fonte X atesta o nome 
 
 Regras:
 
-- **R1.1** Se `count` está vazio, `count_type` é `attested`, e vice-versa.
+- **R1.1** Se `count` está vazio, `count_type` é `attested`, e vice-versa. Valores suprimidos pela fonte são omitidos, não emitidos como vazio: ver [ADR 0002](../../adr/0002-valores-suprimidos.md).
 - **R1.2** Nomes com espaço, hífen ou apóstrofo são mantidos como publicados.
 - **R1.3** Contagens de tipos diferentes nunca são somadas.
 - **R1.4** A chave de unicidade de uma observação é (`name_key`, `kind`, `country`, `gender`, `year`, `source_id`). Duplicatas na mesma fonte são somadas pelo adaptador antes da emissão.
@@ -83,7 +85,7 @@ legacy/                   listas atuais, congeladas
 docs/specs/, docs/adr/
 ```
 
-`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é provisório (`namesio`) e acompanha a futura renomeação do repositório.
+`observations.parquet`, `given_names.*` e `family_names.*` são publicados nas GitHub Releases e não entram no git. O nome do pacote é `namesio`.
 
 ### R5. Versionamento
 

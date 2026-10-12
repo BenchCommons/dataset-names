@@ -1,7 +1,5 @@
 # 002. Pipeline de ingestão: plano de implementação
 
-> **Para agentes:** SUB-SKILL OBRIGATÓRIA: use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar [`tasks.md`](tasks.md) tarefa por tarefa. Os passos usam checkbox (`- [ ]`).
-
 **Objetivo:** implementar o contrato do adaptador, o cache de downloads, os comandos `fetch`, `ingest` e `run`, a validação cruzada com `sources.yaml`, a CI e a medição de desempenho da spec 002, e fechar as pendências de robustez da issue #2.
 
 **Arquitetura:** três módulos novos no pacote `namesio`. `adapters/__init__.py` define `Resource`, `RawRecord` e a carga de um módulo de adaptador por `source_id`; `cache.py` baixa cada recurso para `cache/<source_id>/<filename>` com `urllib`, metadados e escrita atômica; `pipeline.py` transforma `RawRecord` em `Observation` (R1.1 a R1.5), valida cada fonte e encadeia cache e `parse`. A CLI ganha `fetch`, `ingest` e `run` e reaproveita o `build` da spec 001. O adaptador de exemplo do critério de aceite 1 vive em `tests/adaptadores/` e é carregado com `--adapters adaptadores`, sem entrar no pacote publicado.
@@ -19,7 +17,6 @@
 - Faixa de `year`: 1800 até o ano corrente mais um, calculado na hora da validação.
 - Mensagem de falha de fonte: `fonte '<id>': <causa>`, código de saída 1, sem traceback e sem saída parcial.
 - `SCHEMA_VERSION` continua `1.0.0`: nenhum campo de saída muda.
-- Commits assinados com GPG, autor `Matheus Breguêz <matbrgz@gmail.com>`, trailer `Co-Authored-By` no rodapé. Nunca `--no-gpg-sign`.
 
 ## Decisões de implementação
 
@@ -37,7 +34,7 @@
 | Download incompleto é detectado comparando os bytes recebidos com `Content-Length`; toda falha de rede ou HTTP é tentada de novo | `http.client` não acusa resposta truncada em leituras por bloco; tentar de novo um 404 custa 6 s e mantém a regra simples |
 | Observações de `ingest` ordenadas por (`source_id`, `kind`, `country`, `name_key`, `year`, `gender`) | R6: duas execuções produzem Parquet com as mesmas linhas na mesma ordem, independente da ordem do arquivo da fonte |
 | `run` não aceita IDs; `fetch` e `ingest` aceitam; nenhuma fonte com adaptador é erro | Segue a tabela de R5; uma release sempre usa todas as fontes com adaptador |
-| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB, sem dicionário por linha |
+| `Observation` com `slots=True` e Parquet lido e gravado por colunas, com textos repetidos compartilhados | Na medição de R8 do protótipo, o tempo caiu de 240 s para 140 s; o pico de memória ficou em 1,4 GB (após a Task 10; a issue #8 mediu antes da otimização), sem dicionário por linha |
 | O script de R8 roda `ingest` e `build` pela CLI, com um adaptador sintético gerado num diretório temporário | Mede os comandos reais, inclusive leitura do CSV, validação e escrita, e não só a agregação |
 
 ## Foco de revisão

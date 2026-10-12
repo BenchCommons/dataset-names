@@ -1,5 +1,7 @@
 # 001. Esquema do dataset: tarefas
 
+> Roteiro histórico da implementação (PR #1). O código vigente está em `src/` e `tests/`; em divergência, vale o código.
+
 Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório.
 
 ---

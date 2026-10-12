@@ -1,5 +1,7 @@
 # 003. Fontes oficiais: tarefas
 
+> Roteiro histórico da implementação (PR #11). O código vigente está em `src/` e `tests/`; em divergência, vale o código.
+
 Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório, a partir de `master` com a spec 002. Antes da Task 1, rodar `uv sync` e conferir `uv run pytest -q` com `244 passed`.
 
 Os arquivos de `src/` que já existem aparecem inteiros: substituir o conteúdo do arquivo pelo bloco. A linha **Mudanças** resume o que difere da versão anterior. Em `sources.yaml` e `tests/fixtures/ATRIBUICAO.md`, as Tasks 3 a 5 acrescentam linhas ao fim do arquivo criado na Task 2.

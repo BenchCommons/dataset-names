@@ -1,6 +1,8 @@
 # 002. Pipeline de ingestão: tarefas
 
-Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório, a partir da branch da spec 001. Antes da Task 1, rodar `uv sync` e conferir `uv run pytest -q` com `97 passed`.
+> Roteiro histórico da implementação (PR #7). O código vigente está em `src/` e `tests/`; em divergência, vale o código.
+
+Plano: [`plan.md`](plan.md). Spec: [`spec.md`](spec.md). Rodar todos os comandos na raiz do repositório, a partir da branch da spec 001. Estado inicial histórico: master com a spec 001, 97 testes passando.
 
 Os arquivos de `src/` que já existem aparecem inteiros: substituir o conteúdo do arquivo pelo bloco. A linha **Mudanças** resume o que difere da versão anterior.
 
