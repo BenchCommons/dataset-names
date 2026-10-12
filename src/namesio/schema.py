@@ -36,6 +36,13 @@ class ValidationError(ValueError):
         super().__init__(f"{len(erros)} erro(s) de validação:\n" + "\n".join(erros[:50]))
 
 
+def derive_name_fields(raw_name: str, uniform_case: bool | None = None) -> tuple[str, str, str, str]:
+    """(name, name_key, ascii, script) derivados do nome publicado."""
+    name = normalize_name(raw_name, uniform_case)
+    script = detect_script(name)
+    return name, name_key(name), ascii_form(name, script), script
+
+
 def make_observation(
     raw_name: str,
     *,
@@ -46,12 +53,12 @@ def make_observation(
     gender: str | None = None,
     year: int | None = None,
     count: int | None = None,
+    uniform_case: bool | None = None,
 ) -> Observation:
     """Constrói uma observação derivando name, name_key, ascii e script do nome publicado."""
-    name = normalize_name(raw_name)
-    script = detect_script(name)
+    name, chave, forma_ascii, script = derive_name_fields(raw_name, uniform_case)
     return Observation(
-        name=name, name_key=name_key(name), ascii=ascii_form(name, script), script=script,
+        name=name, name_key=chave, ascii=forma_ascii, script=script,
         kind=kind, country=country, gender=gender, year=year, count=count,
         count_type=count_type, source_id=source_id,
     )
