@@ -53,6 +53,15 @@ Add `--offline` to `ingest` or `run` to use only files already in the cache. Use
 
 The SSA server refuses automated downloads (HTTP 403). Download the national data ZIP in a browser and save it where the error message of `fetch` says, then continue with `--offline` ([spec 003, R4](docs/specs/003-fontes-oficiais/spec.md)).
 
+## Development
+
+```sh
+uv sync                 # installs the dependencies, including the source toolkit
+uv run pytest -q        # tests never use the network
+```
+
+The download cache, the spreadsheet reader, the adapter base, the source registry and the manifest file helpers come from the BenchCommons source toolkit, the `benchcommons-tools-dataset` package (import `datasettool`), pinned to a git tag of [tools-dataset](https://github.com/BenchCommons/tools-dataset) ([ADR 0013](docs/adr/0013-dependencia-do-tools-dataset.md)). This repository keeps only what is specific to names: the schema, normalisation, aggregation, variants, the pipeline, the adapters, `sources.yaml` and the CLI ([spec 007](docs/specs/007-tools-dataset/spec.md)). Messages from the toolkit are in English. Files placed in the cache by hand must be copies or hard links, not symbolic links.
+
 ## Licences
 
 - Code: Apache-2.0, see [`LICENSE`](LICENSE).

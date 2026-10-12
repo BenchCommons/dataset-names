@@ -8,7 +8,9 @@ Dataset mundial de nomes: primeiros nomes e sobrenomes com país, frequência, g
 
 ## Stack
 
-Python 3.12, `uv`, `pytest`, `pyarrow`, `pyyaml`, `pycountry`, `xlrd` (XLS, [ADR 0005](docs/adr/0005-leitor-de-planilhas.md)). Build com `hatchling`.
+Python 3.12, `uv`, `pytest`, `pyarrow`, `pycountry` e o kit de fontes `benchcommons-tools-dataset` (import `datasettool`), fixado na tag `v0.1.0` do [tools-dataset](https://github.com/BenchCommons/tools-dataset) ([ADR 0013](docs/adr/0013-dependencia-do-tools-dataset.md)). O kit traz o cache de downloads, o leitor de planilhas (com `xlrd` fixado, [ADR 0005](docs/adr/0005-leitor-de-planilhas.md)), a base do adaptador, o registro de fontes e os auxiliares de arquivo do manifesto, e fixa `pyyaml` e `xlrd`. Build com `hatchling`.
+
+O contrato do kit é do tools-dataset ([spec 004 de lá](https://github.com/BenchCommons/tools-dataset/blob/v0.1.0/docs/specs/004-source-toolkit/spec.md)); aqui fica só o que é de nomes ([spec 007](docs/specs/007-tools-dataset/spec.md)). Correção no código genérico é feita lá, numa versão nova, nunca com cópia ou remendo local.
 
 ## Comandos
 
@@ -24,6 +26,16 @@ A CI também roda o pipeline offline sobre as amostras de `tests/fixtures/`:
 PYTHONPATH=tests uv run namescommons run --offline --sources tests/fixtures/sources.yaml \
   --adapters adaptadores --cache <cache> --out <saida> --release 2026.10
 ```
+
+## Atualizar o kit de fontes
+
+Procedimento completo no [ADR 0013](docs/adr/0013-dependencia-do-tools-dataset.md):
+
+1. Troque juntas, em `pyproject.toml`, a versão (`benchcommons-tools-dataset==X.Y.Z`) e a tag (`tag = "vX.Y.Z"` em `[tool.uv.sources]`), e a constante `VERSAO` de `tests/test_tools_dataset.py`.
+2. `uv lock --upgrade-package benchcommons-tools-dataset && uv sync`.
+3. `uv run pytest -q` e os dois passos offline da CI; compare as saídas com as da versão anterior (`diff -r`).
+
+O cache do kit recusa entradas que resolvem fora do diretório do cache, inclusive links simbólicos ([tools-dataset#9](https://github.com/BenchCommons/tools-dataset/issues/9)): ponha arquivos baixados à mão no cache por cópia ou link físico.
 
 ## Passo anual do INSEE
 
