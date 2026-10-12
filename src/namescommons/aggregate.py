@@ -227,7 +227,7 @@ def name_index(
     # Spec 005, R5: grupos sobre as chaves do índice (já em ordem), com o ascii das latinas.
     ids = group_ids(
         [r.name_key for r in indice], [r.ascii if r.script == "Latn" else "" for r in indice],
-        sem_acento, links, kind,
+        sem_acento, links, kind, [r.script for r in indice],
     )
     for i, grupo in enumerate(ids):
         indice[i] = replace(indice[i], group_id=grupo)

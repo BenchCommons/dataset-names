@@ -21,9 +21,10 @@ def _grupos(nomes, ligacoes=(), sem_acento=(), kind="given"):
     """nome -> group_id; nomes do índice com ascii só para os latinos, como name_index monta."""
     chaves = sorted({name_key(n) for n in nomes})
     formas = {name_key(n): n for n in nomes}
-    ascii_ = [ascii_form(formas[k]) if detect_script(formas[k]) == "Latn" else "" for k in chaves]
+    escritas = [detect_script(formas[k]) for k in chaves]
+    ascii_ = [ascii_form(formas[k]) if e == "Latn" else "" for k, e in zip(chaves, escritas)]
     marcas = [formas[k] in sem_acento for k in chaves]
-    ids = group_ids(chaves, ascii_, marcas, list(ligacoes), kind)
+    ids = group_ids(chaves, ascii_, marcas, list(ligacoes), kind, escritas)
     return {formas[k]: g for k, g in zip(chaves, ids)}
 
 
@@ -101,17 +102,17 @@ def test_sem_acento_nao_junta_outra_escrita():
 
 
 def test_different_from_separa():
-    """A e B são different_from; C é rótulo do mesmo item que A e que B: só uma junção entra."""
+    """Q1 (Ivanov, Иванов) e Q2 (Ivanova) são o mesmo sobrenome, mas Иванов é different_from Ivanova."""
     ligacoes = [
-        _l("same_item", "Ana", "Anna", qid="Q1"),
-        _l("same_item", "Anna", "Anne", qid="Q3"),
-        _l("different_from", "Ana", "Anne", qid="Q1", target_qid="Q3"),
+        _l("same_item", "Ivanov", "Иванов", kind="family", qid="Q1"),
+        _l("other_gender", "Ivanov", "Ivanova", kind="family", qid="Q1", target_qid="Q2"),
+        _l("different_from", "Иванов", "Ivanova", kind="family", qid="Q1", target_qid="Q2"),
     ]
-    g = _grupos(["Ana", "Anna", "Anne"], ligacoes)
-    assert g["Ana"] != g["Anne"]
-    # Ordem fixa: (ana, anna) entra antes de (anna, anne), que é pulada.
-    assert g["Ana"] == g["Anna"] == "ana"
-    assert g["Anne"] == "anne"
+    g = _grupos(["Ivanov", "Иванов", "Ivanova"], ligacoes, kind="family")
+    assert g["Иванов"] != g["Ivanova"]
+    # Ordem fixa: ivanov e ivanova entram antes de иванов, que é pulado.
+    assert g["Ivanov"] == g["Ivanova"] == "ivanov"
+    assert g["Иванов"] == "иванов"
 
 
 def test_different_from_separa_tambem_na_fase_2():
@@ -145,24 +146,28 @@ def test_juncao_pela_chave_e_nao_pelo_texto():
 
 
 def test_resultado_nao_depende_da_ordem():
-    nomes = ["Ana", "Anna", "Anne", "Ann", "Annie", "Marie-Eve", "Marie-Ève"]
+    nomes = ["Ana", "Anna", "Anne", "Ann", "Annie", "Marie-Eve", "Marie-Ève", "Анна"]
     ligacoes = [
         _l("same_item", "Ana", "Anna", qid="Q1"),
-        _l("same_item", "Anna", "Anne", qid="Q3"),
-        _l("same_item", "Ann", "Annie", qid="Q4"),
-        _l("same_item", "Annie", "Anne", qid="Q4"),
+        _l("same_item", "Anne", "Annie", qid="Q3"),
+        _l("same_item", "Ann", "Annie", qid="Q3"),
         _l("different_from", "Ana", "Anne", qid="Q1", target_qid="Q3"),
-        _l("different_from", "Ann", "Ana", qid="Q4", target_qid="Q1"),
+        _l("different_from", "Ann", "Ana", qid="Q3", target_qid="Q1"),
+        _l("same_item", "Marie-Ève", "Анна", qid="Q5"),
     ]
-    esperado = _grupos(nomes, ligacoes, sem_acento={"Marie-Eve"})
+    # Transliteração e sem acento têm direção própria: entram embaralhadas, sem inverter.
+    dirigidas = [_l("transliteration", "Анна", "Anna", qid="Q6")]
+    esperado = _grupos(nomes, ligacoes + dirigidas, sem_acento={"Marie-Eve"})
     for semente in range(20):
         embaralhadas = ligacoes[:]
         random.Random(semente).shuffle(embaralhadas)
         invertidas = [
             _l(v.relation, v.target_name, v.name, qid=v.target_qid, target_qid=v.qid) for v in embaralhadas
         ]
-        assert _grupos(nomes, embaralhadas, sem_acento={"Marie-Eve"}) == esperado
-        assert _grupos(nomes, invertidas, sem_acento={"Marie-Eve"}) == esperado
+        todas = embaralhadas + dirigidas
+        random.Random(semente).shuffle(todas)
+        assert _grupos(nomes, todas, sem_acento={"Marie-Eve"}) == esperado
+        assert _grupos(nomes, invertidas + dirigidas, sem_acento={"Marie-Eve"}) == esperado
 
 
 def test_group_id_e_a_menor_chave():
@@ -172,3 +177,63 @@ def test_group_id_e_a_menor_chave():
 
 def test_sem_ligacoes():
     assert group_ids(["a", "b"], ["a", "b"], [False, False], None, "given") == ["a", "b"]
+
+
+# Revisão do PR #38: rótulo homógrafo de itens diferentes não faz ponte.
+def test_rotulo_de_dois_itens_nao_junta_os_itens():
+    """장 é rótulo de 张 (Q1) e de 蒋 (Q2): fica sozinho, e 张 e 蒋 continuam separados."""
+    ligacoes = [_l("same_item", "张", "장", kind="family", qid="Q1"),
+                _l("same_item", "蒋", "장", kind="family", qid="Q2")]
+    g = _grupos(["张", "蒋", "장"], ligacoes, kind="family")
+    assert len(set(g.values())) == 3
+
+
+def test_rotulo_de_dois_itens_do_mesmo_grupo_junta():
+    """Herman de Q1 e de Q2, com Q1 e Q2 ligados por other_gender: os itens já são um grupo."""
+    ligacoes = [_l("same_item", "Herman", "Hermanová", kind="family", qid="Q1"),
+                _l("same_item", "Herman", "Хэрман", kind="family", qid="Q2"),
+                _l("other_gender", "Herman", "Hermanová", kind="family", qid="Q2", target_qid="Q1")]
+    g = _grupos(["Herman", "Hermanová", "Хэрман"], ligacoes, kind="family")
+    assert len(set(g.values())) == 1
+
+
+def test_transliteracao_para_rotulo_de_outro_nome_nao_junta():
+    """見 tem a transliteração 현, que já é rótulo de 玄: 見 não entra no grupo de 玄."""
+    ligacoes = [_l("same_item", "玄", "현", kind="family", qid="Q1"),
+                _l("transliteration", "見", "현", kind="family", qid="Q2")]
+    g = _grupos(["玄", "현", "見"], ligacoes, kind="family")
+    assert g["玄"] == g["현"] != g["見"]
+
+
+def test_transliteracao_para_grupo_de_outra_escrita_junta():
+    """Герман -> Herman, e Herman já está com Hermanová (other_gender): junção legítima."""
+    ligacoes = [_l("other_gender", "Hermanová", "Herman", kind="family", qid="Q2", target_qid="Q3"),
+                _l("other_gender", "Herman", "Hermanová", kind="family", qid="Q3", target_qid="Q2"),
+                _l("transliteration", "Герман", "Herman", kind="family", qid="Q1")]
+    g = _grupos(["Herman", "Hermanová", "Герман"], ligacoes, kind="family")
+    assert g["Herman"] == g["Hermanová"] == g["Герман"] == "herman"
+
+
+def test_sem_acento_ja_em_outro_grupo_nao_junta():
+    """Jose já está com Хосе (mesmo item); José está em outro grupo: concorrem, nada junta."""
+    ligacoes = [_l("same_item", "Jose", "Хосе", qid="Q1"), _l("same_item", "José", "Josè", qid="Q2")]
+    g = _grupos(["Jose", "Хосе", "José", "Josè"], ligacoes, sem_acento={"Jose"})
+    assert g["Jose"] != g["José"]
+
+
+def test_rotulo_ambiguo_nao_recebe_transliteracao():
+    """현 é rótulo de 玄 (Q1) e de 見 (Q2); a transliteração 見 -> 현 não o tira dessa ambiguidade."""
+    ligacoes = [_l("same_item", "玄", "현", kind="family", qid="Q1"),
+                _l("same_item", "見", "현", kind="family", qid="Q2"),
+                _l("transliteration", "見", "현", kind="family", qid="Q2")]
+    g = _grupos(["玄", "見", "현"], ligacoes, kind="family")
+    assert len(set(g.values())) == 3
+
+
+def test_transliteracao_para_rotulo_de_outro_item_com_rotulo_ambiguo_nao_junta():
+    """玄 é ambíguo (rótulo de Q1 e Q3), e 현 fica sozinho no grupo; ainda assim é rótulo de Q1, de escrita han."""
+    ligacoes = [_l("same_item", "현", "玄", kind="family", qid="Q1"),
+                _l("same_item", "玄", "Hyeon", kind="family", qid="Q3"),
+                _l("transliteration", "見", "현", kind="family", qid="Q2")]
+    g = _grupos(["玄", "見", "현", "Hyeon"], ligacoes, kind="family")
+    assert g["見"] != g["현"]
