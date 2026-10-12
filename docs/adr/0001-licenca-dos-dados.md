@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-10-12)
+Aceito (2026-10-12). Lista de licenças ampliada pelo [ADR 0004](0004-licenca-statistics-canada.md) (Statistics Canada Open Licence).
 
 ## Contexto
 
