@@ -85,7 +85,8 @@ def test_r1_4_repetidos_sem_contagem_viram_uma_linha():
 
 
 def test_r1_4_repetidos_com_e_sem_contagem_sao_recusados():
-    with pytest.raises(RecordError, match="R1.4"):
+    # Desde a spec 003 (R2.3), count vazio numa fonte births é recusado já no registro.
+    with pytest.raises(RecordError, match="registro 2: count vazio numa fonte 'births'"):
         to_observations([RawRecord("Maria", "given", "PT", "F", 2020, 1),
                          RawRecord("Maria", "given", "PT", "F", 2020, None)], _fonte())
 

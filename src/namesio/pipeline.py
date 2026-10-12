@@ -4,10 +4,12 @@ from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
 
-from namesio.adapters import DEFAULT_PACKAGE, AdapterError, RawRecord, load_adapter
+from namesio.adapters import (
+    DEFAULT_PACKAGE, AdapterError, FormatError, RawRecord, SourceFiles, load_adapter,
+)
 from namesio.cache import FetchError, fetch_resource
-from namesio.schema import Observation, ValidationError, derive_name_fields, validate
-from namesio.sources import Source
+from namesio.schema import GENDERS, KINDS, Observation, ValidationError, derive_name_fields, validate
+from namesio.sources import Source, is_country
 
 
 class PipelineError(Exception):
@@ -19,7 +21,7 @@ class RecordError(ValueError):
 
 
 # Exceções cuja mensagem já explica a causa; as demais ganham o nome do tipo.
-_ERROS_DO_DOMINIO = (AdapterError, FetchError, ValidationError, RecordError)
+_ERROS_DO_DOMINIO = (AdapterError, FetchError, ValidationError, RecordError, FormatError)
 
 
 def _falha(fonte: Source, e: Exception) -> PipelineError:
@@ -74,9 +76,31 @@ def _checar_tipos(r: RawRecord, posicao: int) -> None:
             )
 
 
+def _checar_valores(o: Observation, posicao: int, paises: dict[str, bool]) -> None:
+    """Spec 003, R2.1 e R2.3: valores convertidos pelo adaptador, conferidos na ordem do arquivo."""
+    if o.kind not in KINDS:
+        raise RecordError(f"registro {posicao}: kind {o.kind!r} inválido; use 'given' ou 'family'")
+    if o.gender is not None and o.gender not in GENDERS:
+        raise RecordError(f"registro {posicao}: gender {o.gender!r} inválido; use 'F', 'M' ou vazio")
+    if o.country is not None:
+        valido = paises.get(o.country)
+        if valido is None:
+            valido = paises[o.country] = is_country(o.country)
+        if not valido:
+            raise RecordError(f"registro {posicao}: country {o.country!r} fora da ISO 3166-1 alfa-2")
+    if o.count is None and o.count_type != "attested":
+        raise RecordError(
+            f"registro {posicao}: count vazio numa fonte '{o.count_type}'; "
+            "valor suprimido deve ser omitido pelo adaptador"
+        )
+    if o.count is not None and o.count_type == "attested":
+        raise RecordError(f"registro {posicao}: count {o.count} numa fonte 'attested'")
+
+
 def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observation]:
     """Aplica R1.1 a R1.5 aos registros brutos de uma fonte."""
     derivados: dict[str, tuple[str, str, str, str]] = {}
+    paises: dict[str, bool] = {}
     unicas: dict[tuple, Observation] = {}
     for posicao, r in enumerate(records, start=1):
         _checar_tipos(r, posicao)
@@ -89,6 +113,7 @@ def to_observations(records: Iterable[RawRecord], source: Source) -> list[Observ
             country=_vazio(r.country), gender=_vazio(r.gender), year=r.year, count=r.count,
             count_type=source.count_type, source_id=source.id,
         )
+        _checar_valores(o, posicao, paises)
         anterior = unicas.get(o.key())
         unicas[o.key()] = o if anterior is None else _somar(anterior, o)
     _checar_genero(unicas.values())
@@ -144,10 +169,10 @@ def ingest_sources(
     for fonte in selected:
         try:
             mod = load_adapter(fonte.id, adapters)
-            arquivos = {
-                r.filename: fetch_resource(cache_dir, fonte.id, r, offline=offline, **opcoes)
+            arquivos = SourceFiles(
+                (r.filename, fetch_resource(cache_dir, fonte.id, r, offline=offline, **opcoes))
                 for r in mod.RESOURCES
-            }
+            )
             obs = to_observations(mod.parse(arquivos), fonte)
             if not obs:
                 raise RecordError("nenhum registro produzido por parse")

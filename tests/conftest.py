@@ -7,9 +7,11 @@ import threading
 import time
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
+from namesio.adapters import Resource
 from namesio.schema import make_observation
 from namesio.sources import parse_sources
 
@@ -72,12 +74,16 @@ class ServidorLocal:
         self.falhas: dict[str, int] = {}  # caminho -> quantas respostas 500 antes de servir
         self.truncados: set[str] = set()  # caminhos que anunciam o dobro do tamanho e fecham
         self.lentos: dict[str, float] = {}  # caminho -> segundos de espera antes de responder
+        self.recusados: set[str] = set()  # caminhos que respondem 403, como um servidor que bloqueia robôs
         self.requisicoes: list[tuple[str, str]] = []  # (caminho, User-Agent)
         servidor = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 servidor.requisicoes.append((self.path, self.headers.get("User-Agent", "")))
+                if self.path in servidor.recusados:
+                    self.send_error(403)
+                    return
                 if servidor.falhas.get(self.path, 0) > 0:
                     servidor.falhas[self.path] -= 1
                     self.send_error(500)
@@ -120,3 +126,23 @@ def servidor():
     yield s
     s.httpd.shutdown()
     s.httpd.server_close()
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def servir_fixtures(servidor, monkeypatch):
+    """Spec 003, R2.5: serve tests/fixtures/<SOURCE_ID>/<filename> no servidor local e aponta
+    RESOURCES do módulo do adaptador para ele. Uso: servir_fixtures(modulo) -> servidor."""
+
+    def servir(modulo):
+        recursos = []
+        for r in modulo.RESOURCES:
+            caminho = f"/{modulo.SOURCE_ID}/{r.filename}"
+            servidor.arquivos[caminho] = (FIXTURES / modulo.SOURCE_ID / r.filename).read_bytes()
+            recursos.append(Resource(servidor.url(caminho), r.filename))
+        monkeypatch.setattr(modulo, "RESOURCES", recursos)
+        return servidor
+
+    return servir
