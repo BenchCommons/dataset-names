@@ -162,9 +162,19 @@ def _arquivos(files: Mapping[str, dict]) -> list[tuple[str, int | None]]:
     return linhas
 
 
-def _descarte(d: Mapping[str, int] | None) -> str:
+def _sem_ingestao(manifest: Mapping, usadas: list[Source]) -> set[str]:
+    """Fontes sem observações numa release que tem contagens de descarte: entraram só por variant_links, não
+    passaram por ingest_sources e não têm descarte a contar. Sem nenhuma contagem na release (observations.parquet
+    anterior à spec 006, R1.4), nada se afirma e a fonte continua desconhecida."""
+    por_id = {s["id"]: s for s in manifest["sources"]}
+    if all(s.get("dropped") is None for s in por_id.values()):
+        return set()
+    return {f.id for f in usadas if por_id[f.id].get("dropped") is None and not por_id[f.id].get("observations")}
+
+
+def _descarte(d: Mapping[str, int] | None, aplicavel: bool = True) -> str:
     if d is None:
-        return "unknown"
+        return "unknown" if aplicavel else "n/a"
     if not d["lines"]:
         return "0"
     return f"{_n(d['lines'])} lines, {_n(d['records'])} records"
@@ -210,7 +220,8 @@ def _limitacoes(manifest: Mapping, usadas: list[Source]) -> list[str]:
             f"names, such as lost diacritics or macrons (ADR 0007): {_lista(com_descarte)}. Country totals "
             "exclude them."
         )
-    desconhecidos = [f for f in usadas if por_id[f.id].get("dropped") is None]
+    so_ligacoes = _sem_ingestao(manifest, usadas)
+    desconhecidos = [f for f in usadas if por_id[f.id].get("dropped") is None and f.id not in so_ligacoes]
     if desconhecidos:
         itens.append(f"Drop counts are unknown for: {_lista(desconhecidos)}.")
     itens.append(
@@ -268,12 +279,13 @@ def dataset_card(manifest: Mapping, sources: Mapping[str, Source], countries: Ma
     out += ["", "## Fields", "", _CAMPOS, "", "## Sources", "",
             "| Source | Id | Country | Count type | Licence | Suppression | Retrieved | Observations | Dropped |",
             "|---|---|---|---|---|---|---|---|---|"]
+    so_ligacoes = _sem_ingestao(manifest, usadas)
     for f in usadas:
         s = por_id[f.id]
         supressao = f"below {_n(f.suppression)}" if f.suppression else "none"
         out.append(
             f"| {f.name} | `{f.id}` | {f.country or 'all'} | {f.count_type} | {f.license} | {supressao} | "
-            f"{f.retrieved.isoformat()} | {_n(s.get('observations', 0))} | {_descarte(s.get('dropped'))} |"
+            f"{f.retrieved.isoformat()} | {_n(s.get('observations', 0))} | {_descarte(s.get('dropped'), f.id not in so_ligacoes)} |"
         )
     out += ["", "## Coverage", "", "| Country | Given names | Family names | Years |", "|---|---|---|---|"]
     for pais in sorted(countries):
