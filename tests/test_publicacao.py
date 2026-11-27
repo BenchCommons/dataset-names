@@ -106,7 +106,7 @@ SECOES = ["## Summary", "## Files", "## Fields", "## Sources", "## Coverage", "#
           "## Known limitations", "## Licence", "## How to cite"]
 
 
-def _manifesto(fontes, usadas, dropped=None, links=None):
+def _manifesto(fontes, usadas, dropped=None, links=None, observacoes=None):
     arquivos = {
         "by_country/BR.csv": {"sha256": "0" * 64, "rows": 3},
         "by_country/US.csv": {"sha256": "0" * 64, "rows": 4},
@@ -122,7 +122,7 @@ def _manifesto(fontes, usadas, dropped=None, links=None):
         "release": "2026.10", "schema_version": "1.3.0", "data_license": "CC-BY-4.0",
         "sources": [
             {"id": i, "name": fontes[i].name, "license": fontes[i].license,
-             "retrieved": fontes[i].retrieved.isoformat(), "observations": 4,
+             "retrieved": fontes[i].retrieved.isoformat(), "observations": (observacoes or {}).get(i, 4),
              "dropped": (dropped or {}).get(i)}
             for i in sorted(usadas)
         ],
@@ -171,6 +171,39 @@ def test_cartao_lista_fontes_sem_acento_e_descartes(observacoes, fontes):
     fontes_tabela = texto.split("## Sources", 1)[1].split("\n## ", 1)[0]
     assert "| SSA | `us-ssa` | US | births | public-domain | below 5 | 2026-10-01 | 4 | 3 lines, 49 records |" in fontes_tabela
     assert "| IBGE Censo | `br-ibge-censo` | BR | population | CC-BY-4.0 | none | 2026-10-01 | 4 | unknown |" in fontes_tabela
+
+
+def _fontes_do_cartao(texto):
+    tabela = texto.split("## Sources", 1)[1].split("\n## ", 1)[0]
+    limitacoes = texto.split("## Known limitations", 1)[1].split("\n## ", 1)[0]
+    return tabela, limitacoes
+
+
+def test_cartao_fonte_so_de_ligacoes_nao_tem_descarte_desconhecido(observacoes, fontes):
+    # Issue #51: o Wikidata entra só por variant_links, não passa por ingest_sources e não tem entrada em dropped.
+    usadas = {o.source_id for o in observacoes} | {"wikidata"}
+    m = _manifesto(fontes, usadas, observacoes={"wikidata": 0},
+                   dropped={i: {"lines": 0, "records": 0} for i in ("us-ssa", "us-births-b", "br-ibge-censo")}, links=5)
+    assert m["sources"][-1]["dropped"] is None  # o contrato serializado não muda: null
+    tabela, limitacoes = _fontes_do_cartao(dataset_card(m, fontes, by_country(observacoes, fontes)))
+    assert "| Wikidata | `wikidata` | all | attested | CC0-1.0 | none | 2026-10-01 | 0 | n/a |" in tabela
+    assert "unknown" not in tabela and "Drop counts are unknown" not in limitacoes
+
+
+def test_cartao_sem_contagens_antigas_continua_desconhecido(observacoes, fontes):
+    # observations.parquet gravado antes da spec 006 (R1.4): nenhuma fonte tem contagem, nem a sem observações.
+    usadas = {o.source_id for o in observacoes} | {"wikidata"}
+    m = _manifesto(fontes, usadas, observacoes={"wikidata": 0})
+    tabela, limitacoes = _fontes_do_cartao(dataset_card(m, fontes, by_country(observacoes, fontes)))
+    assert tabela.count("| unknown |") == len(usadas)
+    assert "Drop counts are unknown for:" in limitacoes and "Wikidata" in limitacoes
+
+
+def test_cartao_fonte_com_observacoes_sem_contagem_continua_desconhecida(observacoes, fontes):
+    usadas = {o.source_id for o in observacoes}
+    m = _manifesto(fontes, usadas, dropped={"us-ssa": {"lines": 0, "records": 0}})
+    tabela, limitacoes = _fontes_do_cartao(dataset_card(m, fontes, by_country(observacoes, fontes)))
+    assert "| 4 | unknown |" in tabela and "Drop counts are unknown for: IBGE Censo" in limitacoes
 
 
 def test_cartao_data_do_wikidata(cartao):
